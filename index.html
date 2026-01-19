@@ -58,6 +58,25 @@ body.pdf-share-mode *{
     print-color-adjust: exact !important;
     color-adjust: exact !important;
 }
+
+/* =====================================================
+   PRINT PATCH v15 – Seite 1 Canvas breiter
+   Nutzt den bisher freien rechten Rand (rot markiert)
+   ===================================================== */
+@media print {
+  /* Gesamter Seiten-Wrapper von Seite 1 */
+  .print-situation-view {
+      padding-right: 6mm !important;
+  }
+
+  /* Zentrale Zeichen-/Inhaltsfläche auf Seite 1 */
+  .print-situation-view .canvas,
+  .print-situation-view .canvas-area,
+  .print-situation-view .situation-canvas,
+  .print-situation-view .content-area {
+      max-width: calc(100% + 6mm) !important;
+  }
+}
 body.pdf-share-mode{
     background-color:#ffffff !important;
 }
@@ -287,15 +306,20 @@ html, body {
         opacity: 1 !important;
         position: relative !important;
 
-        width: 1120px !important;
-        max-width: 1120px !important;
+        /* FIX: Breite auf 100% des Papiers setzen statt 1120px */
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
 
-        min-width: 1120px !important;
+        /* FIX (v12): Keine vertikale Komprimierung auf Seite 1.
+           Statt "zoom" (skaliert X+Y und schiebt alles nach oben) nutzen wir nur eine X-Skalierung,
+           damit rechts nichts abgeschnitten wird, aber die Hoehe/Position optisch gleich bleibt. */
+        zoom: 1 !important;
+        transform: scaleX(0.92) !important;
+        transform-origin: top left !important;
+
         height: auto !important;
         overflow: visible !important;
-
-        /* kein Screen-Zoom/Scale im Druck */
-        zoom: 1 !important;
 
         break-after: page !important;
         page-break-after: always !important;
@@ -303,7 +327,10 @@ html, body {
         margin: 0 !important;
         padding: 0 !important;
         padding-left: 0px !important; /* Safe-Shift für links (Print + Share identisch) */
-        background: transparent !important;
+        /* Seite 1 im Print wie Seite 2: hellblauer Seitenhintergrund */
+        background: #eff6ff !important;
+        background-color: #eff6ff !important;
+        box-shadow: inset 0 0 0 1000px #eff6ff !important;
     }
 
     /* Print-Header soll volle Breite oben einnehmen */
@@ -312,22 +339,49 @@ html, body {
         max-width: 100% !important;
         width: 100% !important;
         order: 0 !important;
+        /* Seite 1 Header wie Seite 2: weiße, abgerundete Header-Kapsel */
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        box-shadow: inset 0 0 0 1000px #ffffff !important;
+    }
+
+    /* FIX: Linke Label-Spalte (w-[30%]) = hellblau wie Seite 2 */
+    .situation-view-wrapper [class*="w-[30%]"]{
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+
+        background: #eff6ff !important;
+        background-color: #eff6ff !important;
+        box-shadow: inset 0 0 0 1000px #eff6ff !important;
+    }
+
+    /* Falls Tailwind-Klassen auf der linken Spalte andere Farben setzen, trotzdem blau erzwingen */
+    .situation-view-wrapper [class*="w-[30%]"][class*="bg-slate-100"],
+    .situation-view-wrapper [class*="w-[30%]"][class*="bg-blue-50"],
+    .situation-view-wrapper [class*="w-[30%]"][class*="bg-white"]{
+        background: #eff6ff !important;
+        background-color: #eff6ff !important;
+        box-shadow: inset 0 0 0 1000px #eff6ff !important;
     }
 
     /* Main (Links+Mitte) = 80% */
     .situation-view-wrapper > div.flex-1.flex.items-stretch {
-        flex: 0 0 760px !important;
-        max-width: 760px !important;
-        width: 760px !important;
+        
+        /* Sicherstellen, dass die Spalten innerhalb flexibel bleiben */
+        flex: 1 1 auto !important;
+        width: 74% !important; /* Haupttabelle bekommt ca. 3/4 des Platzes */
+        max-width: 74% !important;
         order: 1 !important;
     }
 
     /* Rechte Sidebar = 20% (im Print sichtbar) */
     .situation-view-wrapper > aside {
+        
         display: flex !important;
-        flex: 0 0 280px !important;
-        max-width: 280px !important;
-        width: 280px !important;
+        flex: 0 0 26% !important; /* Sidebar bekommt ca. 1/4 */
+        width: 26% !important;
+        max-width: 26% !important;
         min-width: 0 !important;
         height: auto !important;
         overflow: visible !important;
@@ -385,8 +439,34 @@ html, body {
 
     /* Karten-Hintergründe erzwingen */
     .bg-white { background-color: #ffffff !important; }
-    .bg-slate-100 { background-color: #f1f5f9 !important; }
-    .bg-blue-50 { background-color: #eff6ff !important; }
+    .bg-slate-100 {
+        background-color: #f1f5f9 !important;
+        box-shadow: inset 0 0 0 1000px #f1f5f9 !important;
+    }
+    .bg-blue-50 {
+        background-color: #eff6ff !important;
+        box-shadow: inset 0 0 0 1000px #eff6ff !important;
+    }
+
+    /* === HARD-FIX (Chrome/Edge): Wenn "Hintergrundgrafiken" im Druckdialog AUS ist,
+       werden reine background-colors oft nicht gedruckt.
+       Lösung: Wir legen im Printmodus ein SVG-IMG als Layer unter den Inhalt (Bilder drucken immer).
+       JS injiziert dieses IMG dynamisch in alle .bg-blue-50 / .bg-slate-100 Container.
+    */
+    .print-bg-host { position: relative !important; }
+    .print-bg-host > img.print-bg-img-layer {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        z-index: 0 !important;
+        pointer-events: none !important;
+    }
+    .print-bg-host > :not(img.print-bg-img-layer) {
+        position: relative !important;
+        z-index: 1 !important;
+    }
 
     /* -------- Seite 2: Angebot (voll sichtbar) -------- */
     .print-offer-view {
@@ -405,7 +485,10 @@ html, body {
 
         margin: 0 !important;
         padding: 0 !important;
-        background: transparent !important;
+        /* FIX: Seite 2 IMMER hellblau im Print */
+        background: #eff6ff !important;
+        background-color: #eff6ff !important;
+        box-shadow: inset 0 0 0 1000px #eff6ff !important;
     }
 
     .print-offer-view .overflow-hidden,
@@ -737,7 +820,108 @@ body.pdf-share-mode .share-page:last-child{
   page-break-after:auto !important;
   break-after:auto !important;
 }
+
+
+    /* ===== PRINT: Seite 2 Canvas-Mehrplatz Patch v1 ===== */
+    /* Farben/Hintergründe im Druck erzwingen */
+    *{
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    /* Seite 2: Hintergrund wieder aktiv (falls transparent/weiß) */
+    .print-offer-view{
+        background: #f0f6ff !important;
+    }
+
+    /* "Kostenübersicht & Abschluss" vertikal stauchen (Breite bleibt gleich) */
+    .situation-view-wrapper aside .bg-white.rounded-xl.p-4.shadow-sm{
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        margin-top: auto !important;
+        transform: none !important;
+    }
+
+    .situation-view-wrapper aside h3{
+        margin: 0 0 4px 0 !important;
+        padding: 0 !important;
+        font-size: 0.85rem !important;
+        line-height: 1.1 !important;
+    }
+
+    .cost-grid-years{
+        gap: 3px !important;
+    }
+    .cost-grid-years > div{
+        padding: 2px 4px !important;
+        font-size: 0.75rem !important;
+        line-height: 1.05 !important;
+    }
+
+    .situation-view-wrapper aside input,
+    .situation-view-wrapper aside select{
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+        height: 26px !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* Canvas 1/2/3 sollen den gewonnenen Platz nach unten nutzen */
+    .situation-view-wrapper > aside{
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        height: 100% !important;
+    }
+
+    .situation-view-wrapper aside .flex.flex-col.gap-4{
+        gap: 8px !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+    }
+
+    .offer-canvas-container{
+        flex: 1 1 auto !important;
+        min-height: 320px !important;
+        margin-bottom: 6px !important;
+    }
+
+
+
+    /* ================================
+       PRINT PATCH: Kostenblock in Seite 2 nach UNTEN schieben
+       (Breite bleibt gleich)
+       ================================ */
+    .situation-view-wrapper > aside{
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important; /* Canvas oben, Kosten unten via margin-top:auto */
+        height: 100% !important;
+        min-height: 0 !important;
+    }
+
+    /* Canvas-Stack soll den Raum oben füllen */
+    .situation-view-wrapper > aside .flex.flex-col.gap-4{
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+    }
+
+    /* Kostenübersicht-Block (weiße Karte) an den unteren Rand */
+    .situation-view-wrapper > aside .bg-white.rounded-xl.p-4.shadow-sm{
+        margin-top: auto !important;
+        order: 99 !important;
+    }
+
+    /* Canvas-Container: bleiben oberhalb, dürfen wachsen */
+    .offer-canvas-container{
+        order: 1 !important;
+        flex: 1 1 auto !important;
+        min-height: 300px !important;
+    }
 }
+
 
 
     /* ===== PRINT ONLY: Stammdaten (Kundentyp + Segment) untereinander & volle Breite ===== */
@@ -874,6 +1058,55 @@ body.pdf-share-mode .share-page:last-child{
   overflow: visible !important;
 }
 
+
+
+    /* ================================
+       FINAL PRINT PATCH (Chrome + Edge):
+       Seite 2 (Ihre Aktuelle Situation)
+       - definierte Seitenhoehe, damit "unten" existiert
+       - Kostenblock wirklich nach unten + 30px tiefer
+       - Breiten bleiben unveraendert
+       ================================ */
+    @media print {
+      /* Seite 2: Unten definieren */
+      .situation-view-wrapper{
+        height: 190mm !important;
+        min-height: 190mm !important;
+        overflow: visible !important;
+      }
+
+      /* Rechte Spalte nutzt volle Hoehe */
+      .situation-view-wrapper > aside{
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        min-height: 100% !important;
+        overflow: visible !important;
+      }
+
+      /* Canvas-Stack fuellt den Raum oberhalb der Kosten */
+      .situation-view-wrapper aside .flex.flex-col.gap-4{
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+      }
+
+      /* Kostenblock: ganz nach unten + extra 30px tiefer */
+      .situation-view-wrapper aside .bg-white.rounded-xl.p-4.shadow-sm{
+        margin-top: auto !important;
+        margin-bottom: -30px !important;
+        overflow: visible !important;
+        transform: none !important; /* transform wird im Print oft ignoriert */
+      }
+    }
+
+/* ===== PRINT PATCH: rechte Padding-Freigabe Seite 1 ===== */
+@media print {
+  .print-situation-view {
+    padding-right: 0mm !important; /* vorher 6mm -> volle Breite */
+  }
+}
+
+
 </style>
 
 <style id="export-hardlock-patch-v1">
@@ -893,8 +1126,9 @@ body.pdf-share-mode .share-page:last-child{
   }
   @page { size: A4 landscape !important; margin: 0.5cm !important; }
   .situation-view-wrapper, .print-offer-view {
-    width: 1120px !important;
-    max-width: 1120px !important;
+    /* PRINT-FIT: nicht hart auf 1120px fixieren */
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     background: #ffffff !important;
   }
@@ -2316,7 +2550,13 @@ const resolveUserName = (raw) => {
                         setStatus(prev => ({ ...prev, [statusKey]: (prev[statusKey] === 'open' ? 'neutral' : 'open') }));
                         return;
                     }
-                }; const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; if (textSize === 'small') classes += "text-base "; else if (textSize === 'medium') classes += "text-lg "; else if (textSize === 'large') classes += "text-xl "; if (textStyle.bold) classes += "font-black "; else classes += "font-medium "; if (textStyle.italic) classes += "italic "; classes += inputMode === 'pen' ? 'pointer-events-none text-slate-800' : 'pointer-events-auto text-slate-800'; return classes; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const hasOverlay = !!(image || (statusKey === 'offer1' && window.__canvasHtmlOffer1)); 
+                }; const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; if (textSize === 'small') classes += "text-base "; else if (textSize === 'medium') classes += "text-lg "; else if (textSize === 'large') classes += "text-xl "; if (textStyle.bold) classes += "font-black "; else classes += "font-medium "; if (textStyle.italic) classes += "italic "; classes += inputMode === 'pen' ? 'pointer-events-none text-slate-800' : 'pointer-events-auto text-slate-800'; return classes; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const htmlGlobalKey = (statusKey === 'offer1') ? '__canvasHtmlOffer1' : (statusKey === 'offer2') ? '__canvasHtmlOffer2' : (statusKey === 'offer3') ? '__canvasHtmlOffer3' : null; const htmlOverlay = htmlGlobalKey ? window[htmlGlobalKey] : null; const hasOverlay = !!(image || htmlOverlay); const [overlayEditEnabled, setOverlayEditEnabled] = useState(false);
+                useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
+
+        // Sobald ein neues Bundle/Bild eingefügt wurde: Edit-Modus wieder deaktivieren, damit Zeichnen sofort funktioniert.
+        useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
+        useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
+        useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
         const [overlayMode, setOverlayMode] = useState(null);
         const interactionStateRef = useRef({ isDragging: false, isScaling: false, startX: 0, startY: 0, initialX: 0, initialY: 0, initialScale: 1.0, initialDistance: 0, initialRotation: 0, initialAngle: 0, mode: null });
         const pointerCacheRef = useRef({}); 
@@ -2360,37 +2600,8 @@ const resolveUserName = (raw) => {
             // Pointer Capture (stabiler Drag)
             try { e.currentTarget?.setPointerCapture?.(e.pointerId); } catch(_) {}
 
-            const pointerType = e.pointerType || 'mouse';
-
-            // Stylus/Touch: erst nach 5 Sekunden "Hold" Drag freigeben (damit man nicht versehentlich verschiebt)
-            if (pointerType === 'pen' || pointerType === 'touch') {
-                longPressMetaRef.current = { active: true, x: clientX, y: clientY, pointerId: e.pointerId };
-                try { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); } catch(_) {}
-                longPressTimerRef.current = setTimeout(() => {
-                    // Wenn immer noch gehalten
-                    if (!longPressMetaRef.current.active) return;
-                    interactionStateRef.current = {
-                        isDragging: true,
-                        isScaling: false,
-                        startX: clientX,
-                        startY: clientY,
-                        initialX: x,
-                        initialY: y,
-                        initialScale: scale,
-                        initialRotation: rotation,
-                        initialDistance: 0,
-                        initialAngle: 0,
-                        mode: 'drag'
-                    };
-                    try { setOverlayMode('drag'); } catch(_) {}
-                }, 5000);
-                return;
-            }
-
-            // Mouse: im FIXED-Modus KEIN Verschieben (nur Stift/Touch per 5s-Hold oder Rechtsklick zum Loeschen)
-            if (pointerType === 'mouse') {
-                return;
-            }
+            // Nur wenn der User explizit den Bearbeiten/Move-Modus aktiviert hat.
+            if (!overlayEditEnabled) return;
 
             const pointerIds = Object.keys(pointerCacheRef.current);
             if (pointerIds.length >= 2) {
@@ -2403,10 +2614,23 @@ const resolveUserName = (raw) => {
                 try { setOverlayMode('scale'); } catch(_) {}
                 try { setOverlayMode('scale'); } catch(_) {}
             } else {
-                interactionStateRef.current.mode = null;
-                try { setOverlayMode(null); } catch(_) {}
+                // 1 Pointer -> Drag
+                interactionStateRef.current = {
+                    isDragging: true,
+                    isScaling: false,
+                    startX: clientX,
+                    startY: clientY,
+                    initialX: x,
+                    initialY: y,
+                    initialScale: scale,
+                    initialRotation: rotation,
+                    initialDistance: 0,
+                    initialAngle: 0,
+                    mode: 'drag'
+                };
+                try { setOverlayMode('drag'); } catch(_) {}
             }
-        }, [hasOverlay, x, y, scale, rotation]);
+        }, [hasOverlay, overlayEditEnabled, x, y, scale, rotation]);
 
         const handleInteractionMove = useCallback((e) => {
             if (!hasOverlay) return;
@@ -2497,8 +2721,32 @@ const resolveUserName = (raw) => {
             }
         }, [x, y, scale, rotation]);
 
-const handleImageReset = () => { onUpdateImageTransform(statusKey, { x: 0, y: 0, scale: 0.8, rotation: 0 }); }; 
-        return (<div className={containerClasses} style={{transition: 'all 0.25s ease'}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-10 shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{hasOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={handleImageReset} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+        const bumpScale = (delta) => {
+            const next = Math.round(clamp((scale || 1) + delta, 0.25, 2.5) * 100) / 100;
+            onUpdateImageTransform(statusKey, { scale: next });
+        };
+        const bumpRotation = (deltaDeg) => {
+            const next = Math.round(((rotation || 0) + deltaDeg) * 10) / 10;
+            onUpdateImageTransform(statusKey, { rotation: next });
+        };
+        const toggleOverlayEdit = () => {
+            setOverlayEditEnabled(v => !v);
+            // Mode reset, damit nichts "klebt"
+            try { hardEndInteraction(); } catch(_) {}
+        };
+        const handleImageReset = () => { onUpdateImageTransform(statusKey, { x: 0, y: 0, scale: 0.8, rotation: 0 }); }; 
+        return (<div className={containerClasses} style={{transition: 'all 0.25s ease'}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-10 shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{hasOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImageReset(); }} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}
+        {hasOverlay && (statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (
+            <>
+                <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); toggleOverlayEdit(); }} className={`p-1.5 rounded-full transition-colors ${overlayEditEnabled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`} title={overlayEditEnabled ? 'Bearbeiten aktiv: Angebot kann bewegt/skaliert werden (Zeichnen ist dann gesperrt). Klick zum Sperren.' : 'Bearbeiten aus: Zeichnen ist frei. Klick um Angebot zu bewegen/skaliert zu bearbeiten.'}><Icon d={ICONS.Lock} size={16}/></button>
+                <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); setOverlayEditEnabled(true); bumpScale(-0.1); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Verkleinern"><Icon d={ICONS.ZoomOut} size={16}/></button>
+                <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); setOverlayEditEnabled(true); bumpScale(0.1); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Vergrößern"><Icon d={ICONS.ZoomIn} size={16}/></button>
+                <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); setOverlayEditEnabled(true); bumpRotation(-5); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Drehen"><Icon d={ICONS.RotateCcw} size={16}/></button>
+                <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); (onClearOverlay||onClearImage)?.(statusKey); setOverlayEditEnabled(false); }} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={16}/></button>
+            </>
+        )}
+        {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
                     {followUpInfo && (followUpInfo.date || followUpInfo.time || followUpInfo.reason) ? (
                         <div className={`mt-3 mb-2 p-3 rounded-xl text-sm relative z-20 ${
                             status === 'open'
@@ -2521,7 +2769,7 @@ const handleImageReset = () => { onUpdateImageTransform(statusKey, { x: 0, y: 0,
                         </div>
                     ) : null}
 
-</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0 z-40" onPointerDown={handleInteractionStart} onPointerMove={handleInteractionMove} onPointerUp={handleInteractionEnd} onPointerCancel={handleInteractionEnd} onPointerLeave={handleInteractionEnd} onContextMenu={(e)=>{ e.preventDefault(); e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} style={{ transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'default')), pointerEvents: 'auto', touchAction: 'none' }}>{(statusKey === 'offer1' && window.__canvasHtmlOffer1) ? (<div style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none' }} dangerouslySetInnerHTML={{ __html: window.__canvasHtmlOffer1 }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} placeholder={inputMode === 'keyboard' ? 'Details digital eingeben...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/></div></div>); });
+</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0 z-40" onPointerDown={handleInteractionStart} onPointerMove={handleInteractionMove} onPointerUp={handleInteractionEnd} onPointerCancel={handleInteractionEnd} onPointerLeave={handleInteractionEnd} onContextMenu={(e)=>{ e.preventDefault(); e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} style={{ transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'default' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))), pointerEvents: overlayEditEnabled ? 'auto' : 'none', touchAction: overlayEditEnabled ? 'none' : 'auto' }}>{htmlOverlay ? (<div style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} placeholder={inputMode === 'keyboard' ? 'Details digital eingeben...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/></div></div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
         
@@ -2938,11 +3186,38 @@ const fileInputRef = useRef(null);
                 if (!payload) return;
                 const key = bundleTargetKey || 'offer1';
 
+                const calcCenteredY = () => {
+                    try {
+                        const containers = document.querySelectorAll('.offer-canvas-container');
+                        const idx = (key === 'offer2') ? 1 : (key === 'offer3') ? 2 : 0;
+                        const el = containers && containers[idx];
+                        const h = el ? (el.clientHeight || 0) : 0;
+                        // Overlay-Card ist ca. 320px hoch; wir starten mit scale 0.8 => ~256px.
+                        const approxOverlayH = 320 * 0.8;
+                        const y = Math.round((h > 0 ? (h - approxOverlayH) / 2 : 140));
+                        // Nie ganz oben, damit Icons frei bleiben
+                        return Math.max(110, y);
+                    } catch (e) {
+                        return 140;
+                    }
+                };
+
+                const applyCenteredY = () => {
+                    const y = calcCenteredY();
+                    setImageTransform(prev => ({
+                        ...prev,
+                        [key]: { ...(prev[key] || { x: 0, y: 0, scale: 0.8, rotation: 0 }), y, x: 0, scale: 0.8, rotation: 0 }
+                    }));
+                };
+
                 // 1) HTML-Import (Scharf)
                 if (typeof payload === 'object' && payload.kind === 'html') {
                     setCanvasHtml(prev => ({ ...prev, [key]: payload.html || null }));
                     setCanvasImages(prev => ({ ...prev, [key]: null })); // Bild leeren
-                    setImageTransform(prev => ({ ...prev, [key]: { x: 0, y: 0, scale: 0.8, rotation: 0 } }));
+
+                    // Nach Render: mittig positionieren (damit die Toolbar-Icons nicht verdeckt werden)
+                    requestAnimationFrame(() => requestAnimationFrame(applyCenteredY));
+
                     triggerToast('Bundle (HTML – scharf) eingefügt.');
                     setShowBundleModal(false);
                     return;
@@ -2952,7 +3227,10 @@ const fileInputRef = useRef(null);
                 if (typeof payload === 'string') {
                     setCanvasImages(prev => ({ ...prev, [key]: payload }));
                     setCanvasHtml(prev => ({ ...prev, [key]: null }));
-                    setImageTransform(prev => ({ ...prev, [key]: { x: 0, y: 0, scale: 0.8, rotation: 0 } }));
+
+                    // Nach Render: mittig positionieren
+                    requestAnimationFrame(() => requestAnimationFrame(applyCenteredY));
+
                     triggerToast('Bundle (Bild) eingefügt.');
                     setShowBundleModal(false);
                 }
@@ -2997,7 +3275,57 @@ const fileInputRef = useRef(null);
                 triggerToast(`Inhalt von ${key.toUpperCase()} entfernt.`);
             };
 
-            
+            // === PRINT: Hintergrund-Layer als IMG (druckt auch ohne "Hintergrundgrafiken") ===
+            const PRINT_BG_SVG = {
+                blue50: "data:image/svg+xml;charset=utf-8," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='#eff6ff'/></svg>"),
+                slate100: "data:image/svg+xml;charset=utf-8," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='#f1f5f9'/></svg>")
+            };
+
+            const injectPrintBgLayers = useCallback(() => {
+                try {
+                    const hosts = [];
+
+                    const addLayer = (el, src) => {
+                        if (!el || el.querySelector(':scope > img.print-bg-img-layer')) return;
+                        el.classList.add('print-bg-host');
+                        const img = document.createElement('img');
+                        img.className = 'print-bg-img-layer';
+                        img.setAttribute('aria-hidden', 'true');
+                        img.setAttribute('data-print-bg', '1');
+                        img.alt = '';
+                        img.src = src;
+                        el.insertBefore(img, el.firstChild);
+                        hosts.push(el);
+                    };
+
+                    document.querySelectorAll('.bg-blue-50').forEach(el => addLayer(el, PRINT_BG_SVG.blue50));
+                    document.querySelectorAll('.bg-slate-100').forEach(el => addLayer(el, PRINT_BG_SVG.slate100));
+
+                    return hosts;
+                } catch (e) {
+                    return [];
+                }
+            }, []);
+
+            const cleanupPrintBgLayers = useCallback(() => {
+                try {
+                    document.querySelectorAll('img.print-bg-img-layer[data-print-bg="1"]').forEach(img => img.remove());
+                    document.querySelectorAll('.print-bg-host').forEach(el => el.classList.remove('print-bg-host'));
+                } catch (e) { /* ignore */ }
+            }, []);
+
+            // Global vor/nach Print (falls User STRG+P direkt nutzt)
+            useEffect(() => {
+                const bp = () => injectPrintBgLayers();
+                const ap = () => cleanupPrintBgLayers();
+                window.addEventListener('beforeprint', bp);
+                window.addEventListener('afterprint', ap);
+                return () => {
+                    window.removeEventListener('beforeprint', bp);
+                    window.removeEventListener('afterprint', ap);
+                };
+            }, [injectPrintBgLayers, cleanupPrintBgLayers]);
+
             const requestPrint = useCallback((doPrint) => {
                 // Angebotsgültigkeit nur abfragen, wenn mindestens ein Bereich auf "Offen" steht.
                 const hasOpen = (() => {
@@ -3007,6 +3335,15 @@ const fileInputRef = useRef(null);
                 const hasText = !!String(getDisplayText('OfferValidUntil') || '').trim();
                 const hasInk = !!(drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
 
+                // PRINT-HINWEIS (Browser-Setting): Farben/Hintergründe werden nur gedruckt, wenn
+                // im Druckdialog "Hintergrundgrafiken" (bzw. "Hintergrundfarben und -bilder") aktiviert ist.
+                // Der CSS-Fix ist bereits aktiv, aber dieses Häkchen kann die Ausgabe trotzdem überschreiben.
+                try {
+                    if (typeof triggerToast === 'function') {
+                        triggerToast('Tipp (STRG+P): In Chrome/Edge unter „Weitere Einstellungen“ → „Hintergrundgrafiken“ aktivieren, damit Farben/Hintergründe gedruckt werden.');
+                    }
+                } catch(e) { /* ignore */ }
+
                 // Nur wenn "offen" UND noch kein Datum vorhanden -> Modal zeigen
                 if (hasOpen && !hasText && !hasInk) {
                     pendingPrintRef.current = (typeof doPrint === 'function') ? doPrint : (() => window.print());
@@ -3014,8 +3351,12 @@ const fileInputRef = useRef(null);
                     return;
                 }
 
+                // Wichtig: Layer injizieren, damit blaue/graue Hintergründe sicher gedruckt werden
+                // (auch wenn im Druckdialog "Hintergrundgrafiken" deaktiviert ist).
+                injectPrintBgLayers();
+
                 (typeof doPrint === 'function' ? doPrint : (() => window.print()))();
-            }, [drawnStrokes, getDisplayText, canvasStatus]);
+            }, [drawnStrokes, getDisplayText, canvasStatus, triggerToast, injectPrintBgLayers]);
 
             const downloadPdfBlob = (blob, filename) => {
                 try {
