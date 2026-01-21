@@ -1107,6 +1107,30 @@ body.pdf-share-mode .share-page:last-child{
 }
 
 
+
+/* =====================================================
+   PRINT PATCH v30 – Chrome: enforce 2 pages (tighter scale)
+   ===================================================== */
+@media print{
+  /* Make offer page slightly smaller in Chrome so it never spills to an extra page */
+  .print-offer-view{
+    zoom: 0.76 !important; /* was 0.80-ish in Chrome */
+    transform-origin: top left !important;
+  }
+
+  /* Prevent Kostenübersicht block from being pushed to a new page */
+  .grid.grid-cols-2.gap-4.mt-6{
+    margin-top: 0.5rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Reduce excessive vertical padding in offer page (Chrome is sensitive) */
+  .p-6.space-y-6{
+    padding: 1rem !important;
+  }
+}
+
 </style>
 
 <style id="export-hardlock-patch-v1">
@@ -1150,6 +1174,58 @@ body.pdf-share-mode *, body.pdf-share-mode *::before, body.pdf-share-mode *::aft
 
 /* Optional: manual export flag */
 body.exporting, body.exporting #root { filter:none !important; background:#fff !important; }
+</style>
+
+
+<!-- === PRINT CHROME FIX v28: force A4 landscape on ALL pages + hard page breaks === -->
+<style id="print-chrome-fix-v28">
+@page { size: A4 landscape; margin: 0.5cm; }
+
+/* Chrome sometimes applies @page only to first page when multiple conflicting print blocks exist.
+   This override enforces landscape sizing + deterministic 2-page layout. */
+@media print{
+  html, body{
+    width: 297mm !important;
+    max-width: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* Ensure our main print pages behave like real pages */
+  .print-page{
+    width: 287mm !important; /* 297mm - margins */
+    max-width: 287mm !important;
+    box-sizing: border-box !important;
+    break-after: page !important;
+    page-break-after: always !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .print-page:last-of-type{
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  /* Fallback: if your layout uses named wrappers instead of .print-page */
+  .print-situation-view, .print-offer-view{
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Avoid nested @media print side-effects: kill any accidental nested print zoom scaling */
+  .bundle-import-wrap{
+    zoom: 1 !important;
+    transform: none !important;
+  }
+}
+
+  /* v29: Chrome prints 4 pages because share-safe-stage (pdf-share pages) are still present.
+     For paper print (Ctrl+P) we hide the share stage completely. */
+  body.force-paper-print .share-safe-stage,
+  body.force-paper-print .share-safe-stage *{
+    display: none !important;
+  }
 </style>
 
 </head>
@@ -1785,8 +1861,62 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
     const buildHighResBundleHTML = (raw) => {
         const d = raw || {};
         // If the Aktionsmappe already provides the full card HTML (Tailwind classes), prefer it to keep the tile 1:1.
+        // IMPORTANT: Pencil-Selling does not have the Tailwind stylesheet from the Aktionsmappe.
+        // Therefore the original Laufzeit <select> can appear as an empty white bar. We inject a visible term badge
+        // (24/36 Monate) right above 'ANGEBOTSPREIS' and apply minimal inline styles for selects.
         if (d && typeof d.cardHTML === 'string' && d.cardHTML.trim()) {
-            return `<div class="bundle-import-wrap" style="max-width:100%;">${d.cardHTML}</div>`;
+            const escInline = (s) => String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+
+            const rawTermInline = (d.laufzeit || d.term || d.duration || d.monate || d.months || '').toString().trim();
+            const termBadgeInline = rawTermInline && !/mon/i.test(rawTermInline) ? (rawTermInline + ' Monate') : rawTermInline;
+
+            let html = String(d.cardHTML);
+
+            // Inject term badge above the label 'ANGEBOTSPREIS' (first occurrence only)
+            if (termBadgeInline) {
+                const badgeHTML = `<div data-ps-term-badge="1" style="display:inline-block;font-family:Arial,Helvetica,sans-serif;font-weight:900;font-size:13px;line-height:1;color:#fff;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.30);padding:6px 10px;border-radius:10px;margin-bottom:8px;">${escInline(termBadgeInline)}</div>`;
+                // Insert right before the text 'ANGEBOTSPREIS'
+                html = html.replace(/ANGEBOTSPREIS/i, `${badgeHTML}<div style="height:2px"></div>ANGEBOTSPREIS`);
+            }
+
+            const styleFix = `<style>
+              
+              /* === PS FIX: keep imported bundle card size consistent immediately === */
+              .bundle-import-wrap{
+                zoom: 0.78;
+              }
+              /* Fallback if zoom unsupported */
+              @supports not (zoom:1){
+                .bundle-import-wrap{
+                  transform: scale(0.78);
+                  transform-origin: top left;
+                }
+              }
+/* Ensure term selector is readable even without Tailwind */
+              .bundle-import-wrap select, .bundle-import-wrap option {
+                color:#ffffff !important;
+              }
+              .bundle-import-wrap select {
+                background: rgba(255,255,255,0.18) !important;
+                border: 1px solid rgba(255,255,255,0.30) !important;
+                border-radius: 10px !important;
+                padding: 6px 10px !important;
+                font-weight: 900 !important;
+                font-size: 13px !important;
+                appearance: none !important;
+                -webkit-appearance: none !important;
+              }
+              /* If a select still renders as an empty white rectangle, hide it when we injected a badge */
+              .bundle-import-wrap [data-ps-term-badge="1"] ~ select {
+                display:none !important;
+              }
+            </style>`;
+
+            return `<div class="bundle-import-wrap" style="max-width:100%;">${styleFix}${html}</div>`;
         }
         const esc = (s) => String(s ?? '')
             .replace(/&/g, '&amp;')
@@ -3688,9 +3818,11 @@ const fileInputRef = useRef(null);
             const handleImagePlacement = (targetCanvasKey) => { if (currentImagePayload) { setCanvasImages(prev => ({ ...prev, [targetCanvasKey]: currentImagePayload.url })); setImageTransform(prev => ({ ...prev, [targetCanvasKey]: { x: 0, y: 0, scale: 0.8, rotation: 0 } })); triggerToast(`Bild "${currentImagePayload.name}" zu ${targetCanvasKey.toUpperCase()} hinzugefügt.`); } setIsImageSelectModalOpen(false); setCurrentImagePayload(null); };
             const handleClearImage = (key) => { setCanvasImages(prev => ({ ...prev, [key]: null })); setImageTransform(prev => ({ ...prev, [key]: { x: 0, y: 0, scale: 1.0, rotation: 0 } })); triggerToast(`Bild von ${key.toUpperCase()} entfernt.`); };
             const handleClearOverlay = (key) => {
+                // Wichtig: Beim Entfernen NICHT den Transform auf 1.0 resetten – das verursacht ein kurzes "Großziehen"
+                // durch die Transition. Wir behalten den aktuellen Transform (oder Default), damit es visuell sofort verschwindet.
                 setCanvasImages(prev => ({ ...prev, [key]: null }));
                 setCanvasHtml(prev => ({ ...prev, [key]: null }));
-                setImageTransform(prev => ({ ...prev, [key]: { x: 0, y: 0, scale: 1.0, rotation: 0 } }));
+                setImageTransform(prev => ({ ...prev, [key]: (prev && prev[key]) ? prev[key] : { x: 0, y: 0, scale: 0.8, rotation: 0 } }));
                 triggerToast(`Inhalt von ${key.toUpperCase()} entfernt.`);
             };
 
@@ -5251,6 +5383,63 @@ const handlePDFShare = async () => {
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+
+      // === v24: Bundle-Laufzeit Dropdown/Badge sichtbar machen (Tailwind-Klassen fehlen im Pencil-Selling) ===
+      (function(){
+        function fixTermSelectStyles(scope){
+          try{
+            scope = scope || document;
+            const nodes = Array.from(scope.querySelectorAll('select,button,div,span'));
+            const candidates = nodes.filter(el=>{
+              const txt = (el.innerText || '').trim();
+              if (/^(24|36)\s*Monate\b/i.test(txt)) return true;
+              if (el.tagName === 'SELECT'){
+                const opts = Array.from(el.options || []);
+                return opts.some(o => /Monat/i.test((o.textContent||'')));
+              }
+              return false;
+            });
+
+            candidates.forEach(el=>{
+              // Grundsätzlich lesbar machen
+              el.style.color = '#fff';
+              el.style.textShadow = '0 1px 0 rgba(0,0,0,0.12)';
+
+              // Für echte Controls: pill-style
+              if (el.tagName === 'SELECT' || el.tagName === 'BUTTON'){
+                el.style.background = 'rgba(255,255,255,0.14)';
+                el.style.border = '1px solid rgba(255,255,255,0.75)';
+                el.style.borderRadius = '999px';
+                el.style.padding = '6px 10px';
+                el.style.fontWeight = '700';
+                el.style.fontSize = '12px';
+                el.style.lineHeight = '1';
+                el.style.outline = 'none';
+                el.style.webkitAppearance = 'none';
+                el.style.appearance = 'none';
+              } else {
+                el.style.fontWeight = '700';
+              }
+            });
+          }catch(e){/* ignore */}
+        }
+
+        const obs = new MutationObserver(muts=>{
+          for(const m of muts){
+            for(const n of m.addedNodes){
+              if(n && n.nodeType===1){
+                fixTermSelectStyles(n);
+              }
+            }
+          }
+        });
+
+        window.addEventListener('DOMContentLoaded', ()=>{
+          fixTermSelectStyles(document);
+          obs.observe(document.body, {subtree:true, childList:true});
+        });
+      })();
+
     </script>
 </body>
 </html>
