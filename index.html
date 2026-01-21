@@ -1131,6 +1131,25 @@ body.pdf-share-mode .share-page:last-child{
   }
 }
 
+
+        /* === PORTRAIT TABLET/MOBILE: Stack canvases vertically regardless of width === */
+        @media (orientation: portrait){
+            .offer-print-grid{
+                display: flex !important;
+                flex-direction: column !important;
+                grid-template-columns: none !important;
+                overflow-y: auto !important;
+            }
+            .offer-print-grid > div{
+                width: 100% !important;
+            }
+            /* Make sure the cost section is not sticky/fixed in portrait */
+            .cost-overview-print{
+                position: static !important;
+                bottom: auto !important;
+            }
+        }
+
 </style>
 
 <style id="export-hardlock-patch-v1">
@@ -3080,7 +3099,7 @@ const resolveUserName = (raw) => {
                     }
                 };
 
-                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; if (textSize === 'small') classes += "text-base "; else if (textSize === 'medium') classes += "text-lg "; else if (textSize === 'large') classes += "text-xl "; if (textStyle.bold) classes += "font-black "; else classes += "font-medium "; if (textStyle.italic) classes += "italic "; classes += inputMode === 'pen' ? 'pointer-events-none text-slate-800' : 'pointer-events-auto text-slate-800'; return classes; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(false);
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[420px] md:min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; if (textSize === 'small') classes += "text-base "; else if (textSize === 'medium') classes += "text-lg "; else if (textSize === 'large') classes += "text-xl "; if (textStyle.bold) classes += "font-black "; else classes += "font-medium "; if (textStyle.italic) classes += "italic "; classes += inputMode === 'pen' ? 'pointer-events-none text-slate-800' : 'pointer-events-auto text-slate-800'; return classes; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(false);
                 useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
 
         // Sobald ein neues Bundle/Bild eingefügt wurde: Edit-Modus wieder deaktivieren, damit Zeichnen sofort funktioniert.
@@ -5278,8 +5297,15 @@ const handlePDFShare = async () => {
 
                     <div className={`flex-1 w-full relative bg-[#f0f6ff] ${view === 'offer' ? 'flex overflow-y-auto' : 'hidden'} print-offer-view`}>
                         <div className="w-full flex-1 flex flex-col space-y-6 min-h-0 p-4 md:p-8">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full offer-print-grid"> 
-                                {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }) => (<OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />))}
+                            <div className="flex flex-col gap-6 w-full md:grid md:grid-cols-3 offer-print-grid"> 
+                                {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }) => {
+                                    const orderClass = key === 'offer1' ? 'order-1' : key === 'offer2' ? 'order-2' : 'order-3';
+                                    return (
+                                        <div className={orderClass}>
+                                            <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shrink-0 cost-overview-print">
