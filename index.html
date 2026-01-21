@@ -1781,6 +1781,409 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
 
     const targetLabel = (targetKey === 'offer2') ? 'Canva 2' : (targetKey === 'offer3') ? 'Canva 3' : 'Canva 1';
 
+    // Build a sharp, self-contained Bundle card HTML from a data payload (also used for DOM-extraction fallback)
+    const buildHighResBundleHTML = (raw) => {
+        const d = raw || {};
+        // If the Aktionsmappe already provides the full card HTML (Tailwind classes), prefer it to keep the tile 1:1.
+        if (d && typeof d.cardHTML === 'string' && d.cardHTML.trim()) {
+            return `<div class="bundle-import-wrap" style="max-width:100%;">${d.cardHTML}</div>`;
+        }
+        const esc = (s) => String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+
+        const titel = esc(d.geraet || d.titel || d.bezeichnung || 'Bundle Angebot');
+        const tarifName = esc(d.tarif || d.tarifName || d.artikelName || '');
+        const preis = esc(d.preis || d.angebotspreis || '0,00 €');
+        const validUntil = esc(d.validUntil || '');
+        const detailsHTML = (d.detailsHTML || '');
+
+        // Laufzeit/Term -> Badge (damit 24/36 korrekt sichtbar ist)
+        const rawTerm = (d.laufzeit || d.term || d.duration || d.monate || d.months || '').toString().trim();
+        const termBadge = rawTerm && !/mon/i.test(rawTerm) ? (rawTerm + ' Monate') : rawTerm;
+
+        const baseBadges = Array.isArray(d.badges) ? d.badges : [];
+        const badgesArr = (termBadge ? [termBadge, ...baseBadges] : baseBadges)
+            .filter(Boolean)
+            .map(esc)
+            .slice(0, 6);
+
+        const images = Array.isArray(d.images) ? d.images.slice(0, 3).map(esc)
+            : (d.bildUrl ? [esc(d.bildUrl)] : (d.bild ? [esc(d.bild)] : []));
+
+        // NOTE (v22): The Aktionsmappe often renders the SIM tile as an inline SVG / background
+        // (not an <img>). Our importer extracts only <img> tags, so the 3rd picture can be missing
+        // in Pencil-Selling even though it is visible in the popup.
+        // We add a conservative fallback SIM image ONLY for o2 bundle cards when exactly 2 images
+        // were found.
+        const SIM_CARD_DATA_URI = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+            <defs>
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#e5e7eb"/>
+                <stop offset="1" stop-color="#f8fafc"/>
+              </linearGradient>
+            </defs>
+            <rect x="28" y="42" width="200" height="172" rx="18" fill="url(#g)" stroke="#94a3b8" stroke-width="6"/>
+            <path d="M176 42 L228 94 L228 42 Z" fill="#cbd5e1"/>
+            <rect x="72" y="96" width="112" height="88" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="6"/>
+            <rect x="92" y="118" width="40" height="20" rx="6" fill="#f59e0b"/>
+            <rect x="142" y="118" width="40" height="20" rx="6" fill="#f59e0b"/>
+            <rect x="92" y="148" width="90" height="20" rx="6" fill="#fbbf24"/>
+          </svg>
+        `);
+
+        const titleOrTarif = `${(d.geraet || d.titel || d.bezeichnung || '')} ${(d.tarif || d.tarifName || '')}`.toLowerCase();
+        const isLikelyO2Bundle = /\bo2\b/.test(titleOrTarif) || /o2\s*mobile/.test(titleOrTarif);
+        if (isLikelyO2Bundle && images.length === 2) images.push(SIM_CARD_DATA_URI);
+
+        const badgesHTML = badgesArr.map(b => `
+            <span style="
+                display:inline-flex;align-items:center;gap:6px;
+                padding:6px 10px;border-radius:999px;
+                background:#e7f2ff;color:#0b4aa2;
+                font-size:12px;font-weight:800;
+                border:1px solid #cfe5ff;
+            ">${b}</span>
+        `).join('');
+
+        const imagesHTML = images.map(src => `
+            <div style="
+                background:#fff;border-radius:10px;
+                border:1px solid #e5e7eb;
+                padding:10px;
+                width:220px;height:220px;
+                display:flex;align-items:center;justify-content:center;
+            ">
+              <img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;" />
+            </div>
+        `).join('');
+
+        return `
+          <div style="
+            width:100%; max-width:920px; margin:0 auto;
+            background:#fff; border-radius:18px;
+            border:2px solid #0b1e42;
+            overflow:hidden;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+            pointer-events:none; user-select:none;
+          ">
+            <div style="
+              background:#173a7a;
+              color:#fff;
+              padding:14px 18px;
+              display:flex;
+              align-items:center;
+              justify-content:space-between;
+              gap:14px;
+            ">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <span style="
+                  width:28px;height:28px;
+                  border-radius:8px;
+                  background:rgba(255,255,255,.14);
+                  display:flex;align-items:center;justify-content:center;
+                  font-weight:900;
+                ">📦</span>
+                <div style="
+                  font-size:22px;
+                  font-weight:1000;
+                  white-space:nowrap;
+                  overflow:hidden;
+                  text-overflow:ellipsis;
+                  max-width:690px;
+                ">${titel}</div>
+              </div>
+
+              ${validUntil ? `
+                <div style="
+                  padding:6px 10px;
+                  border-radius:10px;
+                  background:rgba(255,255,255,.12);
+                  border:1px solid rgba(255,255,255,.22);
+                  font-weight:800;
+                  font-size:12px;
+                  white-space:nowrap;
+                ">Bis: ${validUntil}</div>
+              ` : ``}
+            </div>
+
+            <div style="padding:18px 18px 16px 18px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;">
+                <div style="flex:1;min-width:0;">
+                  ${tarifName ? `<div style="font-size:22px;font-weight:1000;color:#0b1e42;">${tarifName}</div>` : ``}
+                  ${badgesArr.length ? `<div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">${badgesHTML}</div>` : ``}
+                </div>
+
+                <div style="
+                  width:170px;flex:0 0 170px;
+                  background:#dc2626;
+                  border-radius:12px;
+                  color:#fff;
+                  padding:12px 14px;
+                  box-shadow:0 8px 20px rgba(0,0,0,.10);
+                  text-align:center;
+                ">
+                  <div style="font-size:11px;font-weight:900;opacity:.95;letter-spacing:.06em;">PREIS</div>
+                  <div style="font-size:30px;font-weight:1100;line-height:1.1;margin-top:6px;">${preis}</div>
+                </div>
+              </div>
+
+              ${images.length ? `
+                <div style="
+                  margin-top:16px;
+                  display:flex;
+                  justify-content:center;
+                  gap:18px;
+                  flex-wrap:wrap;
+                ">${imagesHTML}</div>
+              ` : ``}
+
+              ${detailsHTML ? `
+                <div style="
+                  margin-top:18px;
+                  border-radius:14px;
+                  border:1px solid #e5e7eb;
+                  background:#f8fafc;
+                  padding:14px 16px;
+                ">
+                  <div style="
+                    border-left:4px solid #2563eb;
+                    padding-left:12px;
+                    color:#0f172a;
+                    font-size:14px;
+                    line-height:1.35;
+                  ">${detailsHTML}</div>
+                </div>
+              ` : ``}
+            </div>
+          </div>
+        `;
+    };
+
+    // Fallback: read the current selection (24/36 Monate) directly from the embedded Bundle page
+    const tryExtractBundleDataFromIframe = () => {
+        try {
+            const doc = iframeRef.current?.contentDocument || iframeRef.current?.contentWindow?.document;
+            if (!doc) return null;
+
+            // 1) Laufzeit (aktuelle Auswahl 24/36 Monate)
+            let termText = '';
+            let termAnchor = null;
+
+            // a) Klassisch: <select> (falls vorhanden)
+            const selects = Array.from(doc.querySelectorAll('select'));
+            const termSel = selects.find(s => {
+                const name = ((s.getAttribute('name')||'') + ' ' + (s.getAttribute('id')||'') + ' ' + (s.getAttribute('class')||'')).toLowerCase();
+                return /lauf|term|monat|dauer/.test(name);
+            });
+            if (termSel) {
+                const opt = termSel.options[termSel.selectedIndex];
+                termText = (opt && opt.textContent ? opt.textContent : '').trim();
+                termAnchor = termSel;
+            }
+
+            // b) UI-Dropdown als Button/Badge (dein Fall: "36 Monate" sichtbar, aber kein <select>)
+            if (!termText) {
+                const rx = /\b(24|36)\s*monate\b/i;
+                const candidates = Array.from(doc.querySelectorAll('*'))
+                    .filter(el => {
+                        if (!el) return false;
+                        const t = (el.textContent || '').trim();
+                        if (!t || t.length > 30) return false;
+                        if (!rx.test(t)) return false;
+                        try { return el.offsetParent !== null; } catch (_) { return false; }
+                    });
+
+                if (candidates.length) {
+                    // Nimm das Element mit dem kuerzesten, passendsten Text (meist genau "36 Monate")
+                    candidates.sort((a,b) => ((a.textContent||'').trim().length) - ((b.textContent||'').trim().length));
+                    termText = (candidates[0].textContent || '').trim();
+                    termAnchor = candidates[0];
+                }
+            }
+
+// 2) Preis (nur der aktuell sichtbare Preis zur gewaehlten Laufzeit)
+            let priceText = '';
+            const euroRe = /\b\d{1,3}(?:[\.,]\d{2})\s?€\b/;
+
+            const isVisibleEl = (el) => {
+                try {
+                    if (!el) return false;
+                    const cs = doc.defaultView ? doc.defaultView.getComputedStyle(el) : null;
+                    if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0')) return false;
+                    const r = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0, height: 0 };
+                    return (r.width > 0 && r.height > 0);
+                } catch (e) { return false; }
+            };
+
+            const pickVisiblePrice = (root) => {
+                try {
+                    const els = Array.from((root || doc.body).querySelectorAll('span,div,p,strong,b,td,li,h1,h2,h3,h4'))
+                        .filter(isVisibleEl);
+                    const hits = [];
+                    for (const el of els) {
+                        const t = (el.textContent || '').replace(/\s+/g,' ').trim();
+                        if (!t || t.length > 80) continue;
+                        const m = t.match(euroRe);
+                        if (m) hits.push({ price: m[0], len: t.length, text: t });
+                    }
+                    if (!hits.length) return '';
+                    hits.sort((a,b)=> a.len - b.len);
+                    return hits[0].price || '';
+                } catch (e) { return ''; }
+            };
+
+            // Erst im Umfeld der Laufzeit-Auswahl suchen (damit 36M nicht auf 24M faellt)
+            let scope = doc.body;
+            try {
+                if (termSel && termSel.closest) {
+                    scope = termSel.closest('section,form,main,article,div,[data-bundle-card],[data-bundle],[data-bundle-root],[data-tile],[role="dialog"]') || termSel.parentElement || doc.body;
+                }
+            } catch(e) {}
+
+            // Robust: Preis zur aktuell gewaehlten Laufzeit finden
+            const termNum = (termText && termText.match(/\b(24|36)\b/)) ? (termText.match(/\b(24|36)\b/)[1]) : '';
+            const termRegex = termNum ? new RegExp('\\b' + termNum + '\\b.*monat', 'i') : null;
+
+            const collectVisiblePrices = (root) => {
+                const prices = [];
+                try {
+                    const walker = doc.createTreeWalker(root || doc.body, NodeFilter.SHOW_TEXT, null);
+                    let n; let guard = 0;
+                    while ((n = walker.nextNode()) && guard < 6000) {
+                        guard += 1;
+                        const txt = (n.nodeValue || '').replace(/\s+/g, ' ').trim();
+                        if (!txt) continue;
+                        const mm = txt.match(euroRe);
+                        if (!mm) continue;
+                        const el = n.parentElement;
+                        if (!isVisibleEl(el)) continue;
+                        prices.push({ value: mm[0], el });
+                    }
+                } catch(e) {}
+                return prices;
+            };
+
+            const findBestPriceNearTerm = () => {
+                if (!termRegex) return '';
+                let best = '';
+                try {
+                    // 1) finde sichtbare Elemente, die "24/36 Monate" anzeigen
+                    const termEls = Array.from((scope || doc.body).querySelectorAll('*'))
+                        .filter(el => {
+                            if (!isVisibleEl(el)) return false;
+                            const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+                            return t && termRegex.test(t);
+                        })
+                        .slice(0, 40);
+
+                    // 2) pro Term-Element: im naechsten "Card/Tile"-Container Preis suchen
+                    for (const tel of termEls) {
+                        const container =
+                            tel.closest('[data-bundle-card],[data-bundle],[data-bundle-root],article,section,main,div') || scope || doc.body;
+
+                        const prices = collectVisiblePrices(container);
+                        if (!prices.length) continue;
+
+                        // Preis, der im DOM nach dem Term-Element kommt, bevorzugen
+                        const after = prices.find(p => {
+                            try { return !!(tel.compareDocumentPosition(p.el) & Node.DOCUMENT_POSITION_FOLLOWING); }
+                            catch(e) { return false; }
+                        });
+                        best = (after ? after.value : prices[0].value) || best;
+                        if (best) return best;
+                    }
+                } catch(e) {}
+                return best;
+            };
+
+            priceText = findBestPriceNearTerm() || pickVisiblePrice(scope) || pickVisiblePrice(doc.body);
+
+            // Heuristik: Wenn zwei Preise existieren und Laufzeit=36, nimm oft den guenstigeren (falls DOM nicht eindeutig)
+            if (termNum === '36') {
+                try {
+                    const prices = collectVisiblePrices(scope);
+                    if (prices && prices.length >= 2) {
+                        const nums = prices.map(p => ({ raw: p.value, num: parseFloat(p.value.replace('€','').replace('.','').replace(',','.')) }))
+                                         .filter(p => !isNaN(p.num))
+                                         .sort((a,b) => a.num - b.num);
+                        if (nums.length) priceText = nums[0].raw;
+                    }
+                } catch(e) {}
+            }
+
+            // Letzter Fallback: TreeWalker (falls alles als Canvas/ohne sichtbare Nodes gerendert ist)
+            if (!priceText) {
+                const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
+                let n; let seen = 0;
+                while ((n = walker.nextNode()) && seen < 3500) {
+                    seen += 1;
+                    const s = (n.nodeValue || '').replace(/\s+/g, ' ').trim();
+                    if (!s) continue;
+                    const m = s.match(euroRe);
+                    if (m) { priceText = m[0]; break; }
+                }
+            }
+
+            // 3) Titel (prefer header-like prominent text)
+            let titleText = '';
+            const headings = Array.from(doc.querySelectorAll('h1,h2,h3'));
+            if (headings.length) {
+                titleText = (headings[0].textContent || '').trim();
+            }
+            if (!titleText) {
+                // fallback: longest "card header" text
+                const candidates = Array.from(doc.querySelectorAll('div,span,strong'))
+                    .map(el => (el.textContent || '').trim())
+                    .filter(t => t.length >= 12 && t.length <= 90);
+                titleText = candidates.sort((a,b)=>b.length-a.length)[0] || 'Bundle Angebot';
+            }
+
+            // 4) Tarif line (first short bold-ish line with "o2")
+            let tarifText = '';
+            const allTextEls = Array.from(doc.querySelectorAll('div,span,strong,p'));
+            const o2Line = allTextEls.map(el => (el.textContent || '').replace(/\s+/g,' ').trim())
+                .find(t => /^o2\s+/i.test(t) && t.length <= 40);
+            if (o2Line) tarifText = o2Line;
+
+            // 5) Images (up to 3 big visible imgs)
+            const imgs = Array.from(doc.querySelectorAll('img'))
+                .filter(img => {
+                    const src = img.getAttribute('src') || '';
+                    if (!src) return false;
+                    const r = img.getBoundingClientRect ? img.getBoundingClientRect() : {width:0,height:0};
+                    return (r.width >= 60 && r.height >= 60);
+                })
+                .slice(0, 3)
+                .map(img => img.getAttribute('src'));
+
+            // 6) Details (lines with GB/Internet/Partnerkarte)
+            const detailLines = allTextEls
+                .map(el => (el.textContent || '').replace(/\s+/g,' ').trim())
+                .filter(t => /\b(GB|Internet|Partnerkarte)\b/i.test(t) && t.length <= 60);
+            const uniq = []
+            for (const t of detailLines) {
+                if (!uniq.includes(t)) uniq.push(t);
+                if (uniq.length >= 6) break;
+            }
+            const detailsHTML = uniq.map(t => `<div>${t}</div>`).join('');
+
+            return {
+                titel: titleText,
+                tarif: tarifText,
+                preis: priceText,
+                term: termText,
+                detailsHTML,
+                images: imgs,
+            };
+        } catch (e) {
+            return null;
+        }
+    };
+
 
     useEffect(() => {
         if (!isOpen) return;
@@ -1844,7 +2247,11 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
 
     const gotAutoImportRef = useRef(false);
 
-    // Listen for screenshot messages from the iframe (optional: if the Bundle page supports it)
+    
+    const lastBundleDataRef = useRef(null);
+    const lastBundleTsRef = useRef(0);
+    const pendingBundleReqRef = useRef(null);
+// Listen for screenshot messages from the iframe (optional: if the Bundle page supports it)
     // Robust: accepts {dataUrl} or {payload}. Also verifies sender (source window) + origin.
     useEffect(() => {
         if (!isOpen) return;
@@ -1881,149 +2288,21 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
 
                 // 2) NEW: Data transfer -> echtes HTML (scharf) in Canva 1
                 if (d.type === 'BUNDLE_DATA_TRANSFER') {
-                    const esc = (s) => String(s ?? '')
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;');
+                    const __now = Date.now();
+                    lastBundleDataRef.current = d;
+                    lastBundleTsRef.current = __now;
+                    // If we are waiting for a fresh export, resolve when matching requestId or newer than request time
+                    const __pend = pendingBundleReqRef.current;
+                    if (__pend && !__pend.resolved) {
+                        const matchId = (__pend.id && d.requestId && String(d.requestId) === String(__pend.id));
+                        const newer = __now > (__pend.t0 || 0);
+                        if (matchId || newer) {
+                            __pend.resolved = true;
+                            try { __pend.resolve(d); } catch(_) {}
+                        }
+                    }
 
-                    const titel = esc(d.geraet || d.titel || d.bezeichnung || 'Bundle Angebot');
-                    const tarifName = esc(d.tarif || d.tarifName || d.artikelName || '');
-                    const preis = esc(d.preis || d.angebotspreis || '0,00 €');
-                    const validUntil = esc(d.validUntil || '');
-                    const detailsHTML = (d.detailsHTML || '');
-
-                    const badges = Array.isArray(d.badges) ? d.badges.slice(0, 6).map(esc) : [];
-                    const images = Array.isArray(d.images) ? d.images.slice(0, 2).map(esc) : (d.bildUrl ? [esc(d.bildUrl)] : (d.bild ? [esc(d.bild)] : []));
-
-                    const badgesHTML = badges.map(b => `
-                        <span style="
-                            display:inline-flex;align-items:center;gap:6px;
-                            padding:6px 10px;border-radius:999px;
-                            background:#e7f2ff;color:#0b4aa2;
-                            font-size:12px;font-weight:800;
-                            border:1px solid #cfe5ff;
-                        ">${b}</span>
-                    `).join('');
-
-                    const imagesHTML = images.map(src => `
-                        <div style="
-                            background:#fff;border-radius:10px;
-                            border:1px solid #e5e7eb;
-                            padding:10px;
-                            width:220px;height:220px;
-                            display:flex;align-items:center;justify-content:center;
-                        ">
-                          <img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;" />
-                        </div>
-                    `).join('');
-
-                    // ✅ 1:1 Card-Optik (wie Bundle-Seite) + Fix fürs „Händchen“ (pointer-events:none)
-                    const highResHTML = `
-                      <div style="
-                        width:100%; max-width:920px; margin:0 auto;
-                        background:#fff; border-radius:18px;
-                        border:2px solid #0b1e42;
-                        overflow:hidden;
-                        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-                        pointer-events:none; user-select:none;
-                      ">
-                        <!-- Header -->
-                        <div style="
-                          background:#173a7a;
-                          color:#fff;
-                          padding:14px 18px;
-                          display:flex;
-                          align-items:center;
-                          justify-content:space-between;
-                          gap:14px;
-                        ">
-                          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-                            <span style="
-                              width:28px;height:28px;
-                              border-radius:8px;
-                              background:rgba(255,255,255,.14);
-                              display:flex;align-items:center;justify-content:center;
-                              font-weight:900;
-                            ">📦</span>
-                            <div style="
-                              font-size:22px;
-                              font-weight:1000;
-                              white-space:nowrap;
-                              overflow:hidden;
-                              text-overflow:ellipsis;
-                              max-width:690px;
-                            ">${titel}</div>
-                          </div>
-
-                          ${validUntil ? `
-                            <div style="
-                              padding:6px 10px;
-                              border-radius:10px;
-                              background:rgba(255,255,255,.12);
-                              border:1px solid rgba(255,255,255,.22);
-                              font-weight:800;
-                              font-size:12px;
-                              white-space:nowrap;
-                            ">Bis: ${validUntil}</div>
-                          ` : ``}
-                        </div>
-
-                        <!-- Content -->
-                        <div style="padding:18px 18px 16px 18px;">
-                          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;">
-                            <div style="flex:1;min-width:0;">
-                              ${tarifName ? `<div style="font-size:22px;font-weight:1000;color:#0b1e42;">${tarifName}</div>` : ``}
-                              ${badges.length ? `<div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">${badgesHTML}</div>` : ``}
-                            </div>
-
-                            <div style="
-                              width:170px;flex:0 0 170px;
-                              background:#dc2626;
-                              border-radius:12px;
-                              color:#fff;
-                              padding:12px 14px;
-                              box-shadow:0 8px 20px rgba(0,0,0,.10);
-                              text-align:center;
-                            ">
-                              <div style="font-size:11px;font-weight:900;opacity:.95;letter-spacing:.06em;">PREIS</div>
-                              <div style="font-size:30px;font-weight:1100;line-height:1.1;margin-top:6px;">${preis}</div>
-                            </div>
-                          </div>
-
-                          <!-- Images -->
-                          ${images.length ? `
-                            <div style="
-                              margin-top:16px;
-                              display:flex;
-                              justify-content:center;
-                              gap:18px;
-                              flex-wrap:wrap;
-                            ">${imagesHTML}</div>
-                          ` : ``}
-
-                          <!-- Details -->
-                          ${detailsHTML ? `
-                            <div style="
-                              margin-top:18px;
-                              border-radius:14px;
-                              border:1px solid #e5e7eb;
-                              background:#f8fafc;
-                              padding:14px 16px;
-                            ">
-                              <div style="
-                                border-left:4px solid #2563eb;
-                                padding-left:12px;
-                                color:#0f172a;
-                                font-size:14px;
-                                line-height:1.35;
-                              ">${detailsHTML}</div>
-                            </div>
-                          ` : ``}
-                        </div>
-                      </div>
-                    `;
-
+const highResHTML = buildHighResBundleHTML(d);
                     gotAutoImportRef.current = true;
                     setPendingImport({ kind: "html", value: highResHTML });
                     if (typeof triggerToast === "function") triggerToast("Bundle geladen – bitte mit + Uebernehmen in " + targetLabel + " einfuegen.");
@@ -2086,15 +2365,93 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
             const win = iframeRef.current?.contentWindow;
             let targetOrigin = '*';
             try { targetOrigin = currentUrl ? (new URL(currentUrl)).origin : (url ? (new URL(url)).origin : '*'); } catch(_) {}
-            if (win) win.postMessage({ type: 'REQUEST_BUNDLE_SCREENSHOT' }, targetOrigin);
+            if (win) {
+                // Try to request structured data first (if supported), then screenshot fallback
+                win.postMessage({ type: 'REQUEST_BUNDLE_DATA' }, targetOrigin);
+                win.postMessage({ type: 'REQUEST_BUNDLE_SCREENSHOT' }, targetOrigin);
+            }
         } catch (_) {}
+    };
+
+    const requestIframeBundleData = (requestId) => {
+        try {
+            const win = iframeRef.current?.contentWindow;
+            let targetOrigin = '*';
+            try { targetOrigin = currentUrl ? (new URL(currentUrl)).origin : (url ? (new URL(url)).origin : '*'); } catch(_) {}
+            if (win) {
+                // Ask the embedded bundle page to re-export the CURRENT selection (term/price) as data transfer
+                win.postMessage({ type: 'REQUEST_BUNDLE_DATA_TRANSFER', requestId }, targetOrigin);
+                // Backward compatible aliases (in case the bundle page uses another name)
+                win.postMessage({ type: 'REQUEST_BUNDLE_DATA', requestId }, targetOrigin);
+                win.postMessage({ type: 'EXPORT_BUNDLE_DATA', requestId }, targetOrigin);
+            }
+        } catch (_) {}
+    };
+
+    const waitForFreshBundleData = (t0, requestId, timeoutMs = 1200) => {
+        return new Promise((resolve) => {
+            // If we already have newer data, resolve immediately
+            if (lastBundleTsRef.current && lastBundleTsRef.current > t0) {
+                return resolve(lastBundleDataRef.current);
+            }
+            let done = false;
+            const timer = setTimeout(() => {
+                if (done) return;
+                done = true;
+                // cleanup pending
+                if (pendingBundleReqRef.current && pendingBundleReqRef.current.id === requestId) {
+                    pendingBundleReqRef.current = null;
+                }
+                resolve(null);
+            }, timeoutMs);
+
+            pendingBundleReqRef.current = {
+                id: requestId,
+                t0,
+                resolved: false,
+                resolve: (d) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
+                    pendingBundleReqRef.current = null;
+                    resolve(d);
+                }
+            };
+        });
     };
 
     const handleImportClick = async () => {
         if (isWorking) return;
         setIsWorking(true);
 
-        // 1) Try postMessage flow (works only if the Bundle page implements it)
+        
+        // Always request a fresh data export first (so 24/36 Monate is correct)
+        const __reqId = String(Date.now()) + '_' + Math.random().toString(16).slice(2);
+        const __t0 = Date.now();
+        gotAutoImportRef.current = false;
+        requestIframeBundleData(__reqId);
+        // Wait a moment for BUNDLE_DATA_TRANSFER to arrive (if supported)
+        await waitForFreshBundleData(__t0, __reqId, 1300);
+        if (gotAutoImportRef.current) {
+            // We already imported via BUNDLE_DATA_TRANSFER handler
+            setIsWorking(false);
+            return;
+        }
+
+// 0) BEST: Same-origin DOM-extraction (reads the CURRENT 24/36 selection from the iframe)
+        try {
+            const extracted = tryExtractBundleDataFromIframe();
+            if (extracted) {
+                gotAutoImportRef.current = true;
+                const highResHTML = buildHighResBundleHTML(extracted);
+                setPendingImport({ kind: 'html', value: highResHTML });
+                if (typeof triggerToast === 'function') triggerToast('Bundle geladen – bitte mit + Uebernehmen in ' + targetLabel + ' einfuegen.');
+                setIsWorking(false);
+                return;
+            }
+        } catch(_) {}
+
+        // 1) Try postMessage flow (works if the Bundle page implements it)
         requestIframeScreenshot();
 
         // 2) Short wait for a response; if none -> fallback to manual file import
@@ -2541,7 +2898,48 @@ const resolveUserName = (raw) => {
             ctx.globalAlpha = 1; 
         };
 
-        const OfferCanvas = React.memo(({ canvasRef, label, icon, statusKey, status, setStatus,  inputMode, startDrawing, draw, stopDrawing, textValue, handleTextChange, textStyle, textSize, drawnStrokes, setDrawnStrokes, scaleRef, triggerRedraw, image, onClearImage, onClearOverlay, imageTransform, onUpdateImageTransform , followUpInfo, onOpenBundleModal}) => { const SIZE_DIFFERENCE_THRESHOLD = 5; const toggleStatus = (newStatus) => {
+        const OfferCanvas = React.memo(({
+            canvasRef, label, icon, statusKey, status, setStatus,
+            inputMode, startDrawing, draw, stopDrawing,
+            textValue, handleTextChange,
+            textStyle, textSize,
+            drawnStrokes, setDrawnStrokes,
+            scaleRef, triggerRedraw,
+            image, onClearImage, onClearOverlay,
+            imageTransform, onUpdateImageTransform,
+            followUpInfo, onOpenBundleModal,
+            triggerToast
+        }) => {
+                const SIZE_DIFFERENCE_THRESHOLD = 5;
+
+                // Overlay-HTML ist global gespiegelt (wird unten in Window gesetzt)
+                const htmlGlobalKey = (statusKey === 'offer1') ? '__canvasHtmlOffer1' : (statusKey === 'offer2') ? '__canvasHtmlOffer2' : (statusKey === 'offer3') ? '__canvasHtmlOffer3' : null;
+                const htmlOverlay = htmlGlobalKey ? window[htmlGlobalKey] : null;
+
+                const hasInk = !!(drawnStrokes && drawnStrokes.length);
+                const hasText = !!String(textValue || '').trim();
+                const hasOverlay = !!(image || htmlOverlay);
+                const isEmpty = !(hasInk || hasText || hasOverlay);
+
+                // Auto-Inhalterkennung:
+                // - Wenn leer -> Status immer neutral (kein "Offen/Abgeschlossen" noetig)
+                // - Wenn Inhalt vorhanden -> User kann "Offen" oder "Abgeschlossen" setzen
+                React.useEffect(() => {
+                    try {
+                        if (isEmpty && status !== 'neutral') {
+                            setStatus(prev => ({ ...prev, [statusKey]: 'neutral' }));
+                        }
+                    } catch (e) { /* ignore */ }
+                }, [isEmpty, status, statusKey, setStatus]);
+
+                const toggleStatus = (newStatus) => {
+                    // Wenn der Bereich leer ist, kein Status-Wechsel erzwingen (bleibt neutral)
+                    if (isEmpty) {
+                        try { triggerToast && triggerToast('Status nur noetig, wenn im Feld Inhalt vorhanden ist.'); } catch(e) {}
+                        setStatus(prev => ({ ...prev, [statusKey]: 'neutral' }));
+                        return;
+                    }
+
                     if (newStatus === 'closed') {
                         setStatus(prev => ({ ...prev, [statusKey]: (prev[statusKey] === 'closed' ? 'neutral' : 'closed') }));
                         return;
@@ -2550,7 +2948,9 @@ const resolveUserName = (raw) => {
                         setStatus(prev => ({ ...prev, [statusKey]: (prev[statusKey] === 'open' ? 'neutral' : 'open') }));
                         return;
                     }
-                }; const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; if (textSize === 'small') classes += "text-base "; else if (textSize === 'medium') classes += "text-lg "; else if (textSize === 'large') classes += "text-xl "; if (textStyle.bold) classes += "font-black "; else classes += "font-medium "; if (textStyle.italic) classes += "italic "; classes += inputMode === 'pen' ? 'pointer-events-none text-slate-800' : 'pointer-events-auto text-slate-800'; return classes; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const htmlGlobalKey = (statusKey === 'offer1') ? '__canvasHtmlOffer1' : (statusKey === 'offer2') ? '__canvasHtmlOffer2' : (statusKey === 'offer3') ? '__canvasHtmlOffer3' : null; const htmlOverlay = htmlGlobalKey ? window[htmlGlobalKey] : null; const hasOverlay = !!(image || htmlOverlay); const [overlayEditEnabled, setOverlayEditEnabled] = useState(false);
+                };
+
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; if (textSize === 'small') classes += "text-base "; else if (textSize === 'medium') classes += "text-lg "; else if (textSize === 'large') classes += "text-xl "; if (textStyle.bold) classes += "font-black "; else classes += "font-medium "; if (textStyle.italic) classes += "italic "; classes += inputMode === 'pen' ? 'pointer-events-none text-slate-800' : 'pointer-events-auto text-slate-800'; return classes; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(false);
                 useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
 
         // Sobald ein neues Bundle/Bild eingefügt wurde: Edit-Modus wieder deaktivieren, damit Zeichnen sofort funktioniert.
@@ -3112,8 +3512,7 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
                 setFollowUpIndex(0);
                 setFinishAfterFollowUp(false);
             };
-
-            const isReadyToFinish = Object.values(canvasStatus).every(s => s === 'open' || s === 'closed');
+            // isReadyToFinish wird weiter unten nach Inhalterkennung berechnet
 
             
             const [customerSignature, setCustomerSignature] = useState(null);
@@ -3180,6 +3579,26 @@ const fileInputRef = useRef(null);
             const getStaticLabel = useCallback((key) => { if (displayLanguage === 'de') return STATIC_LABELS[key] || key; return staticTranslations[displayLanguage]?.[key] || MOCK_TRANSLATIONS[displayLanguage]?.[key] || STATIC_LABELS[key] || key; }, [staticTranslations, displayLanguage]);
 
             const triggerToast = (message) => { clearTimeout(toastTimerRef.current); setToastMessage(message); toastTimerRef.current = setTimeout(() => setToastMessage(null), 3000); };
+
+
+            // === Inhalterkennung Offer-Canvas (Status nur bei Inhalt erforderlich) ===
+            const isOfferAreaNonEmpty = React.useCallback((k) => {
+                try {
+                    const hasText = !!String(getDisplayText(k) || '').trim();
+                    const hasInk = !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length);
+                    const hasImg = !!(canvasImages && canvasImages[k]);
+                    const hasHtml = !!((k === 'offer1') ? window.__canvasHtmlOffer1 : (k === 'offer2') ? window.__canvasHtmlOffer2 : (k === 'offer3') ? window.__canvasHtmlOffer3 : null);
+                    return hasText || hasInk || hasImg || hasHtml;
+                } catch (e) {
+                    return false;
+                }
+            }, [getDisplayText, drawnStrokes, canvasImages]);
+
+            const isReadyToFinish = ['offer1','offer2','offer3'].every(k => {
+                if (!isOfferAreaNonEmpty(k)) return true; // leer -> keine Status-Pflicht
+                const s = (canvasStatus && canvasStatus[k]) ? canvasStatus[k] : 'neutral';
+                return (s === 'open' || s === 'closed');
+            });
 
             // ===== Bundle -> Ziel-Canva (HTML bevorzugt, Fallback Bild) =====
             const importBundleToCanvas = React.useCallback((payload) => {
@@ -3329,7 +3748,17 @@ const fileInputRef = useRef(null);
             const requestPrint = useCallback((doPrint) => {
                 // Angebotsgültigkeit nur abfragen, wenn mindestens ein Bereich auf "Offen" steht.
                 const hasOpen = (() => {
-                    try { return Object.values(canvasStatus || {}).includes('open'); } catch(e){ return false; }
+                    try {
+                        const keys = ['offer1','offer2','offer3'];
+                        const nonEmpty = keys.filter(k => {
+                            const hasText = !!String(getDisplayText(k) || '').trim();
+                            const hasInk = !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length);
+                            const hasImg = !!(canvasImages && canvasImages[k]);
+                            const hasHtml = !!(k === 'offer1' ? window.__canvasHtmlOffer1 : k === 'offer2' ? window.__canvasHtmlOffer2 : window.__canvasHtmlOffer3);
+                            return hasText || hasInk || hasImg || hasHtml;
+                        });
+                        return nonEmpty.some(k => (canvasStatus && canvasStatus[k]) === 'open');
+                    } catch(e){ return false; }
                 })();
 
                 const hasText = !!String(getDisplayText('OfferValidUntil') || '').trim();
@@ -3419,7 +3848,31 @@ const fileInputRef = useRef(null);
             };
 
 const handleFinishOfferClick = () => {
-                const openKeys = Object.keys(canvasStatus || {}).filter(k => canvasStatus[k] === 'open');
+                // Inhalterkennung: Status nur fuer Bereiche erzwingen, die wirklich Inhalt haben
+                const keys = ['offer1','offer2','offer3'];
+                const nonEmptyKeys = keys.filter(k => {
+                    try {
+                        const hasText = !!String(getDisplayText(k) || '').trim();
+                        const hasInk = !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length);
+                        const hasImg = !!(canvasImages && canvasImages[k]);
+                        const hasHtml = !!(k === 'offer1' ? window.__canvasHtmlOffer1 : k === 'offer2' ? window.__canvasHtmlOffer2 : window.__canvasHtmlOffer3);
+                        return hasText || hasInk || hasImg || hasHtml;
+                    } catch(e) { return false; }
+                });
+
+                const missingStatus = nonEmptyKeys.filter(k => {
+                    const s = (canvasStatus && canvasStatus[k]) || 'neutral';
+                    return !(s === 'open' || s === 'closed');
+                });
+
+                if (missingStatus.length > 0) {
+                    try {
+                        triggerToast('Bitte Status setzen (Offen/Abgeschlossen) fuer: ' + missingStatus.map(k => k.replace('offer','Angebot ')).join(', '));
+                    } catch(e) {}
+                    return;
+                }
+
+                const openKeys = nonEmptyKeys.filter(k => canvasStatus[k] === 'open');
 
                 // Wenn Kunde unterschrieben hat: erst Folgetermine abfragen (falls etwas offen), dann drucken/hochladen
                 if (customerSignature) {
@@ -4694,7 +5147,7 @@ const handlePDFShare = async () => {
                     <div className={`flex-1 w-full relative bg-[#f0f6ff] ${view === 'offer' ? 'flex overflow-y-auto' : 'hidden'} print-offer-view`}>
                         <div className="w-full flex-1 flex flex-col space-y-6 min-h-0 p-4 md:p-8">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full offer-print-grid"> 
-                                {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }) => (<OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} />))}
+                                {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }) => (<OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />))}
                             </div>
 
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shrink-0 cost-overview-print">
