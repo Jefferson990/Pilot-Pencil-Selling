@@ -3544,22 +3544,40 @@ const toolRef = useRef('pen');
             };
 
             const getToolTuning = (toolId, baseWidth, baseOpacity) => {
-                // leichte, feste Defaults pro Tool (ohne UI zu verändern)
+                // WICHTIG: width muss in diesem Projekt in den "diskreten" Stufen bleiben,
+                // sonst wirkt der Strich nach dem Absetzen dicker (Redraw-Mapping 2/4/8).
+                const quantize = (w) => {
+                    const steps = [2, 4, 8];
+                    let best = steps[0], bestD = Math.abs(w - steps[0]);
+                    for (let i = 1; i < steps.length; i++) {
+                        const d = Math.abs(w - steps[i]);
+                        if (d < bestD) { bestD = d; best = steps[i]; }
+                    }
+                    return best;
+                };
+                const bw = quantize(baseWidth);
+
+                // Tool-Charakter: klar sichtbar unterschiedlich
+                // - Pen: Standard (mittlere Deckkraft)
+                // - Fountain: kräftiger + eine Stufe breiter
+                // - Ballpen: dünner + "leichter" (mehr Transparenz)
                 if (toolId === 'fountain') {
+                    const up = (bw === 2) ? 4 : (bw === 4) ? 8 : 8;
                     return {
-                        width: Math.max(3, baseWidth + 1),
-                        opacity: Math.min(1, Math.max(baseOpacity, 0.9)),
+                        width: up,
+                        opacity: 1,
                         smooth: 1
                     };
                 }
                 if (toolId === 'ballpen') {
+                    const down = (bw === 8) ? 4 : 2;
                     return {
-                        width: Math.max(2, baseWidth),
-                        opacity: Math.min(1, Math.max(baseOpacity, 0.95)),
-                        smooth: 0.6
+                        width: down,
+                        opacity: Math.max(0.55, Math.min(0.75, baseOpacity)),
+                        smooth: 0.25
                     };
                 }
-                return { width: baseWidth, opacity: baseOpacity, smooth: 0 };
+                return { width: bw, opacity: Math.min(1, baseOpacity), smooth: 0 };
             };
 
             const digitalTouchedRef = useRef({}); // merkt: Feld wurde per Tastatur genutzt
