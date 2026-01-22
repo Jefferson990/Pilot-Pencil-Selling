@@ -3086,7 +3086,36 @@ const resolveUserName = (raw) => {
                 const htmlGlobalKey = (statusKey === 'offer1') ? '__canvasHtmlOffer1' : (statusKey === 'offer2') ? '__canvasHtmlOffer2' : (statusKey === 'offer3') ? '__canvasHtmlOffer3' : null;
                 const htmlOverlay = htmlGlobalKey ? window[htmlGlobalKey] : null;
 
-                const hasInk = !!(drawnStrokes && drawnStrokes.length);
+                // ✅ Inhalterkennung direkt am Canvas (wichtig: auch nach Radieren korrekt)
+                const canvasHasVisibleInkLocal = (canvas) => {
+                    try {
+                        if (!canvas) return false;
+                        const w = canvas.width || 0;
+                        const h = canvas.height || 0;
+                        if (!w || !h) return false;
+                        const ctx2d = canvas.getContext('2d', { willReadFrequently: true });
+                        if (!ctx2d) return false;
+
+                        // Sample-Scan (Performance): nicht jedes Pixel, aber zuverlässig
+                        const step = Math.max(4, Math.floor(Math.min(w, h) / 80));
+                        const img = ctx2d.getImageData(0, 0, w, h);
+                        const d = img.data;
+
+                        for (let y = 0; y < h; y += step) {
+                            const row = y * w * 4;
+                            for (let x = 0; x < w; x += step) {
+                                const a = d[row + x * 4 + 3];
+                                if (a && a > 0) return true;
+                            }
+                        }
+                        return false;
+                    } catch (_) {
+                        return false;
+                    }
+                };
+
+                const cEl = (canvasRef && canvasRef.current) ? canvasRef.current : null;
+                const hasInk = cEl ? canvasHasVisibleInkLocal(cEl) : !!(drawnStrokes && drawnStrokes.length);
                 const hasText = !!String(textValue || '').trim();
                 const hasOverlay = !!(image || htmlOverlay);
                 const isEmpty = !(hasInk || hasText || hasOverlay);
@@ -3800,10 +3829,52 @@ const fileInputRef = useRef(null);
 
 
             // === Inhalterkennung Offer-Canvas (Status nur bei Inhalt erforderlich) ===
-            const isOfferAreaNonEmpty = React.useCallback((k) => {
+            // === Inhalterkennung Offer-Canvas (wichtig: auch nach Radieren korrekt) ===
+            const getOfferCanvasElByKey = (k) => {
+                try {
+                    if (k === 'offer1') return offerCanvasRef1?.current || null;
+                    if (k === 'offer2') return offerCanvasRef2?.current || null;
+                    if (k === 'offer3') return offerCanvasRef3?.current || null;
+                    return null;
+                } catch(_) { return null; }
+            };
+
+            // Prüft echte Pixel auf dem Canvas (nicht nur "Strokes-Liste"),
+            // damit "Fertigstellen" nach komplettem Radieren wieder möglich ist.
+            const canvasHasVisibleInk = (canvas) => {
+                try {
+                    if (!canvas) return false;
+                    const w = canvas.width || 0;
+                    const h = canvas.height || 0;
+                    if (w === 0 || h === 0) return false;
+
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    if (!ctx) return false;
+
+                    // Sample-Scan: nicht jedes Pixel (Performance), aber zuverlässig genug.
+                    const step = Math.max(4, Math.floor(Math.min(w, h) / 80)); // adaptiv
+                    const img = ctx.getImageData(0, 0, w, h);
+                    const data = img.data;
+
+                    for (let y = 0; y < h; y += step) {
+                        const row = y * w * 4;
+                        for (let x = 0; x < w; x += step) {
+                            const a = data[row + x * 4 + 3]; // alpha
+                            if (a && a > 0) return true;
+                        }
+                    }
+                    return false;
+                } catch (e) {
+                    // Falls der Canvas "tainted" wäre oder readback nicht geht:
+                    return false;
+                }
+            };
+
+const isOfferAreaNonEmpty = React.useCallback((k) => {
                 try {
                     const hasText = !!String(getDisplayText(k) || '').trim();
-                    const hasInk = !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length);
+                    const cEl = getOfferCanvasElByKey(k);
+                    const hasInk = (cEl ? canvasHasVisibleInk(cEl) : !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length));
                     const hasImg = !!(canvasImages && canvasImages[k]);
                     const hasHtml = !!((k === 'offer1') ? window.__canvasHtmlOffer1 : (k === 'offer2') ? window.__canvasHtmlOffer2 : (k === 'offer3') ? window.__canvasHtmlOffer3 : null);
                     return hasText || hasInk || hasImg || hasHtml;
