@@ -3028,8 +3028,20 @@ const resolveUserName = (raw) => {
         // --- OFFER CANVAS (Redraw Patch Applied) ---
         const redrawCanvas = (canvas, strokes, scaleFactor = 1, key = '') => { 
             if (!canvas) return; 
+            // ✅ Wichtig für Drehen/Resize: Canvas-Pixelgröße immer an CSS-Größe anpassen (sonst "verschiebt" sich alles)
+            try {
+                const r = canvas.getBoundingClientRect();
+                const w = Math.max(1, Math.round(r.width || 0));
+                const h = Math.max(1, Math.round(r.height || 0));
+                if (w && h && (canvas.width !== w || canvas.height !== h)) {
+                    canvas.width = w;
+                    canvas.height = h;
+                }
+            } catch(_) {}
             const ctx = canvas.getContext('2d'); 
-            ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1)); 
+            if (!ctx) return;
+            ctx.setTransform(1,0,0,1,0,0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
             ctx.save(); 
             const isOfferCanvas = key.startsWith('offer') || key.startsWith('cost_') || key.startsWith('agent_') || key.startsWith('date_') || key.startsWith('signature'); 
             strokes.forEach(stroke => { 
@@ -3377,7 +3389,7 @@ const resolveUserName = (raw) => {
             inputMode, canvasRef, inputKey,
             inputValue = '', inputType = 'text', onChange, placeholder,
             drawnStrokes, setDrawnStrokes, readOnly = false,
-            startDrawing, draw, stopDrawing
+            startDrawing, draw, stopDrawing, triggerRedraw
         }) => {
             const isPen = inputMode === 'pen';
 
@@ -3387,7 +3399,7 @@ const resolveUserName = (raw) => {
                 if (isPen) {
                     redrawCanvas(canvas, drawnStrokes[inputKey], 1, inputKey);
                 }
-            }, [isPen, drawnStrokes, inputKey]);
+            }, [isPen, drawnStrokes, inputKey, triggerRedraw]);
 
             const clearSmallCanvas = () => {
                 const canvas = canvasRef.current;
@@ -3627,7 +3639,23 @@ const toolRef = useRef('pen');
             const scaleRef1 = useRef({ baseWidth: 0, scaleFactor: 1 });
             const scaleRef2 = useRef({ baseWidth: 0, scaleFactor: 1 });
             const scaleRef3 = useRef({ baseWidth: 0, scaleFactor: 1 });
-            const [redrawCounter, setRedrawCounter] = useState(0); 
+            const [redrawCounter, setRedrawCounter] = useState(0);
+            // ✅ Auto-Redraw bei Drehen/Resize (damit Canvas-Inhalte nicht verrutschen)
+            useEffect(() => {
+                const handle = () => {
+                    // doppelt rAF: erst Layout settle, dann redraw
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => setRedrawCounter(r => r + 1));
+                    });
+                };
+                window.addEventListener('resize', handle);
+                window.addEventListener('orientationchange', handle);
+                return () => {
+                    window.removeEventListener('resize', handle);
+                    window.removeEventListener('orientationchange', handle);
+                };
+            }, []);
+ 
             const hasMigratedSituationRef = useRef(false);
             
             useEffect(() => { toolRef.current = tool; }, [tool]);
@@ -4681,7 +4709,7 @@ const renderPenToolButtons = () => (
                 const rawKey = `${key}Raw`;
                 setOfferData(prev => ({ ...prev, [rawKey]: value, [key]: isNaN(val) || value.trim() === '' ? 0 : val }));
             };
-            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg`}>{inputMode === 'pen' ? (<SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing}/>) : (() => { const showDigital = !!digitalTouchedRef.current[strokesKey]; const displayValue = showDigital ? rawValue : ''; const hasInk = !!(drawnStrokes[strokesKey] && drawnStrokes[strokesKey].length); if (!showDigital && hasInk) { return (<canvas ref={ref} className="absolute inset-0 w-full h-full drawing-canvas" style={{ pointerEvents: 'none', touchAction: 'none', background: 'transparent' }} />); } return (<input type={type} value={displayValue} onChange={handleChange} placeholder={label.split(' ')[0]} className={`w-full h-full px-3 text-base font-medium focus:ring-1 focus:ring-blue-300 transition-colors focus:outline-none ${isCostField ? 'offer-cost-input text-xl font-black text-slate-800 bg-transparent' : 'offer-meta-input text-slate-700 bg-transparent'}`}/>); })()}</div></div>); };
+            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg`}>{inputMode === 'pen' ? (<SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/>) : (() => { const showDigital = !!digitalTouchedRef.current[strokesKey]; const displayValue = showDigital ? rawValue : ''; const hasInk = !!(drawnStrokes[strokesKey] && drawnStrokes[strokesKey].length); if (!showDigital && hasInk) { return (<canvas ref={ref} className="absolute inset-0 w-full h-full drawing-canvas" style={{ pointerEvents: 'none', touchAction: 'none', background: 'transparent' }} />); } return (<input type={type} value={displayValue} onChange={handleChange} placeholder={label.split(' ')[0]} className={`w-full h-full px-3 text-base font-medium focus:ring-1 focus:ring-blue-300 transition-colors focus:outline-none ${isCostField ? 'offer-cost-input text-xl font-black text-slate-800 bg-transparent' : 'offer-meta-input text-slate-700 bg-transparent'}`}/>); })()}</div></div>); };
             
             const handleLocalTranslation = useCallback((targetCode) => { if (targetCode === 'de') return; const mockData = MOCK_TRANSLATIONS[targetCode]; if (mockData) { const newTranslatedText = {}; const newStaticTranslations = {}; Object.keys(STATIC_LABELS).forEach(key => { if (mockData[key]) { newStaticTranslations[key] = mockData[key]; } }); Object.keys(textData).forEach(key => { if (mockData[key]) { newTranslatedText[key] = mockData[key]; } }); setTranslatedText(prev => ({ ...prev, [targetCode]: { ...(prev[targetCode] || {}), ...newTranslatedText } })); setStaticTranslations(prev => ({ ...prev, [targetCode]: { ...(prev[targetCode] || {}), ...newStaticTranslations } })); if (mockData.AgentName) handleTextChange('AgentName', mockData.AgentName); if (mockData.DateValue) handleTextChange('DateValue', mockData.DateValue); triggerToast(`Lokale (Mock) Übersetzung geladen: ${targetCode.toUpperCase()}.`); } else { triggerToast(`Für ${targetCode.toUpperCase()} ist keine lokale Mock-Übersetzung verfügbar. Standard-Deutsch wird verwendet.`); } }, [triggerToast, textData, handleTextChange]); 
             useEffect(() => { if (displayLanguage !== 'de') { if (!staticTranslations[displayLanguage] || !translatedText[displayLanguage]) { handleLocalTranslation(displayLanguage); } } }, [displayLanguage, handleLocalTranslation, translatedText, staticTranslations]);
