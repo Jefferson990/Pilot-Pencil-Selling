@@ -1316,6 +1316,45 @@ body.pdf-share-mode .share-page:last-child{
   }
 }
 
+
+/* =========================================================
+   SHARE-PDF CENTER FIX (Seite 2/3 abgeschnitten) – NUR TEILEN
+   Berührt STRG+P NICHT, weil es nur bei body.pdf-share-mode greift
+   Ursache: FULLSCREEN_SHIFT_X Media-Query triggert bei html2canvas windowWidth>=1100
+   ========================================================= */
+body.pdf-share-mode{
+  --FULLSCREEN_SHIFT_X: 0px !important; /* neutralisiert Landscape-Fullscreen-Shift */
+}
+
+/* wenn die Landscape-Fullscreen-Regeln greifen, überschreiben wir sie im Share-PDF */
+@media (orientation: landscape) and (min-width: 1100px){
+  body.pdf-share-mode .situation-view-wrapper,
+  body.pdf-share-mode .print-situation-view,
+  body.pdf-share-mode .print-offer-view{
+    transform: none !important;
+  }
+  body.pdf-share-mode .situation-view-wrapper .grid,
+  body.pdf-share-mode .print-offer-view .grid{
+    margin-left: 0 !important;
+  }
+}
+
+/* zusätzliche Zentrierung im Share-PDF */
+body.pdf-share-mode .share-pdf-container{
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+
+/* ===== SHARE / PDF ONLY: Farb-/Hintergrund-Rendering wie bei STRG+P ===== */
+body.pdf-share-mode, body.pdf-share-mode *{
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+body.pdf-share-mode{
+  background: #ffffff !important;
+}
+
 </style>
 
 <style id="export-hardlock-patch-v1">
@@ -4999,6 +5038,11 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
 
     // Share-PDF: eigener Modus im Iframe
     try { doc.body.classList.add('pdf-share-mode');
+                    // Zentrierung: Clone-Body als Flex-Wrapper (nur im Share-PDF)
+                    body.style.display = 'flex';
+                    body.style.justifyContent = 'center';
+                    body.style.alignItems = 'flex-start';
+
                     // Hide voucher / Gutscheincode area during export (prevents it showing in screenshot/PDF)
                     try {
                         const txt = (el) => (el && (el.textContent || el.innerText) || '').toLowerCase();
@@ -5448,10 +5492,10 @@ if (addPageNumbers) {
         pagebreak: { mode: ['css', 'legacy'] },
         image: { type: 'jpeg', quality: 1.0 },
         html2canvas: {
-            scale: 2,
+            scale: 3,
             useCORS: true,
             allowTaint: true,
-            backgroundColor: '#ffffff',
+            backgroundColor: null,
             // A4-Querformat @ 96dpi als stabiler "virtueller Viewport"
             width: 1122,
             windowWidth: 1122,
@@ -5471,6 +5515,71 @@ if (addPageNumbers) {
                     body.style.padding = '0';
                     body.style.overflow = 'hidden';
                     body.classList.add('pdf-share-mode');
+                    // Farben & Hintergründe wie bei "Hintergrundgrafiken" im Browserdruck erzwingen
+                    const __pdfStyle = clonedDoc.createElement('style');
+                    __pdfStyle.textContent = `
+                      body.pdf-share-mode, body.pdf-share-mode *{
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                      }
+                    `;
+                    clonedDoc.head.appendChild(__pdfStyle);
+                    // --- FORCE BACKGROUNDS / GRADIENTS (Share-PDF only) ---
+                    try{
+                        const scope = clonedDoc.querySelector('.share-pdf-container') || clonedDoc.body;
+                        const nodes = scope.querySelectorAll('*');
+                        nodes.forEach(el => {
+                            const cs = clonedDoc.defaultView.getComputedStyle(el);
+                            // copy background + shadow to inline styles so html2canvas doesn't drop them
+                            if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+                                el.style.backgroundImage = cs.backgroundImage;
+                                el.style.backgroundRepeat = cs.backgroundRepeat;
+                                el.style.backgroundPosition = cs.backgroundPosition;
+                                el.style.backgroundSize = cs.backgroundSize;
+                            }
+                            if (cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent') {
+                                el.style.backgroundColor = cs.backgroundColor;
+                            }
+                            if (cs.boxShadow && cs.boxShadow !== 'none') {
+                                el.style.boxShadow = cs.boxShadow;
+                            }
+                        });
+                    }catch(e){}
+
+                    // --- REMOVE LAST EMPTY PAGE (prevents extra blank page with a tiny line) ---
+                    try{
+                        const pages = Array.from(clonedDoc.querySelectorAll('.page, .print-page, .print-page-wrapper'));
+                        if (pages.length){
+                            const last = pages[pages.length - 1];
+                            const hasMedia = last.querySelector('img,svg,canvas,video,iframe,textarea,input,select');
+                            const txt = (last.textContent || '').replace(/\s+/g,'').trim();
+                            if (!hasMedia && txt === '') {
+                                last.parentNode && last.parentNode.removeChild(last);
+                            }
+                        }
+                    }catch(e){}
+
+                    // --- PAGE NUMBERS (bottom-right) ---
+                    try{
+                        const pages = Array.from(clonedDoc.querySelectorAll('.page, .print-page, .print-page-wrapper'));
+                        const total = pages.length;
+                        pages.forEach((p, i) => {
+                            p.style.position = p.style.position || 'relative';
+                            const badge = clonedDoc.createElement('div');
+                            badge.className = 'pdf-page-number';
+                            badge.textContent = `${i+1} / ${total}`;
+                            badge.style.position = 'absolute';
+                            badge.style.right = '10mm';
+                            badge.style.bottom = '6mm';
+                            badge.style.fontSize = '10px';
+                            badge.style.opacity = '0.55';
+                            badge.style.zIndex = '9999';
+                            badge.style.pointerEvents = 'none';
+                            p.appendChild(badge);
+                        });
+                    }catch(e){}
+
+
 
                     const c = clonedDoc.querySelector('.share-pdf-container');
                     if(c){
@@ -5484,7 +5593,7 @@ if (addPageNumbers) {
             }
         },
         // echte Papiermaße: A4 Landscape in mm (immer korrekt skaliert)
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape', compress: true }
     };
     try {
         const blob = await window.html2pdf().set(opt).from(doc.body).outputPdf('blob');
