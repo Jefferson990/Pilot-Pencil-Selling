@@ -45,9 +45,27 @@
         .beam-anim { animation: beam 1.5s linear infinite; }
 
         /* General Layout */
-        html, body, #root { 
-        min-width: 297mm !important;
-width: 100%; height: 100%; margin: 0; overflow: hidden; background-color: #f0f6ff; }
+        /* General Layout */
+/* Screen/layout MUST be fluid (fix for Android/Tablet Fullscreen clipping).
+   Print/PDF keeps its fixed A4-landscape widths inside @media print / pdf-share-mode blocks. */
+html, body, #root{
+  min-width: 0 !important;          /* important: remove 297mm hard-lock on screen */
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden !important;    /* avoid horizontal scrollbars */
+  overflow-y: hidden !important;    /* keep original no-scroll behavior */
+  background-color: #f0f6ff !important;
+  box-sizing: border-box;
+}
+/* Ensure nothing forces a wider-than-viewport layout in fullscreen */
+#root{ max-width: 100vw !important; }
+
+/* === FULLSCREEN/ROTATE: prevent canvas distortion === */
+.drawing-canvas{ width:100% !important; height:100% !important; }
+
+
         
         
 
@@ -1150,6 +1168,154 @@ body.pdf-share-mode .share-page:last-child{
             }
         }
 
+
+/* ================================
+   RESPONSIVE FIX (Portrait / schmale Displays):
+   Verhindert "rechts abgeschnitten" in Hochformat,
+   indem Sidebar unter den Inhalt stapelt.
+   ================================ */
+@media (max-width: 1024px){
+  .situation-view-wrapper{
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  /* Hauptbereich (links + Canvas) auf volle Breite */
+  .situation-view-wrapper > div{
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  /* Sidebar unten statt rechts */
+  .situation-view-wrapper > aside{
+    display: flex !important;        /* überschreibt Tailwind "hidden" auf Mobile */
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: 45vh !important;     /* bleibt bedienbar */
+    overflow: auto !important;
+    border-left: none !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin-top: 10px !important;
+  }
+}
+
+
+
+
+
+
+  /* Mittelgroße Tablets */
+  @media (min-width: 700px) and (max-width: 899px) {
+    .situation-view-wrapper,
+    .print-situation-view,
+    .print-offer-view { margin-left: -24px !important; }
+  }
+
+  /* Kleine Tablets & große Phones */
+  @media (max-width: 699px) {
+    .situation-view-wrapper,
+    .print-situation-view,
+    .print-offer-view { margin-left: -30px !important; }
+  }
+
+  .situation-view-wrapper .grid,
+  .print-offer-view .grid {
+    margin-left: -12px !important;
+  }
+}
+
+
+/* === SMART Portrait Pixel-Fix (Auto) ===
+   Berechnet eine dynamische Linksverschiebung per CSS-Variable
+   -> nutzt linken Platz
+   -> verhindert Abschneiden rechts
+*/
+:root{
+  --PORTRAIT_SHIFT_PX: 0px;
+}
+@media (orientation: portrait){
+  .situation-view-wrapper,
+  .print-situation-view,
+  .print-offer-view{
+    transform: translateX(var(--PORTRAIT_SHIFT_PX)) !important;
+    will-change: transform;
+  }
+  /* Formulare etwas weiter links (wie vorher) */
+  .situation-view-wrapper .grid,
+  .print-offer-view .grid{
+    margin-left: -12px !important;
+  }
+}
+
+
+/* === PORTRAIT SMART SHIFT (AUTO) ===
+   Schiebt im Hochformat automatisch nach links, NUR wenn rechts etwas abgeschnitten wird.
+   Die JS-Logik setzt --PORTRAIT_SHIFT_PX dynamisch (z.B. -18px / -24px / -30px).
+*/
+:root{ --PORTRAIT_SHIFT_PX: 0px; }
+
+@media (orientation: portrait){
+  .situation-view-wrapper,
+  .print-situation-view,
+  .print-offer-view{
+    margin-left: var(--PORTRAIT_SHIFT_PX) !important;
+  }
+}
+
+
+
+/* ================================================
+   FULLSCREEN LANDSCAPE FIX
+   Verhindert Rechts-Abschneiden im Vollbildmodus
+   (nur Landscape + breite Viewports)
+   ================================================ */
+:root{
+  --FULLSCREEN_SHIFT_X: -26px;   /* Feintuning: -18px bis -32px möglich */
+}
+@media (orientation: landscape) and (min-width: 1100px){
+  .situation-view-wrapper,
+  .print-situation-view,
+  .print-offer-view{
+    transform: translateX(var(--FULLSCREEN_SHIFT_X)) !important;
+    will-change: transform;
+  }
+  .situation-view-wrapper .grid,
+  .print-offer-view .grid{
+    margin-left: calc(var(--FULLSCREEN_SHIFT_X) * 0.5) !important;
+  }
+}
+
+/* === PRINT HARD FIX: FORCE A4 LANDSCAPE (NO LETTER) === */
+@media print {
+
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  html, body {
+    width: 297mm !important;
+    height: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #root {
+    width: 297mm !important;
+    min-width: 297mm !important;
+    max-width: 297mm !important;
+    transform: none !important;
+  }
+
+  /* Hide UI while printing */
+  .no-print, button, .toolbar, .top-toolbar, .floating-toolbar {
+    display: none !important;
+  }
+}
+
 </style>
 
 <style id="export-hardlock-patch-v1">
@@ -1630,7 +1796,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 const cssY = clientY - rect.top;
                 return { x: cssX, y: cssY };
             };
-            const startDrawing = (e) => { e.preventDefault(); const canvas = canvasRef.current; if (!canvas) return; const pt = e.pointerType; if (pt && pt !== 'pen' && pt !== 'touch' && pt !== 'mouse') return; const { x: cssX, y: cssY } = getRelativeCoords(e, canvas) || {}; if (cssX == null || cssY == null) return; const ctx = canvas.getContext('2d'); /* Canvas-Context ist bereits im resizeCanvas() auf DPR skaliert, daher hier NICHT nochmal mit DPR multiplizieren. */ ctx.lineWidth = sigConfig.strokeWidth; ctx.strokeStyle = sigConfig.color; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(cssX, cssY); currentStrokeRef.current = { tool: 'pen', color: sigConfig.color, width: sigConfig.strokeWidth, points: [{ x: cssX, y: cssY }], baseWidth: canvas.getBoundingClientRect().width }; if (canvas.setPointerCapture && e.pointerId != null) { try { canvas.setPointerCapture(e.pointerId); } catch(_) {} } setIsDrawingSig(true); };
+            const startDrawing = (e) => { e.preventDefault(); const canvas = canvasRef.current; if (!canvas) return; const pt = e.pointerType; if (pt && pt !== 'pen' && pt !== 'touch' && pt !== 'mouse') return; const { x: cssX, y: cssY } = getRelativeCoords(e, canvas) || {}; if (cssX == null || cssY == null) return; const ctx = canvas.getContext('2d'); /* Canvas-Context ist bereits im resizeCanvas() auf DPR skaliert, daher hier NICHT nochmal mit DPR multiplizieren. */ ctx.lineWidth = sigConfig.strokeWidth; ctx.strokeStyle = sigConfig.color; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(cssX, cssY); currentStrokeRef.current = { tool: 'pen', color: sigConfig.color, width: sigConfig.strokeWidth, points: [{ x: cssX, y: cssY }], baseWidth: canvas.getBoundingClientRect().width, baseHeight: canvas.getBoundingClientRect().height }; if (canvas.setPointerCapture && e.pointerId != null) { try { canvas.setPointerCapture(e.pointerId); } catch(_) {} } setIsDrawingSig(true); };
             const draw = (e) => { if (!isDrawingSig || !currentStrokeRef.current) return; e.preventDefault(); const canvas = canvasRef.current; if (!canvas) return; const { x: cssX, y: cssY } = getRelativeCoords(e, canvas) || {}; if (cssX == null || cssY == null) return; const ctx = canvas.getContext('2d'); ctx.lineTo(cssX, cssY); ctx.stroke(); currentStrokeRef.current.points.push({ x: cssX, y: cssY }); setHasSigned(true); };
             const stopDrawing = (e) => { if (!isDrawingSig) return; e.preventDefault(); const canvas = canvasRef.current; if (!canvas) return; if (canvas.releasePointerCapture && e.pointerId != null) { try { canvas.releasePointerCapture(e.pointerId); } catch(_) {} } setIsDrawingSig(false); };
             const clearCanvas = () => { const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); setHasSigned(false); currentStrokeRef.current = null; };
@@ -3046,9 +3212,14 @@ const resolveUserName = (raw) => {
             const isOfferCanvas = key.startsWith('offer') || key.startsWith('cost_') || key.startsWith('agent_') || key.startsWith('date_') || key.startsWith('signature'); 
             strokes.forEach(stroke => { 
                 ctx.beginPath(); 
-                let currentCssWidth = canvas.getBoundingClientRect().width; 
+                let currentCssWidth = canvas.getBoundingClientRect().width;
+                let currentCssHeight = canvas.getBoundingClientRect().height;
                 if (currentCssWidth === 0) currentCssWidth = stroke.baseWidth || 100; // FIX: Print Fallback
-                const responsiveScaleFactor = currentCssWidth / (stroke.baseWidth || currentCssWidth); 
+                if (currentCssHeight === 0) currentCssHeight = stroke.baseHeight || (stroke.baseWidth ? (stroke.baseWidth * 0.66) : 100); // best-effort fallback
+                const scaleW = currentCssWidth / (stroke.baseWidth || currentCssWidth);
+                const scaleH = (stroke.baseHeight ? (currentCssHeight / stroke.baseHeight) : scaleW);
+                // ✅ Uniform scaling: prevents "overstretching" when aspect ratio changes (tablet rotate/fullscreen)
+                const responsiveScaleFactor = Math.min(scaleW, scaleH); 
                 const rawStrokeWidth = stroke.width; 
                 let visualBaseWidth; 
                 if (isOfferCanvas) { visualBaseWidth = rawStrokeWidth === 2 ? 2.5 : rawStrokeWidth === 4 ? 5 : 8; } else { visualBaseWidth = rawStrokeWidth === 2 ? 2 : rawStrokeWidth === 4 ? 3 : 5; } 
@@ -3640,19 +3811,95 @@ const toolRef = useRef('pen');
             const scaleRef2 = useRef({ baseWidth: 0, scaleFactor: 1 });
             const scaleRef3 = useRef({ baseWidth: 0, scaleFactor: 1 });
             const [redrawCounter, setRedrawCounter] = useState(0);
-            // ✅ Auto-Redraw bei Drehen/Resize (damit Canvas-Inhalte nicht verrutschen)
+            // ✅ Auto-Redraw + Smart-Shift bei Drehen/Resize/Vollbild (damit nichts rechts abgeschnitten wird)
             useEffect(() => {
-                const handle = () => {
-                    // doppelt rAF: erst Layout settle, dann redraw
+                const setShift = (px) => {
+                    try { document.documentElement.style.setProperty('--PORTRAIT_SHIFT_PX', `${px}px`); } catch(_) {}
+                };
+
+                const applyPortraitShift = () => {
+                    // Nur im Hochformat relevant
+                    if (!(window.matchMedia && window.matchMedia('(orientation: portrait)').matches)) {
+                        setShift(0);
+                        return;
+                    }
+
+                    // Erst Shift resetten, dann echte Geometrie messen
+                    setShift(0);
+
                     requestAnimationFrame(() => {
-                        requestAnimationFrame(() => setRedrawCounter(r => r + 1));
+                        try {
+                            const pad = 8; // Sicherheitsabstand links/rechts
+                            const vv = window.visualViewport;
+                            const vw = Math.max(1, Math.round((vv && vv.width) || window.innerWidth || document.documentElement.clientWidth || 0));
+
+                            // Versuche ein sichtbares Haupt-Layout zu messen (stabiler als scrollWidth im Vollbild)
+                            const el =
+                                document.querySelector('.situation-view-wrapper') ||
+                                document.querySelector('.print-offer-view') ||
+                                document.querySelector('.print-situation-view');
+
+                            if (!el) {
+                                setShift(0);
+                                return;
+                            }
+
+                            const r = el.getBoundingClientRect();
+
+                            // Shift-Spanne, die "passt": links >= pad und rechts <= vw - pad
+                            const minShift = (vw - pad) - r.right; // (negativ => nach links)
+                            const maxShift = pad - r.left;         // (positiv => nach rechts)
+
+                            let shift = 0;
+
+                            if (minShift <= maxShift) {
+                                // Wähle den Shift, der 0 am nächsten ist, aber innerhalb der Spanne liegt
+                                if (shift < minShift) shift = minShift;
+                                if (shift > maxShift) shift = maxShift;
+                            } else {
+                                // Inhalt ist breiter als viewport: priorisiere, dass links nichts abgeschnitten wird
+                                shift = maxShift;
+                            }
+
+                            // Runden + Limit gegen "zu viel"
+                            shift = Math.round(shift);
+                            shift = Math.max(Math.min(shift, 120), -120);
+
+                            // Nur setzen, wenn wirklich nötig (verhindert unnötiges Springen)
+                            if (Math.abs(shift) <= 1) shift = 0;
+
+                            setShift(shift);
+                        } catch (_) {
+                            setShift(0);
+                        }
                     });
                 };
+                const handle = () => {
+                    // doppelt rAF: erst Layout settle, dann Shift + Redraw
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            applyPortraitShift();
+                            setRedrawCounter(r => r + 1);
+                        });
+                    });
+                };
+
+                // initial
+                handle();
+
                 window.addEventListener('resize', handle);
                 window.addEventListener('orientationchange', handle);
+                document.addEventListener('fullscreenchange', handle);
+
+                // Mobile: visualViewport kann bei Vollbild/Browser-UI ändern ohne klassisches resize
+                const vv = window.visualViewport;
+                if (vv && vv.addEventListener) vv.addEventListener('resize', handle);
+
                 return () => {
                     window.removeEventListener('resize', handle);
                     window.removeEventListener('orientationchange', handle);
+                    document.removeEventListener('fullscreenchange', handle);
+                    if (vv && vv.removeEventListener) vv.removeEventListener('resize', handle);
                 };
             }, []);
  
@@ -4502,11 +4749,12 @@ const handleFinishOfferClick = () => {
                 const tune = getToolTuning(currentTool, currentStrokeWidth, baseOpacity);
                 const currentOpacity = tune.opacity;
                 const strokeBaseWidth = canvas.getBoundingClientRect().width;
+                const strokeBaseHeight = canvas.getBoundingClientRect().height;
                 const zoomLevel = 1.0;
                 const x = cssX / zoomLevel;
                 const y = cssY / zoomLevel;
 
-                const newStroke = { tool: currentTool, color: currentColor, width: tune.width, opacity: currentOpacity, points: [{ x, y }], baseWidth: strokeBaseWidth };
+                const newStroke = { tool: currentTool, color: currentColor, width: tune.width, opacity: currentOpacity, points: [{ x, y }], baseWidth: strokeBaseWidth, baseHeight: strokeBaseHeight };
 
                 ctx.save();
                 const isOfferType = key.startsWith('offer');
