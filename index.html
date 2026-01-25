@@ -1527,33 +1527,6 @@ body.exporting, body.exporting #root { filter:none !important; background:#fff !
   }
 </style>
 
-
-<style id="print-offer-fill-v30">
-/* === v30: Ctrl+P Seite 2 besser füllen (ohne Share/PDF zu beeinflussen) === */
-@media print{
-  /* Seite 2 (Angebot) war durch aggressive Zoom-Reduktion zu klein -> viel Leerraum unten.
-     Wir erhöhen den Zoom und geben den 3 Canvas wieder mehr Höhe. */
-  .print-offer-view{
-    zoom: 0.84 !important;           /* füllt Seite besser, bleibt i.d.R. 1 Seite */
-    transform: none !important;
-    transform-origin: top left !important;
-  }
-
-  /* Canvas-Felder höher, damit Seite optisch wie Seite 1 wirkt */
-  .print-offer-view .offer-canvas-container{
-    min-height: 620px !important;
-    margin-bottom: 12px !important;
-  }
-
-  /* Kostenblock wieder etwas "normaler", damit er nicht gequetscht wirkt */
-  .print-offer-view .cost-overview-print{
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
-    margin-top: 10px !important;
-  }
-}
-</style>
-
 </head>
 <body>
     <div id="root"></div>
