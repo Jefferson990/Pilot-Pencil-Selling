@@ -2216,6 +2216,46 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
   }
 }
 
+
+/* === PATCH: Seite 5 Mini-Streifen Fix (Kostenblock + Unterschrift kompakt) === */
+@media print {
+    /* Seite 2/4: Angebot & Kosten-Kompaktierung */
+    .print-offer-view {
+        zoom: 0.76 !important; /* Minimal kleinerer Zoom (von 0.80) für mehr Puffer */
+    }
+
+    /* Der blaue Kasten (Unterschrift/Stempel) wird dünner gemacht */
+    .cost-overview-print {
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        margin-top: 4px !important;
+        gap: 8px !important;
+    }
+
+    /* Die Eingabefelder im Kostenblock (EINMALIG / MONATLICH) schrumpfen um 2px */
+    .cost-overview-print input, 
+    .cost-overview-print select {
+        height: 32px !important;
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+        font-size: 11px !important;
+    }
+
+    /* Abstand zwischen den Angebots-Canvas (1, 2, 3) reduzieren */
+    .print-offer-view .offer-canvas-container {
+        margin-bottom: 8px !important;
+        min-height: 540px !important;
+    }
+
+    /* Disclaimer Text ganz unten noch etwas kleiner */
+    .cost-overview-print .text-[10px], 
+    .cost-overview-print p {
+        font-size: 6.5pt !important;
+        line-height: 1.0 !important;
+        margin-top: 2px !important;
+    }
+}
+
 </style>`;
 
             return `<div class="bundle-import-wrap" style="max-width:100%;">${styleFix}${html}</div>`;
@@ -5579,7 +5619,18 @@ stage.appendChild(outroPage);
         container?.scrollHeight || 0
     ) + 80;
 
-    const opt = {
+    
+    // === HARD-FIX: IGNORE/REMOVE EXTRA SHARE PAGE(S) ===
+    // Some browsers force an additional blank/strip page (e.g., only a blue bar).
+    // We strictly export ONLY the first 4 pages in Share-PDF mode.
+    try {
+        const pages = Array.from(doc.querySelectorAll('.share-page'));
+        if (pages.length > 4) {
+            pages.slice(4).forEach(p => { try { p.remove(); } catch(_){} });
+        }
+    } catch(e) { /* ignore */ }
+
+const opt = {
         margin: 0,
         filename: `Angebot_HIDA_${new Date().toISOString().split('T')[0]}.pdf`,
         pagebreak: { mode: ['css', 'legacy'] },
@@ -5802,7 +5853,38 @@ stage.appendChild(outroPage);
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
     try {
-        const blob = await window.html2pdf().set(opt).from(doc.getElementById('pdf-content') || doc.getElementById('print-container') || doc.body).outputPdf('blob');
+        // --- HARD LIMIT: keep ONLY first 4 pages in the generated PDF (Share) ---
+        const sourceEl = (doc.getElementById('pdf-content') || doc.getElementById('print-container') || doc.body);
+        const worker = window.html2pdf().set(opt).from(sourceEl).toPdf();
+        let pdf = null;
+        try { pdf = await worker.get('pdf'); } catch(e) { pdf = null; }
+
+        if (pdf && typeof pdf.getNumberOfPages === 'function') {
+            try {
+                const total = pdf.getNumberOfPages();
+                // Delete from the end so indices stay valid
+                if (typeof pdf.deletePage === 'function') {
+                    for (let i = total; i > 4; i--) {
+                        try { pdf.deletePage(i); } catch(_) {}
+                    }
+                } else {
+                    // Fallback: if deletePage isn't available, we still proceed (best effort)
+                }
+            } catch(e) { /* ignore */ }
+        }
+
+        // Output blob (prefer jsPDF output to respect deleted pages)
+        let blob = null;
+        try {
+            if (pdf && typeof pdf.output === 'function') {
+                blob = pdf.output('blob');
+            }
+        } catch(e) { blob = null; }
+
+        // Fallback: if something failed above, use default worker output
+        if (!blob) {
+            blob = await worker.outputPdf('blob');
+        }
         return blob;
     } finally {
         try { document.body.classList.remove('exporting'); } catch(e){}
