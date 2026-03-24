@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vertriebs-Dashboard - Freunde werben & Druck-Fix</title>
+    <title>Vertriebs-Dashboard V10 Clean - Print & PDF Fix</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -95,7 +95,23 @@
         html.dark-mode textarea::placeholder { color: var(--dm-text3) !important; }
         html.dark-mode .wlan-chip { background: var(--dm-chip-bg) !important; border-color: var(--dm-border) !important; color: var(--dm-text2) !important; }
         html.dark-mode .canvas-lines { background-image: repeating-linear-gradient(to bottom, transparent, transparent 19px, #30363d 20px) !important; }
-        html.dark-mode .offer-canvas-container { background: var(--dm-card-bg) !important; }
+        html.dark-mode .offer-html-overlay-wrap {
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.offer-html-overlay-wrap * {
+    color: inherit;
+}
+.offer-html-overlay-wrap [style*="color: rgb(255"] ,
+.offer-html-overlay-wrap [style*="color:#fff"],
+.offer-html-overlay-wrap [style*="color: #fff"],
+.offer-html-overlay-wrap [style*="color: white"] {
+    /* keep white text on colored backgrounds - don't override */
+}
+        
+        .offer-canvas-container { background: var(--dm-card-bg) !important; }
         html.dark-mode .small-canvas-wrapper { background-color: var(--dm-input-bg) !important; border-color: var(--dm-border) !important; }
         html.dark-mode .situation-view-wrapper { background-color: var(--dm-bg) !important; }
         /* Dark toggle button styles */
@@ -139,11 +155,47 @@
         }
         .dark-toggle-track.on .dark-toggle-thumb { transform: translateX(16px); }
 
+        /* === SCREEN: Kacheln nutzen die volle Höhe === */
+        .sit-card-grid {
+            align-content: stretch !important;
+            grid-template-rows: repeat(5, 1fr) !important;
+        }
+        .sit-card-grid > div {
+            min-height: 0 !important;
+            height: 100% !important;
+        }
+        .sit-card-canvas {
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+        }
+
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
         
+        /* === SIT-ASIDE-PANEL: auf kleinen Screens ausblenden, ab md (768px) anzeigen, im Print IMMER sichtbar === */
+        .sit-aside-panel {
+            display: none; /* Default: hidden on mobile */
+        }
+        @media (min-width: 768px) {
+            .sit-aside-panel {
+                display: flex !important;
+            }
+        }
+        @media print {
+            .sit-aside-panel {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+        }
+        body.pdf-share-mode .sit-aside-panel {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-in { animation: fadeIn 0.3s ease-out forwards; }
         
@@ -300,7 +352,8 @@ html, body{
         
         
 @media print {
-    @page { size: A4 landscape; margin: 0.5cm; }
+    @page { size: A4 landscape; margin: 1cm; }
+    @page :first { size: A4 landscape; margin: 1cm; }
 
     /* Farben + Hintergrundgrafiken drucken */
     * {
@@ -470,34 +523,29 @@ html, body {
     .situation-view-wrapper {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important;
         align-items: stretch !important;
         gap: 0 !important;
         visibility: visible !important;
         opacity: 1 !important;
         position: relative !important;
 
-        /* FIX: Breite auf 100% des Papiers setzen statt 1120px */
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
-
-        /* FIX (v12): Keine vertikale Komprimierung auf Seite 1.
-           Statt "zoom" (skaliert X+Y und schiebt alles nach oben) nutzen wir nur eine X-Skalierung,
-           damit rechts nichts abgeschnitten wird, aber die Hoehe/Position optisch gleich bleibt. */
+        box-sizing: border-box !important;
 
         transform: none !important;
 
         height: auto !important;
-        overflow: hidden !important;
+        min-height: 0 !important;
+        overflow: visible !important;
 
         break-after: page !important;
         page-break-after: always !important;
 
         margin: 0 !important;
         padding: 0 !important;
-        padding-left: 0px !important; /* Safe-Shift für links (Print + Share identisch) */
-        /* Seite 1 im Print wie Seite 2: hellblauer Seitenhintergrund */
         background: #eff6ff !important;
         background-color: #eff6ff !important;
         box-shadow: inset 0 0 0 1000px #eff6ff !important;
@@ -551,27 +599,46 @@ html, body {
         box-shadow: inset 0 0 0 1000px #eff6ff !important;
     }
 
-    /* Main (Links+Mitte) = 80% */
-    .situation-view-wrapper > div.flex-1.flex.items-stretch {
-        
-        /* Sicherstellen, dass die Spalten innerhalb flexibel bleiben */
-        flex: 1 1 auto !important;
-        width: 74% !important; /* Haupttabelle bekommt ca. 3/4 des Platzes */
+    /* Main (Links+Mitte) = feste Breite, kein Schrumpfen */
+    .situation-view-wrapper > div.flex-1.flex.items-stretch,
+    .situation-view-wrapper > div.flex-1.flex.flex-col {
+        flex: 0 0 74% !important;
+        width: 74% !important;
         max-width: 74% !important;
+        min-width: 0 !important;
+        overflow: visible !important;
+        height: auto !important;
         order: 1 !important;
+        box-sizing: border-box !important;
     }
 
-    /* Rechte Sidebar = 20% (im Print sichtbar) */
-    .situation-view-wrapper > aside {
-        
+    /* Rechte Sidebar = fest 26%, kein Schrumpfen, kein Umbrechen */
+    .situation-view-wrapper > aside,
+    .situation-view-wrapper > aside.hidden,
+    .situation-view-wrapper > aside.sit-aside-panel {
         display: flex !important;
-        flex: 0 0 26% !important; /* Sidebar bekommt ca. 1/4 */
+        visibility: visible !important;
+        opacity: 1 !important;
+        flex: 0 0 26% !important;
         width: 26% !important;
         max-width: 26% !important;
         min-width: 0 !important;
         height: auto !important;
         overflow: visible !important;
         order: 2 !important;
+        box-sizing: border-box !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        /* Tailwind 'hidden' Klasse explizit aufheben */
+        clip: auto !important;
+        clip-path: none !important;
+    }
+
+    /* Scroll-Container in Sidebar im Print auflösen */
+    .situation-view-wrapper .overflow-y-auto {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
     }
 
 
@@ -598,6 +665,13 @@ html, body {
         overflow: visible !important;
         height: auto !important;
         min-height: 0 !important;
+    }
+    /* Explizit: der innere flex-col Container (direktes Kind von situation-view-wrapper)
+       ACHTUNG: flex darf hier NICHT überschrieben werden – Breite kommt von der Regel oben */
+    .situation-view-wrapper > div.flex-1 {
+        overflow: visible !important;
+        height: auto !important;
+        /* flex: none hier NICHT setzen – würde die 74% Breite zerstören */
     }
 
 
@@ -956,9 +1030,11 @@ html, body {
         overflow: hidden !important;
     }
 
-    /* Rechte Sidebar Seite 1 (Share) */
-    body.pdf-share-mode .situation-view-wrapper > aside {
+    /* Rechte Sidebar Seite 1 (Share) – Tailwind 'hidden' überschreiben */
+    body.pdf-share-mode .situation-view-wrapper > aside,
+    body.pdf-share-mode .situation-view-wrapper > aside.hidden {
         display: flex !important;
+        visibility: visible !important;
         flex: 0 0 280px !important;
         width: 280px !important;
         max-width: 280px !important;
@@ -1163,6 +1239,199 @@ body.pdf-share-mode .share-page:last-child{
         }
     }
 
+/* =====================================================================
+   PRINT PATCH v_FINAL – Seite 1 auf 1 Seite: Sidebar komprimieren +
+   Kacheln größer machen (viel mehr Platz nach unten nutzen)
+   ===================================================================== */
+@media print {
+
+    /* === 1. Seiten-Wrapper: volle Höhe der A4-Seite nutzen === */
+    .situation-view-wrapper {
+        height: 210mm !important;
+        min-height: 0 !important;
+        max-height: 210mm !important;
+        overflow: hidden !important;
+    }
+
+    /* === 2. Linke Hauptfläche (Fortschrittsbalken + Kachel-Grid): volle Höhe === */
+    .situation-view-wrapper > div.flex-1.flex.flex-col {
+        height: 100% !important;
+        max-height: 100% !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 6px 8px 4px 10px !important;
+        gap: 5px !important;
+    }
+
+    /* Fortschrittsbalken: kompakter */
+    .sit-progress-bar {
+        flex: 0 0 auto !important;
+        min-height: 0 !important;
+        margin-bottom: 2px !important;
+    }
+
+    /* Kachel-Grid: nimmt den restlichen Platz = wird VIEL größer */
+    .sit-card-grid {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        gap: 6px !important;
+        align-content: stretch !important;     /* Kacheln dehnen sich vertikal! */
+        grid-template-rows: repeat(5, 1fr) !important; /* 5 Zeilen gleichmäßig */
+    }
+
+    /* Jede einzelne Kachel: füllt ihre Zeile vollständig */
+    .sit-card-grid > div {
+        min-height: 0 !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Kachel-Canvas-Bereich wächst mit */
+    .sit-card-canvas {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    /* Kachel-Header Button kompakter */
+    .sit-card-grid > div > button:first-child {
+        padding: 5px 10px !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* === 3. Rechte Sidebar (Stammdaten): deutlich komprimierter === */
+    .situation-view-wrapper > aside,
+    .situation-view-wrapper > aside.sit-aside-panel {
+        width: 22% !important;
+        flex: 0 0 22% !important;
+        max-width: 22% !important;
+        padding: 5px 6px !important;
+        gap: 4px !important;
+        overflow: hidden !important;
+        height: 100% !important;
+    }
+
+    /* Scroll-Container in Sidebar */
+    .situation-view-wrapper > aside > div.flex-1 {
+        overflow: hidden !important;
+        gap: 4px !important;
+    }
+
+    /* Alle SectionCards in der Sidebar: kompakteres Padding */
+    .situation-view-wrapper aside .bg-white.rounded-xl {
+        padding: 5px 7px !important;
+    }
+
+    /* SectionCard-Titel */
+    .situation-view-wrapper aside h3 {
+        font-size: 8px !important;
+        margin-bottom: 3px !important;
+        padding: 0 !important;
+        line-height: 1.1 !important;
+    }
+
+    /* Stammdaten: Selects nebeneinander (2-Spalten bleibt, aber kleiner) */
+    .situation-view-wrapper .grid.grid-cols-2.gap-2.mb-2.shrink-0 {
+        grid-template-columns: 1fr 1fr !important; /* wieder 2 Spalten – passt jetzt */
+        gap: 3px !important;
+        margin-bottom: 3px !important;
+    }
+
+    /* Alle Select-Felder in der Sidebar: kleiner */
+    .situation-view-wrapper aside select {
+        height: 22px !important;
+        font-size: 8px !important;
+        padding: 0 4px !important;
+        line-height: 1 !important;
+    }
+
+    /* E-Mail Feld */
+    .situation-view-wrapper aside input[type="email"],
+    .situation-view-wrapper aside input[type="text"] {
+        height: 20px !important;
+        font-size: 9px !important;
+        padding: 0 6px !important;
+    }
+
+    /* E-Mail Canvas-Wrapper */
+    .situation-view-wrapper aside div[style*="height:'52px'"],
+    .situation-view-wrapper aside div[style*="height: 52px"] {
+        height: 28px !important;
+    }
+
+    /* E-Mail Bereich inkl. Label-Zeile */
+    .situation-view-wrapper aside .shrink-0 > div[style*="position:'relative'"] {
+        height: 26px !important;
+    }
+
+    /* Kosten (Ist): kleinere Inputs */
+    .situation-view-wrapper aside input.h-7 {
+        height: 20px !important;
+        font-size: 9px !important;
+        padding: 0 4px !important;
+    }
+
+    /* CostBar kompakter */
+    .situation-view-wrapper aside div[style*="height:2px"],
+    .situation-view-wrapper aside .h-0\\.5 {
+        height: 2px !important;
+    }
+
+    /* Gesamt-Zeile in Kosten */
+    .situation-view-wrapper aside .bg-slate-100.rounded-md {
+        height: 20px !important;
+        font-size: 9px !important;
+        padding: 0 5px !important;
+    }
+
+    /* Buttons in Technische Situation & Speed */
+    .situation-view-wrapper aside button.h-8 {
+        height: 20px !important;
+        font-size: 8px !important;
+        padding: 0 6px !important;
+    }
+
+    /* WLAN/Speed Empfehlung Box */
+    .situation-view-wrapper aside .p-2.bg-white.border.border-blue-100 {
+        padding: 2px 4px !important;
+        margin-bottom: 2px !important;
+    }
+    .situation-view-wrapper aside .p-2.bg-white.border.border-blue-100 .text-\[9px\] {
+        font-size: 7px !important;
+    }
+    .situation-view-wrapper aside .p-2.bg-white.border.border-blue-100 .text-\[11px\] {
+        font-size: 9px !important;
+        line-height: 1.1 !important;
+    }
+
+    /* Roaming: ausblenden (ohnehin print-hide-roaming) */
+    .print-hide-roaming {
+        display: none !important;
+    }
+
+    /* Hint-Text unten im Kostenfeld */
+    .situation-view-wrapper aside .text-\[9px\].text-slate-400 {
+        display: none !important;
+    }
+
+    /* Abstände zwischen SectionCards */
+    .situation-view-wrapper aside .gap-2 {
+        gap: 3px !important;
+    }
+
+    /* Hauptbreite anpassen (78% für Kacheln, 22% für Sidebar) */
+    .situation-view-wrapper > div.flex-1.flex.items-stretch,
+    .situation-view-wrapper > div.flex-1.flex.flex-col {
+        flex: 0 0 78% !important;
+        width: 78% !important;
+        max-width: 78% !important;
+    }
+}
+
     
     /* --- PATCH v50_23: Zentrierung + digitale Sichtbarkeit --- */
     .offer-cost-input{
@@ -1286,25 +1555,28 @@ body.pdf-share-mode .share-page:last-child{
 
     /* ================================
        FINAL PRINT PATCH (Chrome + Edge):
-       Seite 2 (Ihre Aktuelle Situation)
-       - definierte Seitenhoehe, damit "unten" existiert
-       - Kostenblock wirklich nach unten + 30px tiefer
-       - Breiten bleiben unveraendert
+       Sidebar rechts neben Kacheln halten,
+       flex-wrap NIEMALS wrap erlauben
        ================================ */
     @media print {
-      /* Seite 2: Unten definieren */
       .situation-view-wrapper{
-        height: 190mm !important;
-        min-height: 190mm !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        height: auto !important;
+        min-height: 0 !important;
         overflow: visible !important;
       }
 
       /* Rechte Spalte nutzt volle Hoehe */
-      .situation-view-wrapper > aside{
+      .situation-view-wrapper > aside,
+      .situation-view-wrapper > aside.sit-aside-panel {
         display: flex !important;
         flex-direction: column !important;
-        height: 100% !important;
-        min-height: 100% !important;
+        flex: 0 0 26% !important;
+        width: 26% !important;
+        height: auto !important;
+        min-height: 0 !important;
         overflow: visible !important;
       }
 
@@ -1824,10 +2096,22 @@ body.pdf-share-mode .sit-card-grid {
         grid-template-columns: 1fr 1fr !important;
         grid-template-rows: repeat(5, 1fr) !important;
         gap: 5px !important;
-        overflow: hidden !important;
+        overflow: visible !important;
         height: auto !important;
-        max-height: 100% !important;
+        max-height: none !important;
         page-break-inside: avoid !important;
+    }
+    /* Der scrollbare Container um das Grid */
+    .custom-scrollbar.sit-card-grid,
+    div:has(> .sit-card-grid) {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        flex: none !important;
+    }
+    /* Direkte Eltern des sit-card-grid */
+    .sit-card-grid {
+        overflow: visible !important;
     }
     .sit-card-grid > div {
         min-height: 0 !important;
@@ -1837,6 +2121,7 @@ body.pdf-share-mode .sit-card-grid {
         break-inside: avoid !important;
     }
     /* Fortschrittsbalken im Print ausblenden */
+    .sit-progress-bar,
     .sit-card-grid ~ div,
     .situation-view-wrapper > div > div:first-child {
         display: none !important;
@@ -1851,7 +2136,7 @@ body.pdf-share-mode .sit-card-grid {
     }
     /* Karten-Schreibfeld: Mindesthöhe für Lesbarkeit */
     .sit-card-grid > div > div:last-child {
-        min-height: 50px !important;
+        min-height: 90px !important;
     }
 }
 </style>
@@ -1861,19 +2146,41 @@ body.pdf-share-mode .sit-card-grid {
 @media print {
     .sit-question-chips { display:none !important; }
 
-    /* Canvas-Bereich: flex:1 deaktivieren + feste Hoehe -> kein Ausdehnen mehr */
-    .sit-card-canvas {
-        flex: none !important;
-        height: 42px !important;
-        min-height: 0 !important;
-        max-height: 42px !important;
+    /* Situation-Wrapper: volle Seitenhöhe ausfüllen */
+    .situation-view-wrapper {
+        height: 100vh !important;
+        max-height: 100vh !important;
         overflow: hidden !important;
     }
-    /* Kachel selbst: kein minHeight mehr */
-    .sit-card-grid > div {
-        min-height: 0 !important;
-        height: auto !important;
+
+    /* Das Kachel-Grid: volle verfügbare Höhe, 5 gleichmäßige Zeilen */
+    .sit-card-grid {
+        height: 100% !important;
+        flex: 1 1 auto !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        grid-template-rows: repeat(5, 1fr) !important;
+        align-content: stretch !important;
+        gap: 5px !important;
     }
+
+    /* Jede Kachel füllt ihre Zeile vollständig */
+    .sit-card-grid > div {
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+
+    /* Canvas-Bereich: wächst flexibel mit der Kachel */
+    .sit-card-canvas {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: hidden !important;
+    }
+
     /* Icon im Kachel-Header kleiner */
     .sit-card-grid > div > button > div:first-child {
         width: 26px !important;
@@ -1882,6 +2189,7 @@ body.pdf-share-mode .sit-card-grid {
     /* Kachel-Header kompakter */
     .sit-card-grid > div > button {
         padding: 5px 8px 4px 8px !important;
+        flex-shrink: 0 !important;
     }
     /* Titel-Text etwas kleiner */
     .sit-card-grid > div > button div[style*="font-size:13px"] {
@@ -2012,6 +2320,179 @@ html.dark-mode .bg-white.p-3.rounded-xl { background-color:var(--dm-card-bg) !im
     }
 }
 </style>
+
+<style id="print-v10-clean-fix">
+/* =====================================================
+   V10 CLEAN PRINT PATCH
+   Ziel: normaler Druck (Ctrl+P) auf Seite 1 voll ausfüllen,
+   rechte Spalte sichtbar, Kacheln breiter, keine abgeschnittene Breite.
+   PDF-Export (pdf-share-mode) bleibt unberührt.
+   ===================================================== */
+@media print {
+  @page { size: A4 landscape; margin: 0 !important; }
+
+  html, body, #root {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  /* Seite 1: Wrapper nutzt die komplette Druckbreite */
+  .print-situation-view,
+  .situation-view-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 10mm 8mm 8mm 8mm !important;
+    gap: 14px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  /* Linke Hauptspalte bekommt mehr Platz */
+  .situation-view-wrapper > div.flex-1,
+  .print-situation-view > div.flex-1,
+  .situation-view-wrapper > .flex-1 {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  /* Rechte Sidebar fest sichtbar, aber etwas kompakter */
+  .situation-view-wrapper > aside,
+  .situation-view-wrapper > aside.sit-aside-panel,
+  .print-situation-view > aside,
+  .print-situation-view > aside.sit-aside-panel,
+  .sit-aside-panel {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex: 0 0 255px !important;
+    width: 255px !important;
+    min-width: 255px !important;
+    max-width: 255px !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Hauptkartenraster auf Seite 1 breiter machen */
+  .situation-view-wrapper .grid.grid-cols-2,
+  .print-situation-view .grid.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Die großen Kacheln selbst */
+  .situation-view-wrapper .bg-white.rounded-2xl,
+  .situation-view-wrapper .bg-white.rounded-xl,
+  .print-situation-view .bg-white.rounded-2xl,
+  .print-situation-view .bg-white.rounded-xl {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Die 10 Hauptfelder der "Aktuellen Situation" größer und voller */
+  .situation-view-wrapper .grid.grid-cols-2 > .bg-white,
+  .print-situation-view .grid.grid-cols-2 > .bg-white,
+  .situation-view-wrapper .grid.grid-cols-2 > div[class*="bg-white"],
+  .print-situation-view .grid.grid-cols-2 > div[class*="bg-white"] {
+    min-height: 86px !important;
+    padding: 12px 14px !important;
+  }
+
+  /* Text in den Kacheln minimal kompakter, damit mehr Breite sichtbar bleibt */
+  .situation-view-wrapper .grid.grid-cols-2 > div[class*="bg-white"] h3,
+  .situation-view-wrapper .grid.grid-cols-2 > div[class*="bg-white"] .font-bold,
+  .print-situation-view .grid.grid-cols-2 > div[class*="bg-white"] h3,
+  .print-situation-view .grid.grid-cols-2 > div[class*="bg-white"] .font-bold {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+
+  .situation-view-wrapper .grid.grid-cols-2 > div[class*="bg-white"] p,
+  .situation-view-wrapper .grid.grid-cols-2 > div[class*="bg-white"] span,
+  .situation-view-wrapper .grid.grid-cols-2 > div[class*="bg-white"] input,
+  .print-situation-view .grid.grid-cols-2 > div[class*="bg-white"] p,
+  .print-situation-view .grid.grid-cols-2 > div[class*="bg-white"] span,
+  .print-situation-view .grid.grid-cols-2 > div[class*="bg-white"] input {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Kleine 2er-Auswahlfelder in Stammdaten im Print weiterhin untereinander */
+  .situation-view-wrapper .grid.grid-cols-2.gap-2.mb-2.shrink-0,
+  .print-situation-view .grid.grid-cols-2.gap-2.mb-2.shrink-0 {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Sidebar-Karten kompakter, damit unten nichts abgeschnitten wird */
+  .situation-view-wrapper aside .bg-white,
+  .print-situation-view aside .bg-white {
+    padding: 10px 11px !important;
+  }
+
+  .situation-view-wrapper aside h3,
+  .print-situation-view aside h3 {
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
+    line-height: 1.2 !important;
+  }
+
+  .situation-view-wrapper aside input,
+  .situation-view-wrapper aside select,
+  .print-situation-view aside input,
+  .print-situation-view aside select {
+    min-height: 34px !important;
+    height: 34px !important;
+    font-size: 11px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  /* Kostenblock rechts unten sicher mitnehmen */
+  .situation-view-wrapper aside .bg-white.rounded-xl.p-4.shadow-sm:last-child,
+  .print-situation-view aside .bg-white.rounded-xl.p-4.shadow-sm:last-child {
+    margin-top: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Harte Breiten aus älteren Patches neutralisieren */
+  .print-situation-view .canvas,
+  .print-situation-view .canvas-area,
+  .print-situation-view .situation-canvas,
+  .print-situation-view .content-area {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Keine ungewollte Zoom-Quetschung auf Seite 1 */
+  .situation-view-wrapper,
+  .print-situation-view {
+    zoom: 1 !important;
+    transform: none !important;
+    transform-origin: top left !important;
+  }
+}
+
+/* PDF-Share-Modus absichtlich NICHT anfassen */
+body.pdf-share-mode .situation-view-wrapper,
+body.pdf-share-mode .print-situation-view {
+  zoom: inherit !important;
+}
+</style>
+
 </head>
 <body>
     <div id="root"></div>
@@ -4780,13 +5261,15 @@ const resolveUserName = (raw) => {
             image, onClearImage, onClearOverlay,
             imageTransform, onUpdateImageTransform,
             followUpInfo, onOpenBundleModal,
-            triggerToast
+            triggerToast,
+            htmlOverlayProp,
+            bundleInsertCount,
+            viewOfferCount
         }) => {
                 const SIZE_DIFFERENCE_THRESHOLD = 5;
 
-                // Overlay-HTML ist global gespiegelt (wird unten in Window gesetzt)
-                const htmlGlobalKey = (statusKey === 'offer1') ? '__canvasHtmlOffer1' : (statusKey === 'offer2') ? '__canvasHtmlOffer2' : (statusKey === 'offer3') ? '__canvasHtmlOffer3' : null;
-                const htmlOverlay = htmlGlobalKey ? window[htmlGlobalKey] : null;
+                // htmlOverlay kommt jetzt als Prop (statt aus window[]) – dadurch kann React Änderungen korrekt tracken
+                const htmlOverlay = htmlOverlayProp || null;
 
                 // ✅ Inhalterkennung direkt am Canvas (wichtig: auch nach Radieren korrekt)
                 const canvasHasVisibleInkLocal = (canvas) => {
@@ -4851,13 +5334,29 @@ const resolveUserName = (raw) => {
                     }
                 };
 
-                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[420px] md:min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '22px' : '17px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(false);
-                useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
-
-        // Sobald ein neues Bundle/Bild eingefügt wurde: Edit-Modus wieder deaktivieren, damit Zeichnen sofort funktioniert.
-        useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
-        useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
-        useEffect(() => { try { setOverlayEditEnabled(false); } catch(_) {} }, [image, htmlOverlay]);
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[420px] md:min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '22px' : '17px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
+                // Immer wenn ein neues Bundle/Bild eingefügt wird: Edit-Modus aktivieren (blau = bewegbar).
+                // bundleInsertCount wird bei jedem Import erhöht – dadurch feuert dieser Effect garantiert,
+                // auch wenn dasselbe Bundle nochmals eingefügt wird.
+                const prevOverlayKeyRef = useRef(null);
+                useEffect(() => {
+                    if (bundleInsertCount > 0) {
+                        try { setOverlayEditEnabled(true); } catch(_) {}
+                    }
+                }, [bundleInsertCount]);
+                // Wenn zur Angebotsseite gewechselt wird und ein Bundle vorhanden ist: Edit-Modus aktivieren.
+                useEffect(() => {
+                    if (viewOfferCount > 0 && (htmlOverlay || image)) {
+                        try { setOverlayEditEnabled(true); } catch(_) {}
+                    }
+                }, [viewOfferCount]);
+                useEffect(() => {
+                    const currentKey = (htmlOverlay ? 'html:' + htmlOverlay.length : '') + (image ? 'img:' + image.length : '');
+                    if (currentKey !== prevOverlayKeyRef.current && (htmlOverlay || image)) {
+                        prevOverlayKeyRef.current = currentKey;
+                        try { setOverlayEditEnabled(true); } catch(_) {}
+                    }
+                }, [htmlOverlay, image]);
         const [overlayMode, setOverlayMode] = useState(null);
         const interactionStateRef = useRef({ isDragging: false, isScaling: false, startX: 0, startY: 0, initialX: 0, initialY: 0, initialScale: 1.0, initialDistance: 0, initialRotation: 0, initialAngle: 0, mode: null });
         const pointerCacheRef = useRef({}); 
@@ -5070,7 +5569,7 @@ const resolveUserName = (raw) => {
                         </div>
                     ) : null}
 
-</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0" style={{zIndex: inputMode === 'keyboard' ? 5 : 40, pointerEvents: inputMode === 'keyboard' ? 'none' : (overlayEditEnabled ? 'auto' : 'none'), touchAction: overlayEditEnabled ? 'none' : 'auto'}} onPointerDown={inputMode !== 'keyboard' ? handleInteractionStart : undefined} onPointerMove={inputMode !== 'keyboard' ? handleInteractionMove : undefined} onPointerUp={inputMode !== 'keyboard' ? handleInteractionEnd : undefined} onPointerCancel={inputMode !== 'keyboard' ? handleInteractionEnd : undefined} onPointerLeave={inputMode !== 'keyboard' ? handleInteractionEnd : undefined} onContextMenu={(e)=>{ if(inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }} style={{ transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'default' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))), pointerEvents: overlayEditEnabled ? 'auto' : 'none', touchAction: overlayEditEnabled ? 'none' : 'auto' }}>{htmlOverlay ? (<div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: inputMode==='keyboard' ? 0.35 : 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 20, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 10, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/></div></div>); });
+</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}>{htmlOverlay ? (<div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/></div></div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
         
@@ -5086,9 +5585,7 @@ const resolveUserName = (raw) => {
             useEffect(() => {
                 const canvas = canvasRef.current;
                 if (!canvas) return;
-                if (isPen) {
-                    redrawCanvas(canvas, drawnStrokes[inputKey], 1, inputKey);
-                }
+                redrawCanvas(canvas, drawnStrokes[inputKey], 1, inputKey);
             }, [isPen, drawnStrokes, inputKey, triggerRedraw]);
 
             const clearSmallCanvas = () => {
@@ -5102,47 +5599,37 @@ const resolveUserName = (raw) => {
 
             return (
                 <div className="small-canvas-wrapper h-full relative flex items-center border-none">
-                    {/* Background value (so initials like "E.I" are visible even when Pen overlay is active) */}
-                    {isPen && (
-                        <div
-                            className="absolute inset-0 flex items-center pl-2 pr-8 text-[15px] font-semibold text-slate-700 select-none"
-                            style={{ pointerEvents: 'none', opacity: 0.9 }}
-                        >
-                            {String(inputValue || '').trim()}
-                        </div>
-                    )}
+                    {/* Keyboard input - always rendered, only interactive in keyboard mode */}
+                    <input
+                        type={inputType}
+                        value={inputValue}
+                        onChange={onChange}
+                        readOnly={readOnly || isPen}
+                        placeholder={isPen ? '' : placeholder}
+                        className="absolute inset-0 w-full h-full p-2 text-sm font-medium text-slate-700 bg-transparent focus:ring-1 focus:ring-blue-300 transition-colors focus:outline-none"
+                        style={{ fontSize: '15px', paddingLeft: '8px', zIndex: isPen ? 2 : 15, pointerEvents: isPen ? 'none' : 'auto', userSelect: isPen ? 'none' : 'text' }}
+                    />
 
-                    {isPen ? (
-                        <>
-                            <canvas
-                                ref={canvasRef}
-                                onPointerDown={(e) => startDrawing(e, canvasRef, inputKey)}
-                                onPointerMove={(e) => draw(e, canvasRef, inputKey)}
-                                onPointerUp={(e) => stopDrawing(e, canvasRef)}
-                                onPointerLeave={(e) => stopDrawing(e, canvasRef)}
-                                className="absolute inset-0 w-full h-full cursor-crosshair z-10 drawing-canvas"
-                                style={{ pointerEvents: 'auto', touchAction: 'none' }}
-                            />
-                            {drawnStrokes[inputKey]?.length > 0 && (
-                                <button
-                                    onClick={clearSmallCanvas}
-                                    className="absolute top-1/2 right-2 -translate-y-1/2 p-0.5 hover:bg-slate-100 rounded text-slate-400 z-20"
-                                    title="Löschen"
-                                >
-                                    <Icon d={ICONS.Trash} size={14}/>
-                                </button>
-                            )}
-                        </>
-                    ) : (
-                        <input
-                            type={inputType}
-                            value={inputValue}
-                            onChange={onChange}
-                            readOnly={readOnly}
-                            placeholder={placeholder}
-                            className="w-full h-full p-2 text-sm font-medium text-slate-700 bg-transparent focus:ring-1 focus:ring-blue-300 transition-colors focus:outline-none"
-                            style={{ fontSize: '15px', paddingLeft: '8px' }}
-                        />
+                    {/* Pen canvas - always rendered, only interactive in pen mode */}
+                    <canvas
+                        ref={canvasRef}
+                        onPointerDown={isPen ? (e) => startDrawing(e, canvasRef, inputKey) : undefined}
+                        onPointerMove={isPen ? (e) => draw(e, canvasRef, inputKey) : undefined}
+                        onPointerUp={isPen ? (e) => stopDrawing(e, canvasRef) : undefined}
+                        onPointerLeave={isPen ? (e) => stopDrawing(e, canvasRef) : undefined}
+                        className="absolute inset-0 w-full h-full drawing-canvas"
+                        style={{ zIndex: isPen ? 10 : 3, pointerEvents: isPen ? 'auto' : 'none', touchAction: 'none', cursor: isPen ? 'crosshair' : 'default' }}
+                    />
+
+                    {/* Clear button for pen strokes - only in pen mode */}
+                    {isPen && drawnStrokes[inputKey]?.length > 0 && (
+                        <button
+                            onClick={clearSmallCanvas}
+                            className="absolute top-1/2 right-2 -translate-y-1/2 p-0.5 hover:bg-slate-100 rounded text-slate-400 z-20"
+                            title="Löschen"
+                        >
+                            <Icon d={ICONS.Trash} size={14}/>
+                        </button>
                     )}
                 </div>
             );
@@ -5626,6 +6113,11 @@ const fileInputRef = useRef(null);
             const toastTimerRef = useRef(null);
             const [canvasImages, setCanvasImages] = useState({ offer1: null, offer2: null, offer3: null });
             const [canvasHtml, setCanvasHtml] = React.useState({ offer1: null, offer2: null, offer3: null });
+            // Zähler: jedes Mal wenn ein Bundle/Bild eingefügt wird, erhöht sich dieser Wert.
+            // Damit kann OfferCanvas zuverlässig den Edit-Modus aktivieren – auch bei gleichem Inhalt.
+            const [bundleInsertCounter, setBundleInsertCounter] = React.useState({ offer1: 0, offer2: 0, offer3: 0 });
+            // Zähler: Jedes Mal wenn zur Angebotsseite gewechselt wird, overlayEditEnabled für alle OfferCanvas auf true setzen.
+            const [viewOfferCounter, setViewOfferCounter] = React.useState(0);
 
             // Brücke für die OfferCanvas-Komponente (minimal-invasiv)
             React.useEffect(() => {
@@ -5702,7 +6194,26 @@ const fileInputRef = useRef(null);
                 } catch(e) { triggerToast('Wiederherstellung fehlgeschlagen.'); }
             };
 
-            const RestoreToastBanner = () => !showRestoreToast ? null : (
+            const RestoreToastBanner = () => {
+                const [countdown, setCountdown] = React.useState(5);
+                React.useEffect(() => {
+                    if (!showRestoreToast) return;
+                    setCountdown(5);
+                    const interval = setInterval(() => {
+                        setCountdown(prev => {
+                            if (prev <= 1) {
+                                clearInterval(interval);
+                                setShowRestoreToast(false);
+                                clearAutosave();
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                    return () => clearInterval(interval);
+                }, [showRestoreToast]);
+                if (!showRestoreToast) return null;
+                return (
                 <div className="print-hide-toast fixed bottom-4 left-1/2 -translate-x-1/2 z-[110] animate-in fade-in" style={{display:'flex',alignItems:'center',gap:12,background:'#1e3a8a',color:'white',padding:'12px 18px',borderRadius:16,boxShadow:'0 8px 32px rgba(0,0,0,0.35)',border:'1px solid #3b5bdb',maxWidth:'90vw',minWidth:280}}>
                     <span style={{fontSize:20}}>💾</span>
                     <div style={{flex:1}}>
@@ -5710,9 +6221,9 @@ const fileInputRef = useRef(null);
                         <div style={{fontSize:11,opacity:0.75,marginTop:2}}>Möchten Sie den letzten Stand wiederherstellen?</div>
                     </div>
                     <button onClick={handleRestoreAutosave} style={{padding:'7px 14px',borderRadius:8,background:'#2563eb',border:'none',color:'white',fontWeight:800,fontSize:12,cursor:'pointer',flexShrink:0}}>Wiederherstellen</button>
-                    <button onClick={()=>{setShowRestoreToast(false);clearAutosave();}} style={{padding:'7px 10px',borderRadius:8,background:'rgba(255,255,255,0.12)',border:'none',color:'white',fontWeight:700,fontSize:12,cursor:'pointer',flexShrink:0}}>✕</button>
+                    <button onClick={()=>{setShowRestoreToast(false);clearAutosave();}} style={{padding:'7px 10px',borderRadius:8,background:'rgba(255,255,255,0.12)',border:'none',color:'white',fontWeight:700,fontSize:12,cursor:'pointer',flexShrink:0,minWidth:32,textAlign:'center'}}>✕ {countdown}</button>
                 </div>
-            );
+            );}
 
 
             // === Inhalterkennung Offer-Canvas (Status nur bei Inhalt erforderlich) ===
@@ -5763,12 +6274,12 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                     const cEl = getOfferCanvasElByKey(k);
                     const hasInk = (cEl ? canvasHasVisibleInk(cEl) : !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length));
                     const hasImg = !!(canvasImages && canvasImages[k]);
-                    const hasHtml = !!((k === 'offer1') ? window.__canvasHtmlOffer1 : (k === 'offer2') ? window.__canvasHtmlOffer2 : (k === 'offer3') ? window.__canvasHtmlOffer3 : null);
+                    const hasHtml = !!(canvasHtml && canvasHtml[k]);
                     return hasText || hasInk || hasImg || hasHtml;
                 } catch (e) {
                     return false;
                 }
-            }, [getDisplayText, drawnStrokes, canvasImages]);
+            }, [getDisplayText, drawnStrokes, canvasImages, canvasHtml]);
 
             const isReadyToFinish = ['offer1','offer2','offer3'].every(k => {
                 if (!isOfferAreaNonEmpty(k)) return true; // leer -> keine Status-Pflicht
@@ -5809,6 +6320,7 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                 if (typeof payload === 'object' && payload.kind === 'html') {
                     setCanvasHtml(prev => ({ ...prev, [key]: payload.html || null }));
                     setCanvasImages(prev => ({ ...prev, [key]: null })); // Bild leeren
+                    setBundleInsertCounter(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
 
                     // Nach Render: mittig positionieren (damit die Toolbar-Icons nicht verdeckt werden)
                     requestAnimationFrame(() => requestAnimationFrame(applyCenteredY));
@@ -5822,6 +6334,7 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                 if (typeof payload === 'string') {
                     setCanvasImages(prev => ({ ...prev, [key]: payload }));
                     setCanvasHtml(prev => ({ ...prev, [key]: null }));
+                    setBundleInsertCounter(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
 
                     // Nach Render: mittig positionieren
                     requestAnimationFrame(() => requestAnimationFrame(applyCenteredY));
@@ -6104,7 +6617,7 @@ const handleFinishOfferClick = () => {
             
             const handleSignatureSave = (dataUrl) => { if (dataUrl === 'PAPER_SIGNATURE') { setCustomerSignature(null); triggerToast("Papier-Unterschrift bestätigt."); } else { setCustomerSignature(dataUrl); triggerToast("Unterschrift erfasst."); } setShowSignatureModal(false); setTimeout(() => setShowReferralModal(true), 300); };
             
-            const handleSkipToOffer = (reasonData) => { setSkipReason(reasonData); setShowSkipReasonModal(false); setView('offer'); triggerToast(`Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`); };
+            const handleSkipToOffer = (reasonData) => { setSkipReason(reasonData); setShowSkipReasonModal(false); setView('offer'); setViewOfferCounter(c => c + 1); triggerToast(`Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`); };
 
             const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
 
@@ -6138,9 +6651,8 @@ const handleFinishOfferClick = () => {
                     const costFieldMap = { 'Anbieter': 'mobile', 'Hardware': 'mobile', 'WeitereProdukte': 'mobile', 'Weitere Produkte': 'mobile', 'Haushalt': 'mobile', 'WiFi': 'landline', 'Fernsehen': 'tv' };
                     const costTarget = costFieldMap[key];
                     if (costTarget && val) {
-                        // GB/MB-Zahlen entfernen, dann €-Beträge summieren
-                        const cleaned = val.replace(/\b\d+\s*(GB|MB|gb|mb)\b/g, '');
-                        const matches = cleaned.match(/\b\d{1,4}[.,]\d{2}\b/g);
+                        // Nur Beträge im Format XX,XX (Komma + genau 2 Stellen) erkennen - kein 40GB etc.
+                        const matches = val.match(/\b\d{1,4},\d{2}\b/g);
                         if (matches && matches.length > 0) {
                             let sum = 0;
                             matches.forEach(m => { const n = parseFloat(m.replace(',','.')); if (!isNaN(n) && n > 0 && n < 500) sum += n; });
@@ -6591,7 +7103,7 @@ const renderPenToolButtons = () => (
                 const rawKey = `${key}Raw`;
                 setOfferData(prev => ({ ...prev, [rawKey]: value, [key]: isNaN(val) || value.trim() === '' ? 0 : val }));
             };
-            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg`}>{inputMode === 'pen' ? (<SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/>) : (() => { const showDigital = !!digitalTouchedRef.current[strokesKey]; const displayValue = showDigital ? rawValue : ''; const hasInk = !!(drawnStrokes[strokesKey] && drawnStrokes[strokesKey].length); if (!showDigital && hasInk) { return (<canvas ref={ref} className="absolute inset-0 w-full h-full drawing-canvas" style={{ pointerEvents: 'none', touchAction: 'none', background: 'transparent' }} />); } return (<input type={type} value={displayValue} onChange={handleChange} placeholder={label.split(' ')[0]} className={`w-full h-full px-3 text-base font-medium focus:ring-1 focus:ring-blue-300 transition-colors focus:outline-none ${isCostField ? 'offer-cost-input text-xl font-black text-slate-800 bg-transparent' : 'offer-meta-input text-slate-700 bg-transparent'}`}/>); })()}</div></div>); };
+            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
             
             const handleLocalTranslation = useCallback((targetCode) => { if (targetCode === 'de') return; const mockData = MOCK_TRANSLATIONS[targetCode]; if (mockData) { const newTranslatedText = {}; const newStaticTranslations = {}; Object.keys(STATIC_LABELS).forEach(key => { if (mockData[key]) { newStaticTranslations[key] = mockData[key]; } }); Object.keys(textData).forEach(key => { if (mockData[key]) { newTranslatedText[key] = mockData[key]; } }); setTranslatedText(prev => ({ ...prev, [targetCode]: { ...(prev[targetCode] || {}), ...newTranslatedText } })); setStaticTranslations(prev => ({ ...prev, [targetCode]: { ...(prev[targetCode] || {}), ...newStaticTranslations } })); if (mockData.AgentName) handleTextChange('AgentName', mockData.AgentName); if (mockData.DateValue) handleTextChange('DateValue', mockData.DateValue); triggerToast(`Lokale (Mock) Übersetzung geladen: ${targetCode.toUpperCase()}.`); } else { triggerToast(`Für ${targetCode.toUpperCase()} ist keine lokale Mock-Übersetzung verfügbar. Standard-Deutsch wird verwendet.`); } }, [triggerToast, textData, handleTextChange]); 
             useEffect(() => { if (displayLanguage !== 'de') { if (!staticTranslations[displayLanguage] || !translatedText[displayLanguage]) { handleLocalTranslation(displayLanguage); } } }, [displayLanguage, handleLocalTranslation, translatedText, staticTranslations]);
@@ -7205,7 +7717,14 @@ const isOfferEmpty = (sourceOfferEl, offerIndex) => {
         // 3) Bild hochgeladen?
         const hasImage = !!col.querySelector('img.canvas-image, img[class*="canvas"]');
 
-        return !hasText && !hasCanvas && !hasImage;
+        // 4) HTML-Overlay eingefügt? (Bundle/Aktionsmappe über window.__canvasHtmlOfferX)
+        const htmlGlobalKeys = ['__canvasHtmlOffer1', '__canvasHtmlOffer2', '__canvasHtmlOffer3'];
+        const hasHtmlGlobal = !!(window[htmlGlobalKeys[offerIndex]]);
+
+        // 5) HTML-Overlay im DOM sichtbar? (Fallback: direkt im geklonten Element prüfen)
+        const hasHtmlDom = !!col.querySelector('.offer-html-overlay-wrap, .bundle-import-wrap');
+
+        return !hasText && !hasCanvas && !hasImage && !hasHtmlGlobal && !hasHtmlDom;
     } catch(e) { return false; }
 };
 
@@ -7321,6 +7840,31 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
         ta.style.whiteSpace = 'pre-wrap';
         ta.style.wordWrap = 'break-word';
         ta.style.overflowWrap = 'break-word';
+    }
+
+    // HTML-Overlay (Bundle/Aktionsmappe): im PDF immer vollständig sichtbar machen
+    const htmlOverlayWrap = container.querySelector('.offer-html-overlay-wrap');
+    if (htmlOverlayWrap) {
+        // Overlay-Parent: transform(x,y) aus Screen-Drag ENTFERNEN (sonst verrutscht das Overlay im PDF)
+        const overlayParent = htmlOverlayWrap.parentElement;
+        if (overlayParent) {
+            overlayParent.style.transform = 'none';   // <-- DER KERN-FIX: Screen-Offset entfernen
+            overlayParent.style.transition = 'none';
+            overlayParent.style.position = 'absolute';
+            overlayParent.style.inset = '0';
+            overlayParent.style.opacity = '1';
+            overlayParent.style.display = 'block';
+            overlayParent.style.zIndex = '5';
+        }
+        // Overlay-Wrap selbst: sauber positioniert, volle Fläche, sichtbar
+        htmlOverlayWrap.style.opacity = '1';
+        htmlOverlayWrap.style.pointerEvents = 'none';
+        htmlOverlayWrap.style.userSelect = 'none';
+        htmlOverlayWrap.style.position = 'relative';
+        htmlOverlayWrap.style.width = '100%';
+        htmlOverlayWrap.style.boxSizing = 'border-box';
+        htmlOverlayWrap.style.overflow = 'hidden';
+        htmlOverlayWrap.style.margin = '0';
     }
 
     // Spalten-Wrapper: volle Höhe
@@ -7551,6 +8095,18 @@ const opt = {
                             -moz-osx-font-smoothing: grayscale !important;
                             text-rendering: geometricPrecision !important;
                             font-kerning: normal !important;
+                        }
+
+                        /* FIX: Overlay-Parent-Div hat screen-drag translate(x,y) - im PDF auf 0 zuruecksetzen */
+                        body.pdf-share-mode .offer-canvas-container > div[style*="translate"] {
+                            transform: none !important;
+                        }
+                        /* Overlay-Wrap: immer oben-links, volle Breite, voll sichtbar */
+                        body.pdf-share-mode .offer-html-overlay-wrap {
+                            position: relative !important;
+                            transform: none !important;
+                            width: 100% !important;
+                            opacity: 1 !important;
                         }
 
                         /* Jede Share-Seite ist ein echtes A4-Landscape Blatt */
@@ -8001,9 +8557,9 @@ const handlePDFShare = async () => {
                                             return !!(getDisplayText(item.id)||(drawnStrokes&&drawnStrokes[sk]&&drawnStrokes[sk].length));
                                         }).length;
                                         const pct = Math.round((filled/SITUATION_ITEMS.length)*100);
-                                        return (<div style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}><div style={{flex:1,height:'8px',background:'#e2e8f0',borderRadius:'999px',overflow:'hidden',minWidth:80}}><div style={{width:pct+'%',height:'100%',background:pct===100?'#16a34a':'#2563eb',borderRadius:'999px',transition:'width 0.5s ease'}}/></div><span style={{fontSize:'11px',fontWeight:800,color:pct===100?'#16a34a':'#94a3b8',flexShrink:0}}>{pct===100?'✓ Vollständig':filled+'/'+SITUATION_ITEMS.length+' Felder'}</span></div>);
+                                        return (<div className="sit-progress-bar" style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}><div style={{flex:1,height:'8px',background:'#e2e8f0',borderRadius:'999px',overflow:'hidden',minWidth:80}}><div style={{width:pct+'%',height:'100%',background:pct===100?'#16a34a':'#2563eb',borderRadius:'999px',transition:'width 0.5s ease'}}/></div><span style={{fontSize:'11px',fontWeight:800,color:pct===100?'#16a34a':'#94a3b8',flexShrink:0}}>{pct===100?'✓ Vollständig':filled+'/'+SITUATION_ITEMS.length+' Felder'}</span></div>);
                                     })()}
-                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'start',overflowY:'auto'}}>
+                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'stretch',gridTemplateRows:'repeat(5, 1fr)',overflowY:'auto'}}>
                                         {SITUATION_ITEMS.map((item) => {
                                             const sitKey = `sit_${item.id.replace(/\s+/g,'')}`;
                                             const sitRefMap = {Kundenname:sitCanvasRef_Kundenname,Rufnummer:sitCanvasRef_Rufnummer,Anbieter:sitCanvasRef_Anbieter,Hardware:sitCanvasRef_Hardware,Nutzung:sitCanvasRef_Nutzung,Haushalt:sitCanvasRef_Haushalt,'Weitere Produkte':sitCanvasRef_WeitereProdukte,Fernsehen:sitCanvasRef_Fernsehen,WiFi:sitCanvasRef_WiFi,Gesamtkosten:sitCanvasRef_Gesamtkosten};
@@ -8015,7 +8571,7 @@ const handlePDFShare = async () => {
                                             const _era = ((drawnStrokes&&drawnStrokes[sitKey])||[]).filter(s=>s&&s.tool==='eraser'&&s.points&&s.points.length>=3).length;
                                             const hasContent = _text.length>=3||Math.max(0,_pen-_era)>=3;
                                             return (
-                                                <div key={item.id} style={{display:'flex',flexDirection:'column',borderRadius:'14px',overflow:'hidden',border:isActive?'2px solid #2563eb':'1.5px solid #e2e8f0',boxShadow:isActive?'0 4px 16px rgba(37,99,235,0.15)':'0 1px 4px rgba(0,0,0,0.05)',background:'#ffffff',minHeight:'90px',transition:'all 0.18s ease'}}>
+                                                <div key={item.id} style={{display:'flex',flexDirection:'column',borderRadius:'14px',overflow:'hidden',border:isActive?'2px solid #2563eb':'1.5px solid #e2e8f0',boxShadow:isActive?'0 4px 16px rgba(37,99,235,0.15)':'0 1px 4px rgba(0,0,0,0.05)',background:'#ffffff',minHeight:'0',height:'100%',transition:'all 0.18s ease'}}>
                                                     <button data-print-keep="1" onClick={(e)=>{e.stopPropagation();setActiveCategory(item.id);setQuestionIndex(0);}} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 12px 8px 12px',background:isActive?'#eff6ff':'#f8fafc',border:'none',cursor:'pointer',textAlign:'left',width:'100%',borderBottom:'1px solid '+(isActive?'#bfdbfe':'#f1f5f9')}}>
                                                         <div style={{width:'36px',height:'36px',borderRadius:'10px',flexShrink:0,background:isActive?'#2563eb':'#ffffff',border:isActive?'none':'1.5px solid #e2e8f0',display:'flex',alignItems:'center',justifyContent:'center',color:isActive?'#ffffff':'#3b82f6'}}><Icon d={item.icon} size={18}/></div>
                                                         <div style={{flex:1,minWidth:0}}>
@@ -8025,7 +8581,7 @@ const handlePDFShare = async () => {
                                                         <div style={{width:'10px',height:'10px',borderRadius:'50%',flexShrink:0,background:hasContent?'#4ade80':'#e2e8f0',boxShadow:hasContent?'0 0 0 2px #fff,0 0 0 4px #4ade80':'none',transition:'all 0.3s'}}/>
                                                     </button>
                                                     <div className='sit-card-canvas' style={{flex:1,position:'relative',minHeight:'38px'}}>
-                                                        <input type="text" value={getDisplayText(item.id)} onChange={(e)=>handleTextChange(item.id,e.target.value)} style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:'14px',fontWeight:500,color:(inputMode==='pen')?'transparent':'#1e293b',background:'transparent',border:'none',outline:'none',zIndex:(inputMode==='keyboard')?40:0,boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} placeholder="" readOnly={inputMode==='pen'}/>
+                                                        <input type="text" value={getDisplayText(item.id)} onChange={(e)=>handleTextChange(item.id,e.target.value)} style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'12px':textSize==='large'?'18px':'14px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} placeholder="" readOnly={inputMode==='pen'}/>
                                                         <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen')?'auto':'none',touchAction:'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
                                                     </div>
                                                 </div>
@@ -8034,7 +8590,7 @@ const handlePDFShare = async () => {
                                     </div>
                                 </div>
 
-                        <aside className="w-[340px] xl:w-[360px] min-w-[340px] bg-[#f0f6ff] p-3 shrink-0 hidden md:flex flex-col border-l border-slate-200 z-10 h-full overflow-hidden">
+                        <aside className="w-[340px] xl:w-[360px] min-w-[340px] bg-[#f0f6ff] p-3 shrink-0 sit-aside-panel flex flex-col border-l border-slate-200 z-10 h-full overflow-hidden">
                             <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-y-auto custom-scrollbar">
                                 <SectionCard title="Stammdaten" className="shrink-0 flex flex-col"><div className="grid grid-cols-2 gap-2 mb-2 shrink-0"><div className="relative h-8"><select value={customerType} onChange={(e) => setCustomerType(e.target.value)} className={`w-full h-full bg-slate-50 border rounded-lg pl-2 pr-6 text-[10px] font-medium text-slate-700 focus:ring-1 outline-none border-l-4 ${customerType === "" ? "border-l-red-500" : "border-l-green-500"}`}><option value="" disabled hidden>Kundentyp *</option><option value="Neukunde">Neukunde</option><option value="Bestandskunde">Bestandskunde</option></select></div><div className="relative h-8"><select value={segment} onChange={(e) => { setSegment(e.target.value); setSegmentTouched(true); }} className={`w-full h-full bg-slate-50 border rounded-lg pl-2 pr-6 text-[10px] font-medium text-slate-700 focus:ring-1 outline-none border-l-4 ${segmentTouched ? "border-l-green-500" : "border-l-red-500"}`}><option value="" disabled hidden>Segment *</option><option value="Neuvertrag">Neuvertrag</option><option value="Vertragsverlängerung">Vertragsverlängerung</option><option value="Junge Leute">Junge Leute</option><option value="Bestes Alter">Bestes Alter</option></select></div></div><div className="shrink-0"><div className="flex items-center justify-between mb-1"><span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>E-Mail</span><div className="flex gap-1"><button onClick={()=>setEmailMode('keyboard')} style={{padding:'2px 8px',borderRadius:'6px',fontSize:'10px',fontWeight:700,border:'1px solid',borderColor:emailMode==='keyboard'?'#2563eb':'#e2e8f0',background:emailMode==='keyboard'?'#eff6ff':'#f8fafc',color:emailMode==='keyboard'?'#2563eb':'#94a3b8',cursor:'pointer'}}>⌨</button><button onClick={()=>setEmailMode('pen')} style={{padding:'2px 8px',borderRadius:'6px',fontSize:'10px',fontWeight:700,border:'1px solid',borderColor:emailMode==='pen'?'#2563eb':'#e2e8f0',background:emailMode==='pen'?'#eff6ff':'#f8fafc',color:emailMode==='pen'?'#2563eb':'#94a3b8',cursor:'pointer'}}>✏</button>{emailMode==='pen'&&(<button onClick={()=>clearCanvas(emailCanvasRef,'email')} style={{padding:'2px 8px',borderRadius:'6px',fontSize:'10px',border:'1px solid #e2e8f0',background:'#fef2f2',color:'#ef4444',cursor:'pointer'}}>✕</button>)}</div></div><div style={{position:'relative',height:'52px',border:'1.5px solid',borderColor:emailMode==='pen'?'#2563eb':'#e2e8f0',borderRadius:'10px',background:'#ffffff',overflow:'hidden'}}>{emailMode==='keyboard'?(<input type="email" value={emailText} onChange={(e)=>setEmailText(e.target.value)} placeholder="kunde@email.de" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 12px',fontSize:'13px',fontWeight:500,color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>):(<canvas ref={emailCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={(e)=>startDrawing(e,emailCanvasRef,'email')} onPointerMove={(e)=>draw(e,emailCanvasRef,'email')} onPointerUp={(e)=>stopDrawing(e,emailCanvasRef)} onPointerLeave={(e)=>stopDrawing(e,emailCanvasRef)}/>)}</div></div></SectionCard>
                                 <SectionCard title="Technische Situation" className="shrink-0 flex flex-col"><div className="relative mb-2 w-full h-8 shrink-0">{!isCustomProvider ? (<select value={providerSelect} onChange={(e) => { if (e.target.value === 'Sonstiges') { setIsCustomProvider(true); setProviderSelect('Sonstiges'); } else { setProviderSelect(e.target.value); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); } }} className={`w-full h-full bg-slate-50 border rounded-md pl-2 pr-6 text-[10px] font-medium text-slate-700 focus:ring-1 outline-none border-l-4 ${providerSelect === "" ? "border-l-red-500" : "border-l-green-500"}`}><option value="" disabled hidden>Derzeitiger DSL-Anbieter *</option><option value="Telekom">Telekom</option><option value="1&1">1&1</option><option value="Vodafone">Vodafone</option><option value="O2">O2</option><option value="Sonstiges">Sonstiges / Eingabe</option></select>) : (<div className="relative w-full h-full border border-slate-200 rounded-md bg-white overflow-hidden group flex items-center border-l-4 border-l-green-500"><div className="absolute right-1 top-1/2 -translate-y-1/2 z-20 flex gap-1"><button onClick={() => setProviderMode(prev => prev === 'keyboard' ? 'pen' : 'keyboard')} className="p-1 hover:bg-slate-100 rounded text-slate-400">{providerMode === 'keyboard' ? <Icon d={ICONS.Pen} size={10}/> : <Icon d={ICONS.Keyboard} size={10}/>}</button><button onClick={() => { setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setProviderSelect(''); setCustomProvider(''); }} className="p-1 hover:bg-slate-100 rounded text-slate-400" title="Zurück zur Liste"><Icon d={ICONS.List} size={10}/></button></div>{providerMode === 'keyboard' ? (<input type="text" value={customProvider} onChange={(e) => setCustomProvider(e.target.value)} placeholder="Anbieter..." className="w-full h-full px-3 text-[10px] focus:outline-none bg-transparent pr-16" autoFocus />) : (<><canvas ref={providerCanvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" onPointerDown={(e) => startDrawing(e, providerCanvasRef, 'provider')} onPointerMove={(e) => draw(e, providerCanvasRef, 'provider')} onPointerUp={(e) => stopDrawing(e, providerCanvasRef)} onPointerLeave={(e) => stopDrawing(e, providerCanvasRef)} /><button onClick={() => clearCanvas(providerCanvasRef, 'provider')} className="absolute top-1/2 right-1 -translate-y-1/2 p-1 hover:bg-slate-100 rounded text-slate-400 z-30" title="Löschen"><Icon d={ICONS.Trash} size={10}/></button></>)}</div>)}</div>{wlanRecommendation && (<div className="w-full mb-2 p-2 bg-white border border-blue-100 rounded-lg"><div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Empfehlung (WLAN)</div><div className="text-[11px] font-bold text-slate-700 leading-snug whitespace-pre-wrap">{wlanRecommendation}</div></div>)}<button onClick={() => setShowWlanModal(true)} className={`w-full h-8 text-left px-3 rounded-md text-[10px] font-bold flex items-center gap-2 border transition-colors shrink-0 ${wlanRecommendation?"bg-green-50 border-green-200 text-green-800 hover:bg-green-100":"bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"}`}><div style={{position:"relative",lineHeight:0}}><Icon d={ICONS.Wifi} size={14} className={wlanRecommendation?"text-green-600":"text-slate-500"}/>{wlanRecommendation&&<span style={{position:"absolute",top:-3,right:-3,width:6,height:6,background:"#22c55e",borderRadius:"50%"}}/>}</div>{wlanRecommendation?"✓ WLAN-Empfehlung":"WLAN-Planer öffnen"}</button></SectionCard>
@@ -8069,7 +8625,7 @@ const handlePDFShare = async () => {
                                         <CostBar val={parseCost(costState.tv)} total={totalCost} colorClass="bg-purple-500" />
                                     </div>
                                 </div>
-                                <div className="bg-slate-100 rounded-md px-2 h-7 flex items-center justify-between text-[11px] font-bold text-slate-700 border border-slate-200 mt-1 shrink-0"><span className="text-slate-400 font-medium">Gesamt</span><span>{totalCost.toFixed(2)} €</span></div>
+                                <div className="bg-slate-100 rounded-md px-2 h-7 flex items-center justify-between text-[11px] font-bold text-slate-700 border border-slate-200 mt-1 shrink-0"><span className="text-slate-400 font-medium">Gesamt</span><span>{totalCost.toFixed(2).replace('.',',')} €</span></div>
                                 {/* Hinweis: Auto-Erkennung bei Tastatur-Modus */}
                                 {inputMode === 'keyboard' && (
                                     <div className="mt-1 text-[9px] text-slate-400 text-center leading-tight">✨ Beträge wie <span className="font-bold text-slate-500">34,99</span> werden beim Tippen automatisch erkannt</div>
@@ -8086,7 +8642,7 @@ const handlePDFShare = async () => {
                                     const orderClass = key === 'offer1' ? 'order-1' : key === 'offer2' ? 'order-2' : 'order-3';
                                     return (
                                         <div className={orderClass}>
-                                            <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />
+                                            <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} htmlOverlayProp={canvasHtml[key] || null} bundleInsertCount={bundleInsertCounter[key] || 0} viewOfferCount={viewOfferCounter} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />
                                         </div>
                                     );
                                 })}
@@ -8151,7 +8707,7 @@ const handlePDFShare = async () => {
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
                         {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => setShowSkipReasonModal(true)} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
-                            <button onClick={() => isFormValid && setView('offer')} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
+                            <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
                         </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button><button onClick={() => setView('situation')} className="px-6 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors mr-2 flex items-center gap-1"><Icon d={ICONS.ArrowLeft} size={14}/> Zurück</button><button onClick={handleFinishOfferClick} disabled={!isReadyToFinish}  className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${
                     (!isReadyToFinish)
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
@@ -8216,17 +8772,61 @@ const handlePDFShare = async () => {
             // === PRINT: Kacheln kompakter machen (überschreibt Inline-Styles) ===
             const _printCardOrig = new Map();
             window.addEventListener('beforeprint', () => {
+                // FIX: Situation-View sichtbar machen, auch wenn gerade Offer-View aktiv ist
+                const sitWrapper = document.querySelector('.situation-view-wrapper');
+                if (sitWrapper) {
+                    _printCardOrig.set('__sit_display', sitWrapper.style.display);
+                    _printCardOrig.set('__sit_cls_hidden', sitWrapper.classList.contains('hidden'));
+                    sitWrapper.classList.remove('hidden');
+                    sitWrapper.style.display = 'flex';
+                    // Alle overflow-hidden/scrollbaren Innen-Container aufmachen
+                    sitWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
+                        _printCardOrig.set('__sit_overflow_' + i, el.style.overflow);
+                        _printCardOrig.set('__sit_height_' + i, el.style.height);
+                        el.style.overflow = 'visible';
+                        el.style.height = 'auto';
+                    });
+                    // flex-1 Kinder aufmachen
+                    sitWrapper.querySelectorAll('.flex-1').forEach((el, i) => {
+                        _printCardOrig.set('__sit_flex1_' + i, el.style.flex);
+                        el.style.flex = 'none';
+                    });
+                }
+                // FIX: Offer-View sichtbar machen, auch wenn gerade Situation-View aktiv ist
+                const offerWrapper = document.querySelector('.print-offer-view');
+                if (offerWrapper) {
+                    _printCardOrig.set('__offer_display', offerWrapper.style.display);
+                    _printCardOrig.set('__offer_cls_hidden', offerWrapper.classList.contains('hidden'));
+                    offerWrapper.classList.remove('hidden');
+                    offerWrapper.style.display = 'block';
+                    offerWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
+                        _printCardOrig.set('__offer_overflow_' + i, el.style.overflow);
+                        el.style.overflow = 'visible';
+                    });
+                }
+
                 document.querySelectorAll('.sit-card-grid > div').forEach((card, i) => {
                     _printCardOrig.set('card_' + i, card.style.minHeight);
                     card.style.minHeight = '0px';
                     card.style.height = 'auto';
                 });
+                // FIX: sit-card-grid selbst hat overflowY:'auto' als Inline-Style → aufmachen
+                document.querySelectorAll('.sit-card-grid').forEach((grid, i) => {
+                    _printCardOrig.set('__grid_overflow_' + i, grid.style.overflowY);
+                    _printCardOrig.set('__grid_flex_' + i, grid.style.flex);
+                    _printCardOrig.set('__grid_height_' + i, grid.style.height);
+                    grid.style.overflowY = 'visible';
+                    grid.style.overflow = 'visible';
+                    grid.style.flex = 'none';
+                    grid.style.height = 'auto';
+                    grid.style.maxHeight = 'none';
+                });
                 document.querySelectorAll('.sit-card-canvas').forEach((area, i) => {
                     _printCardOrig.set('area_' + i, area.style.flex + '|' + area.style.height);
-                    area.style.flex      = 'none';
-                    area.style.height    = '42px';
+                    area.style.flex      = '1 1 auto';
+                    area.style.height    = 'auto';
                     area.style.minHeight = '0';
-                    area.style.maxHeight = '42px';
+                    area.style.maxHeight = 'none';
                 });
                 // Frage-Chips ausblenden
                 document.querySelectorAll('.sit-question-chips').forEach(el => {
@@ -8236,7 +8836,38 @@ const handlePDFShare = async () => {
             });
             window.addEventListener('afterprint', () => {
                 document.querySelectorAll('.print-page-header').forEach(el => el.remove());
+
+                // Situation-View zurücksetzen
+                const sitWrapper = document.querySelector('.situation-view-wrapper');
+                if (sitWrapper) {
+                    sitWrapper.style.display = _printCardOrig.get('__sit_display') || '';
+                    if (_printCardOrig.get('__sit_cls_hidden')) sitWrapper.classList.add('hidden');
+                    sitWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
+                        el.style.overflow = _printCardOrig.get('__sit_overflow_' + i) || '';
+                        el.style.height = _printCardOrig.get('__sit_height_' + i) || '';
+                    });
+                    sitWrapper.querySelectorAll('.flex-1').forEach((el, i) => {
+                        el.style.flex = _printCardOrig.get('__sit_flex1_' + i) || '';
+                    });
+                }
+                // Offer-View zurücksetzen
+                const offerWrapper = document.querySelector('.print-offer-view');
+                if (offerWrapper) {
+                    offerWrapper.style.display = _printCardOrig.get('__offer_display') || '';
+                    if (_printCardOrig.get('__offer_cls_hidden')) offerWrapper.classList.add('hidden');
+                    offerWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
+                        el.style.overflow = _printCardOrig.get('__offer_overflow_' + i) || '';
+                    });
+                }
+
                 // Inline-Styles der Kacheln zuruecksetzen
+                document.querySelectorAll('.sit-card-grid').forEach((grid, i) => {
+                    grid.style.overflowY = _printCardOrig.get('__grid_overflow_' + i) || '';
+                    grid.style.overflow = '';
+                    grid.style.flex = _printCardOrig.get('__grid_flex_' + i) || '';
+                    grid.style.height = _printCardOrig.get('__grid_height_' + i) || '';
+                    grid.style.maxHeight = '';
+                });
                 document.querySelectorAll('.sit-card-grid > div').forEach((card, i) => {
                     card.style.minHeight = _printCardOrig.get('card_' + i) || '';
                     card.style.height = '';
@@ -8314,6 +8945,41 @@ const handlePDFShare = async () => {
         });
       })();
 
+    </script>
+
+    <!-- ===== AUTO PRINT: A4 Querformat erzwingen ===== -->
+    <script>
+    (function() {
+        var A4_LANDSCAPE_PX = 1122; // 297mm @ 96dpi
+
+        function forcePrintLandscape() {
+            var meta = document.querySelector('meta[name="viewport"]');
+            if (meta) {
+                meta._origContent = meta.getAttribute('content');
+                meta.setAttribute('content', 'width=' + A4_LANDSCAPE_PX);
+            }
+            document.documentElement.style.setProperty('width', A4_LANDSCAPE_PX + 'px', 'important');
+            document.body.style.setProperty('width', A4_LANDSCAPE_PX + 'px', 'important');
+        }
+
+        function restoreAfterPrint() {
+            var meta = document.querySelector('meta[name="viewport"]');
+            if (meta && meta._origContent) {
+                meta.setAttribute('content', meta._origContent);
+            }
+            document.documentElement.style.removeProperty('width');
+            document.body.style.removeProperty('width');
+        }
+
+        window.addEventListener('beforeprint', forcePrintLandscape);
+        window.addEventListener('afterprint', restoreAfterPrint);
+
+        var _origPrint = window.print.bind(window);
+        window.print = function() {
+            forcePrintLandscape();
+            setTimeout(function() { _origPrint(); }, 50);
+        };
+    })();
     </script>
 </body>
 </html>
