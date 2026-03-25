@@ -301,7 +301,26 @@ html, body{
         .wlan-svg .keller { fill: #f1f5f9; stroke: #94a3b8; }
         .wlan-svg .floor-line { stroke: #e2e8e0; }
         
-        /* Offer Canvas Styling */
+        /* === OFFER VIEW: Grid und Cards füllen den verfügbaren Raum === */
+        .print-offer-view .offer-print-grid {
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        @media (min-width: 768px) {
+            .print-offer-view .offer-print-grid {
+                align-items: stretch;
+                grid-template-rows: 1fr;
+            }
+            .print-offer-view .offer-print-grid > div {
+                display: flex;
+                flex-direction: column;
+            }
+            .print-offer-view .offer-print-grid .offer-canvas-container {
+                flex: 1 1 auto;
+            }
+        }
+
+        /* Offer Canvas Container */
         .offer-canvas-container {
             border: 4px solid #e5e5e5;
             border-radius: 1rem;
@@ -433,6 +452,7 @@ html, body {
         overflow:hidden !important;
         text-overflow:ellipsis !important;
         display:block !important;
+        text-align:left !important;
     }
     .print-page-header .badge{ background:#2563eb; color:#ffffff; padding:3px 8px; border-radius:999px; font-size:9px; font-weight:800; border:1px solid #1d4ed8; flex-shrink:0; }
 
@@ -1612,6 +1632,8 @@ body.pdf-share-mode .share-page:last-child{
   .print-offer-view{
     zoom: 0.76 !important; /* was 0.80-ish in Chrome */
     transform-origin: top left !important;
+    padding-left: 44px !important; /* shift content right on page 2 */
+    padding-top: 20px !important; /* shift content down on page 2 */
   }
 
   /* Prevent Kostenübersicht block from being pushed to a new page */
@@ -5334,7 +5356,7 @@ const resolveUserName = (raw) => {
                     }
                 };
 
-                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[420px] md:min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '22px' : '17px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[320px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '22px' : '17px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
                 // Immer wenn ein neues Bundle/Bild eingefügt wird: Edit-Modus aktivieren (blau = bewegbar).
                 // bundleInsertCount wird bei jedem Import erhöht – dadurch feuert dieser Effect garantiert,
                 // auch wenn dasselbe Bundle nochmals eingefügt wird.
@@ -8537,7 +8559,7 @@ const handlePDFShare = async () => {
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
                         <span>{darkMode ? '🌙' : '☀️'}</span>
                     </button>
-                    <h1 className="text-3xl font-black text-[#0b1e42] tracking-tighter truncate">{view === 'situation' ? 'Ihre Aktuelle Situation' : 'Ihr Persönliches Angebot'}</h1><div className="hida-logo-screen" aria-hidden="true">
+                    <h1 className="text-2xl font-black text-[#0b1e42] tracking-tighter flex-1 min-w-0 overflow-hidden" style={{whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{view === 'situation' ? 'Ihre Aktuelle Situation' : 'Ihr Persönliches Angebot'}</h1><div className="hida-logo-screen" aria-hidden="true">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190">
     <rect width="100%" height="100%" fill="transparent"/>
     <text x="360" y="55" textAnchor="middle" fontSize="36" letterSpacing="6"
@@ -8635,11 +8657,11 @@ const handlePDFShare = async () => {
                         </aside>
                     </div>
 
-                    <div className={`flex-1 w-full relative bg-[#f0f6ff] ${view === 'offer' ? 'flex overflow-y-auto' : 'hidden'} print-offer-view`}>
-                        <div className="w-full flex-1 flex flex-col space-y-6 min-h-0 p-4 md:p-8">
-                            <div className="flex flex-col gap-6 w-full md:grid md:grid-cols-3 offer-print-grid"> 
+                    <div className={`flex-1 w-full relative bg-[#f0f6ff] ${view === 'offer' ? 'flex flex-col overflow-hidden' : 'hidden'} print-offer-view`}>
+                        <div className="flex-1 flex flex-col min-h-0 p-3 md:p-4 gap-3 overflow-y-auto">
+                            <div className="flex flex-col gap-3 w-full md:grid md:grid-cols-3 offer-print-grid flex-1 min-h-0"> 
                                 {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }) => {
-                                    const orderClass = key === 'offer1' ? 'order-1' : key === 'offer2' ? 'order-2' : 'order-3';
+                                    const orderClass = key === 'offer1' ? 'order-1 flex flex-col min-h-0' : key === 'offer2' ? 'order-2 flex flex-col min-h-0' : 'order-3 flex flex-col min-h-0';
                                     return (
                                         <div className={orderClass}>
                                             <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} htmlOverlayProp={canvasHtml[key] || null} bundleInsertCount={bundleInsertCounter[key] || 0} viewOfferCount={viewOfferCounter} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />
@@ -8746,7 +8768,7 @@ const handlePDFShare = async () => {
             'order:-1',
         ].join(';');
         h.innerHTML = `
-            <div style="flex:1 1 auto; min-width:0; font-size:20px; font-weight:900; color:#0b1e42; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${titleText}</div>
+            <div style="flex:1 1 auto; min-width:0; font-size:20px; font-weight:900; color:#0b1e42; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; text-align:left;">${titleText}</div>
             <div style="flex-shrink:0; display:flex; align-items:center;">
                 <img src="${HIDA_LOGO_DATA_URI}" style="height:26px; width:auto; max-width:160px; object-fit:contain; display:block;" />
             </div>
