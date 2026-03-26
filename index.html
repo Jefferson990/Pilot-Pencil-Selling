@@ -8,6 +8,10 @@
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Firebase für Aktionsmappe-Verknüpfung -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+    
     <!-- 2. React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -3121,7 +3125,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             );
         };
 
-        const WlanModal=({isOpen,onClose,triggerToast,onRecommendation})=>{
+        const WlanModal=({isOpen,onClose,triggerToast,onRecommendation,onUebernehmen})=>{
   const[step,setStep]=React.useState(1);
   const[floors,setFloors]=React.useState(null);
   const[router,setRouter]=React.useState(null);
@@ -3242,6 +3246,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                   const txt=rec.sol+': '+rec.desc+'. Tipps: '+rec.tips.join('; ');
                   try{navigator.clipboard.writeText(txt);}catch(e){}
                   if(typeof onRecommendation==='function')onRecommendation(rec.sol+' ('+rec.desc+')');
+                  if(typeof onUebernehmen==='function')onUebernehmen({floors,router,needs:[...needs],availableFloors:[...availableFloors],floorKeys:[...floorKeys],rec,thickWalls});
                   triggerToast('✅ WLAN-Empfehlung übernommen!');
                   resetAndClose();
                 }} style={{width:'100%',padding:'13px',background:'#2563eb',color:'white',border:'none',borderRadius:12,fontWeight:800,fontSize:14,cursor:'pointer'}}>
@@ -3517,7 +3522,79 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         };
 
         const TechVisualizer = ({ type }) => { function CableOutlet() { return (<g transform="translate(0, 0)"><rect x="0" y="20" width="60" height="80" rx="4" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><rect x="5" y="30" width="50" height="60" rx="8" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2"/><circle cx="30" cy="45" r="6" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><circle cx="20" cy="75" r="6" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><circle cx="40" cy="75" r="6" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><text x="30" y="115" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">DATA - TV - RADIO</text></g>); } function TaeOutlet() { return (<g transform="translate(0, 0)"><rect x="0" y="20" width="60" height="80" rx="4" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><rect x="10" y="30" width="40" height="60" rx="8" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2"/><rect x="15" y="40" width="8" height="40" rx="2" fill="#d1d5db" stroke="#9ca3af" strokeWidth="0.5"/><rect x="26" y="40" width="8" height="40" rx="2" fill="#d1d5db" stroke="#9ca3af" strokeWidth="0.5"/><rect x="37" y="40" width="8" height="40" rx="2" fill="#d1d5db" stroke="#9ca3af" strokeWidth="0.5"/><text x="30" y="115" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">TAE-Dose</text></g>); } const [fiberVariant, setFiberVariant] = useState('ont'); const FiberVisualization = ({ variant }) => { if (variant === 'sfp') { return (<g transform="translate(30,40)"><g transform="translate(20, 0)"><rect x="0" y="20" width="60" height="60" rx="4" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2"/><rect x="15" y="45" width="10" height="10" fill="#94a3b8"/><rect x="35" y="45" width="10" height="10" fill="#94a3b8"/><text x="30" y="95" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">GF-Dose</text></g><path d="M80 50 L380 50" stroke="#22c55e" strokeWidth="3" strokeDasharray="4,4" fill="none" className="flow-anim"/><g transform="translate(380, 20)"><rect x="0" y="0" width="100" height="60" rx="8" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><rect x="10" y="0" width="80" height="5" rx="2" fill="#22c55e" opacity="0.8"/><circle cx="30" cy="40" r="3" fill="#22c55e"/><circle cx="50" cy="40" r="3" fill="#22c55e"/><circle cx="70" cy="40" r="3" fill="#cbd5e1"/><text x="50" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">Router (SFP)</text></g><text x="250" y="15" textAnchor="middle" fontSize="10" fill="#15803d" fontWeight="bold">Variante A: Direkt</text></g>); } else { return (<g transform="translate(30,40)"><g transform="translate(20, 0)"><rect x="0" y="20" width="60" height="60" rx="4" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2"/><rect x="15" y="45" width="10" height="10" fill="#94a3b8"/><rect x="35" y="45" width="10" height="10" fill="#94a3b8"/><text x="30" y="95" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">GF-Dose</text></g><path d="M80 50 Q 150 30, 220 50" stroke="#22c55e" strokeWidth="3" strokeDasharray="4,4" fill="none" className="flow-anim"/><g transform="translate(220, 20)"><rect x="0" y="0" width="70" height="60" rx="4" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><text x="35" y="35" textAnchor="middle" fontSize="12" fontWeight="bold">ONT</text><rect x="10" y="60" width="50" height="10" rx="2" fill="#cbd5e1"/><text x="35" y="80" textAnchor="middle" fontSize="8" fill="#64748b">230V</text></g><path d="M290 50 L380 50" stroke="#3b82f6" strokeWidth="3" fill="none" strokeDasharray="6,6"/><g transform="translate(380, 20)"><rect x="0" y="0" width="100" height="60" rx="8" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><rect x="10" y="0" width="80" height="5" rx="2" fill="#fca5a5" opacity="0.8"/><circle cx="30" cy="40" r="3" fill="#22c55e"/><circle cx="50" cy="40" r="3" fill="#22c55e"/><circle cx="70" cy="40" r="3" fill="#cbd5e1"/><text x="50" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">Router</text></g><text x="250" y="15" textAnchor="middle" fontSize="10" fill="#2563eb" fontWeight="bold">Variante B: Über ONT</text></g>); } }; const renderContent = () => { switch(type) { case 'dsl': return (<g transform="translate(50,40)"><TaeOutlet /><path d="M60 60 L180 60" stroke="#3b82f6" strokeWidth="4" fill="none"/><rect x="180" y="52" width="40" height="16" rx="4" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><text x="200" y="62" textAnchor="middle" fontSize="8" fill="#64748b" fontWeight="bold">RJ11</text><path d="M220 60 L340 60" stroke="#3b82f6" strokeWidth="4" fill="none"/><path d="M60 60 L340 60" stroke="#bfdbfe" strokeWidth="2" fill="none" className="flow-anim"/><g transform="translate(340, 30)"><rect x="0" y="0" width="100" height="60" rx="8" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><rect x="10" y="0" width="80" height="5" rx="2" fill="#fca5a5" opacity="0.8"/><circle cx="30" cy="40" r="3" fill="#22c55e"/><circle cx="50" cy="40" r="3" fill="#22c55e"/><circle cx="70" cy="40" r="3" fill="#cbd5e1"/><text x="50" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">DSL Router</text></g></g>); case 'cable': return (<g transform="translate(50,40)"><CableOutlet /><path d="M60 45 L340 60" stroke="#3b82f6" strokeWidth="4" fill="none"/><rect x="180" y="42" width="40" height="16" rx="4" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><text x="200" y="52" textAnchor="middle" fontSize="8" fill="#64748b" fontWeight="bold">F-Stecker</text><path d="M60 45 L340 60" fill="none" stroke="#bfdbfe" strokeWidth="2" className="flow-anim"/><g transform="translate(340, 30)"><rect x="0" y="0" width="100" height="60" rx="8" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><rect x="10" y="0" width="80" height="5" rx="2" fill="#fca5a5" opacity="0.8"/><circle cx="30" cy="40" r="3" fill="#22c55e"/><circle cx="50" cy="40" r="3" fill="#22c55e"/><circle cx="70" cy="40" r="3" fill="#cbd5e1"/><text x="50" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">Kabel Router</text></g></g>); case 'fiber': return (<g transform="translate(0, 0)"><FiberVisualization variant={fiberVariant} /></g>); case 'mobile': return (<g transform="translate(60,40)"><g transform="translate(50, 20)"><path d="M20 80 L50 0 L80 80" stroke="#475569" strokeWidth="4" fill="none"/><line x1="35" y1="40" x2="65" y2="40" stroke="#475569" strokeWidth="3"/><circle cx="50" cy="0" r="5" fill="#ef4444"/><text x="50" y="100" textAnchor="middle" fontSize="10" fill="#64748b">5G Mast</text><path d="M20 -10 A 40 40 0 0 1 20 50" stroke="#3b82f6" strokeWidth="3" fill="none" className="signal-wave"/><path d="M40 -20 A 60 60 0 0 1 40 70" stroke="#3b82f6" strokeWidth="3" fill="none" className="signal-wave delay-1"/></g><g transform="translate(200, 40)"><rect x="0" y="0" width="60" height="60" rx="4" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><circle cx="20" cy="30" r="5" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><circle cx="40" cy="30" r="5" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><text x="30" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">Schuko</text></g><path d="M260 55 L350 55" stroke="#3b82f6" strokeWidth="3" fill="none" strokeDasharray="6,6"/><g transform="translate(350, 30)"><rect x="0" y="0" width="80" height="60" rx="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2"/><rect x="45" y="65" width="40" height="10" rx="2" fill="#ffbf00"/><text x="65" y="72" textAnchor="middle" fontSize="8" fill="#ffffff" fontWeight="bold">SIM</text><circle cx="40" cy="30" r="4" fill="#22c55e" className="animate-pulse"/><text x="40" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">5G Router</text></g></g>); case 'hybrid': return (<g transform="translate(40,40)"><TaeOutlet /><g transform="translate(200, -20)"><path d="M-10 80 L10 20 L30 80" stroke="#ef4444" strokeWidth="3" fill="none"/><circle cx="10" cy="20" r="3" fill="#ef4444"/></g><path d="M60 60 L340 60" stroke="#3b82f6" strokeWidth="3" fill="none" strokeDasharray="8,4" className="flow-anim"/><path d="M200 40 Q 300 20, 340 40" stroke="#ef4444" strokeWidth="2" fill="none" strokeDasharray="4,4" className="beam-anim"/><g transform="translate(340, 30)"><rect x="0" y="0" width="100" height="60" rx="8" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><rect x="10" y="65" width="40" height="10" rx="2" fill="#ffbf00"/><text x="30" y="72" textAnchor="middle" fontSize="8" fill="#ffffff" fontWeight="bold">SIM</text><rect x="10" y="0" width="80" height="5" rx="2" fill="#fca5a5" opacity="0.8"/><circle cx="30" cy="40" r="3" fill="#22c55e"/><circle cx="50" cy="40" r="3" fill="#22c55e"/><circle cx="70" cy="40" r="3" fill="#cbd5e1"/><text x="50" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">Hybrid Router</text></g></g>); case 'sat': return (<g transform="translate(60,20)"><g transform="translate(100, 20)"><rect x="-30" y="-5" width="60" height="10" fill="#3b82f6"/><circle cx="0" cy="0" r="8" fill="#1e40af"/><text x="0" y="-15" textAnchor="middle" fontSize="10" fill="#64748b">Satellit</text></g><g transform="translate(100, 150)"><path d="M-40 0 C -20 -30, 20 -30, 40 0" fill="none" stroke="#475569" strokeWidth="3"/><line x1="0" y1="0" x2="0" y2="-50" stroke="#475569" strokeWidth="2"/><line x="0" y="0" x="0" y="40" stroke="#475569" strokeWidth="4"/><text x="0" y="55" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">Sat-Schüssel</text></g><path d="M100 20 L100 120" stroke="#bfdbfe" strokeWidth="2" strokeDasharray="4,4" className="beam-anim"/><path d="M100 150 L250 150" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="6,6"/><g transform="translate(250, 120)"><rect x="0" y="0" width="80" height="60" rx="6" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="2"/><text x="40" y="35" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">PoE-Injektor</text><rect x="15" y="60" width="50" height="10" rx="2" fill="#cbd5e1"/><text x="40" y="80" textAnchor="middle" fontSize="8" fill="#64748b">230V</text></g><path d="M330 150 L420 150" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="6,6"/><g transform="translate(420, 120)"><rect x="0" y="0" width="100" height="60" rx="8" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/><text x="50" y="80" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="bold">Router</text></g></g>); default: return null; } }; return (<div className="w-full h-[200px] bg-blue-50/30 rounded-2xl border border-blue-100 flex items-center justify-center overflow-hidden relative mb-6"><svg viewBox="0 0 500 180" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">{renderContent()}</svg>{type === 'fiber' && (<div className="absolute top-2 right-2 flex gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-md"><button onClick={() => setFiberVariant('ont')} className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${fiberVariant === 'ont' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>ONT</button><button onClick={() => setFiberVariant('sfp')} className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${fiberVariant === 'sfp' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Direkt (SFP)</button></div>)}</div>); }
-        const TechModal = ({ isOpen, onClose }) => { const [selected, setSelected] = useState('dsl'); if (!isOpen) return null; const TECHS = { dsl: { id: 'dsl', label: 'DSL / VDSL (Kupfer)', Icon: ICONS.Phone, desc: 'Datenübertragung über die klassische Kupfer-Telefonleitung (TAE-Dose). Nutzt VDSL- und Supervectoring-Technologien.', speed: 'bis 250 MBit/s', ping: 'Gut (10-20ms)', pros: ['Hohe Verfügbarkeit (fast überall in Deutschland)', 'Geringe Anschlusskosten','Konstante Leistung bei kurzer Leitungslänge'], cons: ['Geschwindigkeit stark leitungsabhängig','Maximaler Upload oft begrenzt','Frequenzstörungen möglich'] }, cable: { id: 'cable', label: 'Kabel (Koax-Netz)', Icon: ICONS.Tv, desc: 'Internet über das TV-Kabelnetz (Koax-3-Loch-Dose). Nutzt DOCSIS 3.1 / 4.0 Standard.', speed: 'bis 1000 MBit/s', ping: 'Mittel (15-30ms)', pros: ['Sehr hohe Downloads möglich','Geringere Auslastung im ländlichen Raum','Keine neue Verkabelung in der Wohnung nötig'], cons: ['Shared Medium (geteilte Bandbreite im Segment)','Geringere Stabilität als Glasfaser','Upload oft asynchron (deutlich langsamer)'] }, fiber: { id: 'fiber', label: 'Glasfaser (FTTH)', Icon: ICONS.Zap, desc: 'Datenübertragung per Lichtsignal über Glasfaser bis in die Wohnung (FTTH). Zukunftssicher und nahezu störungsfrei.', speed: 'bis 1000+ MBit/s', ping: 'Exzellent (<5ms)', pros: ['Höchste Geschwindigkeiten und Stabilität', 'Symmetrische Uploads möglich', 'Zukunftssicher und störungsarm'], cons: ['Geringere Verfügbarkeit (Netzausbau nötig)','Installationsaufwand in der Wohnung'] }, mobile: { id: 'mobile', label: '5G / LTE (Mobilfunk)', Icon: ICONS.Smartphone, desc: 'Internet über das Mobilfunknetz per SIM-Karte im Router (CPE). Ideal für Standorte ohne Festnetz-Alternative.', speed: 'bis 500 MBit/s', ping: 'Variabel', pros: ['Sofort startklar (Plug & Play)', 'Flexible Standortwahl (ohne Kabelbindung)','Gute Geschwindigkeiten in 5G-Gebieten'], cons: ['Empfangs- und wetterabhängig','Datenvolumenbegrenzung möglich (je nach Tarif)'] }, hybrid: { id: 'hybrid', label: 'Hybrid (DSL + LTE/5G)', Icon: ICONS.Layers, desc: 'Kombiniert die DSL-Leitung mit dem Mobilfunksignal (LTE/5G), um Geschwindigkeit und Ausfallsicherheit zu erhöhen (Bonding).', speed: 'DSL + Mobilfunk-Boost', ping: 'Wie DSL', pros: ['Höhere Geschwindigkeit als reines DSL möglich','Verbesserte Ausfallsicherheit (Bleibt online bei DSL-Störung)','Nutzt bestehende TAE-Verkabelung'], cons: ['Spezial-Hardware (Hybrid-Router) nötig','Geschwindigkeit des Mobilfunk-Anteils variabel'] }, sat: { id: 'sat', label: 'Satellit (Starlink/etc.)', Icon: ICONS.Disc, desc: 'Breitband-Internet über LEO-Satelliten. Geeignet für sehr ländliche oder schwer zugängliche Gebiete.', speed: '50-200 MBit/s', ping: 'Mittel (ca. 40-70ms)', pros: ['Überall verfügbar (unabhängig vom Leitungsnetz)','Hohe Downloadraten im Vergleich zu altem DSL'], cons: ['Sichtverbindung zum Himmel erforderlich','Wetterabhängige Schwankungen','Höhere Latenz als Festnetz'] } }; const active = TECHS[selected]; return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in"><div className="bg-white w-full max-w-5xl h-[650px] rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-200"><div className="w-full md:w-64 bg-slate-50 border-r border-slate-200 p-4 flex flex-col gap-2 shrink-0 overflow-y-auto custom-scrollbar"><h3 className="font-black text-slate-800 text-lg mb-4 px-2">Technologie</h3>{Object.values(TECHS).map(t => (<button key={t.id} onClick={() => setSelected(t.id)} className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3 border ${selected === t.id ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-100' : 'border-transparent hover:bg-slate-100'}`}><div className={`p-1.5 rounded-lg ${selected===t.id ? 'bg-blue-50 text-blue-600' : 'bg-slate-200 text-slate-500'}`}><Icon d={t.Icon} size={16}/></div><span className={`text-sm ${selected===t.id ? 'font-bold text-blue-700' : 'font-medium text-slate-600'}`}>{t.label.split('(')[0].trim()}</span></button>))}<div className="mt-auto pt-4 border-t border-slate-200"><button onClick={onClose} className="w-full py-3 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">SCHLIESSEN</button></div></div><div className="flex-1 p-8 bg-white relative overflow-y-auto custom-scrollbar"><button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-slate-50 rounded-full text-slate-400"><Icon d={ICONS.X} size={24}/></button><div className="flex items-start gap-4 mb-6"><div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200"><Icon d={active.Icon} size={32}/></div><div><h2 className="text-3xl font-black text-slate-900 mb-1">{active.label}</h2><p className="text-slate-500 leading-relaxed max-w-lg">{active.desc}</p></div></div><TechVisualizer type={selected} /><div className="grid grid-cols-2 gap-4 mb-8"><div className="p-4 bg-slate-50 rounded-2xl border border-slate-100"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">MAX. GESCHWINDIGKEIT</div><div className="text-xl font-black text-blue-600">{active.speed}</div></div><div className="p-4 bg-slate-50 rounded-2xl border border-slate-100"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">LATENZ / PING (REAKTIONSZEIT)</div><div className="text-xl font-black text-slate-700">{active.ping}</div></div></div><div className="grid grid-cols-2 gap-8"><div><h4 className="font-bold text-emerald-600 flex items-center gap-2 mb-3"><Icon d={ICONS.CheckCircle} size={18}/> Vorteile</h4><ul className="space-y-2">{active.pros.map((p,i) => <li key={i} className="text-sm text-slate-600 flex gap-2"><span className="text-emerald-400">•</span> {p}</li>)}</ul></div><div><h4 className="font-bold text-amber-600 flex items-center gap-2 mb-3"><Icon d={ICONS.AlertCircle} size={18}/> Nachteile</h4><ul className="space-y-2">{active.cons.map((c,i) => <li key={i} className="text-sm text-slate-600 flex gap-2"><span className="text-amber-400">•</span> {c}</li>)}</ul></div></div></div></div></div>); };
+        const TechModal = ({ isOpen, onClose, checkedTechs, setCheckedTechs, onUebernehmen }) => {
+            const [selected, setSelected] = useState('dsl');
+            if (!isOpen) return null;
+            const TECHS = { dsl: { id: 'dsl', label: 'DSL / VDSL (Kupfer)', Icon: ICONS.Phone, desc: 'Datenübertragung über die klassische Kupfer-Telefonleitung (TAE-Dose). Nutzt VDSL- und Supervectoring-Technologien.', speed: 'bis 250 MBit/s', ping: 'Gut (10-20ms)', pros: ['Hohe Verfügbarkeit (fast überall in Deutschland)', 'Geringe Anschlusskosten','Konstante Leistung bei kurzer Leitungslänge'], cons: ['Geschwindigkeit stark leitungsabhängig','Maximaler Upload oft begrenzt','Frequenzstörungen möglich'] }, cable: { id: 'cable', label: 'Kabel (Koax-Netz)', Icon: ICONS.Tv, desc: 'Internet über das TV-Kabelnetz (Koax-3-Loch-Dose). Nutzt DOCSIS 3.1 / 4.0 Standard.', speed: 'bis 1000 MBit/s', ping: 'Mittel (15-30ms)', pros: ['Sehr hohe Downloads möglich','Geringere Auslastung im ländlichen Raum','Keine neue Verkabelung in der Wohnung nötig'], cons: ['Shared Medium (geteilte Bandbreite im Segment)','Geringere Stabilität als Glasfaser','Upload oft asynchron (deutlich langsamer)'] }, fiber: { id: 'fiber', label: 'Glasfaser (FTTH)', Icon: ICONS.Zap, desc: 'Datenübertragung per Lichtsignal über Glasfaser bis in die Wohnung (FTTH). Zukunftssicher und nahezu störungsfrei.', speed: 'bis 1000+ MBit/s', ping: 'Exzellent (<5ms)', pros: ['Höchste Geschwindigkeiten und Stabilität', 'Symmetrische Uploads möglich', 'Zukunftssicher und störungsarm'], cons: ['Geringere Verfügbarkeit (Netzausbau nötig)','Installationsaufwand in der Wohnung'] }, mobile: { id: 'mobile', label: '5G / LTE (Mobilfunk)', Icon: ICONS.Smartphone, desc: 'Internet über das Mobilfunknetz per SIM-Karte im Router (CPE). Ideal für Standorte ohne Festnetz-Alternative.', speed: 'bis 500 MBit/s', ping: 'Variabel', pros: ['Sofort startklar (Plug & Play)', 'Flexible Standortwahl (ohne Kabelbindung)','Gute Geschwindigkeiten in 5G-Gebieten'], cons: ['Empfangs- und wetterabhängig','Datenvolumenbegrenzung möglich (je nach Tarif)'] }, hybrid: { id: 'hybrid', label: 'Hybrid (DSL + LTE/5G)', Icon: ICONS.Layers, desc: 'Kombiniert die DSL-Leitung mit dem Mobilfunksignal (LTE/5G), um Geschwindigkeit und Ausfallsicherheit zu erhöhen (Bonding).', speed: 'DSL + Mobilfunk-Boost', ping: 'Wie DSL', pros: ['Höhere Geschwindigkeit als reines DSL möglich','Verbesserte Ausfallsicherheit (Bleibt online bei DSL-Störung)','Nutzt bestehende TAE-Verkabelung'], cons: ['Spezial-Hardware (Hybrid-Router) nötig','Geschwindigkeit des Mobilfunk-Anteils variabel'] }, sat: { id: 'sat', label: 'Satellit (Starlink/etc.)', Icon: ICONS.Disc, desc: 'Breitband-Internet über LEO-Satelliten. Geeignet für sehr ländliche oder schwer zugängliche Gebiete.', speed: '50-200 MBit/s', ping: 'Mittel (ca. 40-70ms)', pros: ['Überall verfügbar (unabhängig vom Leitungsnetz)','Hohe Downloadraten im Vergleich zu altem DSL'], cons: ['Sichtverbindung zum Himmel erforderlich','Wetterabhängige Schwankungen','Höhere Latenz als Festnetz'] } };
+            const active = TECHS[selected];
+            const checkedCount = Object.values(checkedTechs||{}).filter(Boolean).length;
+            const handleUebernehmen = () => {
+                const list = Object.entries(TECHS)
+                    .filter(([id]) => checkedTechs && checkedTechs[id])
+                    .map(([,t]) => t.label.split('(')[0].trim());
+                if (onUebernehmen) onUebernehmen(list);
+                onClose();
+            };
+            return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in">
+              <div className="bg-white w-full max-w-5xl h-[650px] rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-200">
+                {/* ── Linke Sidebar ── */}
+                <div className="w-full md:w-64 bg-slate-50 border-r border-slate-200 p-4 flex flex-col gap-2 shrink-0 overflow-y-auto custom-scrollbar">
+                  <h3 className="font-black text-slate-800 text-lg mb-1 px-2">Technologie</h3>
+                  {/* ── Vorhanden-Checkboxen ── */}
+                  <div className="mb-2 px-2">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">✓ Vorhanden beim Kunden?</div>
+                    {Object.values(TECHS).map(t => {
+                      const isChecked = !!(checkedTechs && checkedTechs[t.id]);
+                      return (
+                        <label key={t.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors group" onClick={() => setSelected(t.id)}>
+                          <div
+                            onClick={(e) => { e.stopPropagation(); setCheckedTechs(prev => ({ ...prev, [t.id]: !prev[t.id] })); }}
+                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer flex-shrink-0 transition-all ${isChecked ? 'bg-emerald-500 border-emerald-500 shadow-md shadow-emerald-200' : 'border-slate-300 bg-white hover:border-emerald-400'}`}
+                          >
+                            {isChecked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                          <div className={`flex items-center gap-2 flex-1 min-w-0`}>
+                            <div className={`p-1 rounded-md flex-shrink-0 ${selected===t.id ? 'bg-blue-50 text-blue-600' : 'bg-slate-200 text-slate-500'}`}><Icon d={t.Icon} size={13}/></div>
+                            <span className={`text-xs leading-tight ${selected===t.id ? 'font-bold text-blue-700' : isChecked ? 'font-bold text-emerald-700' : 'font-medium text-slate-600'}`}>{t.label.split('(')[0].trim()}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {/* ── Übernehmen-Button ── */}
+                  <div className="pt-2 border-t border-slate-200 flex flex-col gap-2">
+                    <button
+                      onClick={handleUebernehmen}
+                      disabled={checkedCount === 0}
+                      className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${checkedCount > 0 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Übernehmen{checkedCount > 0 ? ` (${checkedCount})` : ''}
+                    </button>
+                    <button onClick={onClose} className="w-full py-2 text-slate-400 font-bold text-xs uppercase tracking-wider hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">SCHLIESSEN</button>
+                  </div>
+                </div>
+                {/* ── Rechter Inhalt (unverändert) ── */}
+                <div className="flex-1 p-8 bg-white relative overflow-y-auto custom-scrollbar">
+                  <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-slate-50 rounded-full text-slate-400"><Icon d={ICONS.X} size={24}/></button>
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200"><Icon d={active.Icon} size={32}/></div>
+                    <div><h2 className="text-3xl font-black text-slate-900 mb-1">{active.label}</h2><p className="text-slate-500 leading-relaxed max-w-lg">{active.desc}</p></div>
+                  </div>
+                  <TechVisualizer type={selected} />
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">MAX. GESCHWINDIGKEIT</div><div className="text-xl font-black text-blue-600">{active.speed}</div></div>
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100"><div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">LATENZ / PING (REAKTIONSZEIT)</div><div className="text-xl font-black text-slate-700">{active.ping}</div></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div><h4 className="font-bold text-emerald-600 flex items-center gap-2 mb-3"><Icon d={ICONS.CheckCircle} size={18}/> Vorteile</h4><ul className="space-y-2">{active.pros.map((p,i) => <li key={i} className="text-sm text-slate-600 flex gap-2"><span className="text-emerald-400">•</span> {p}</li>)}</ul></div>
+                    <div><h4 className="font-bold text-amber-600 flex items-center gap-2 mb-3"><Icon d={ICONS.AlertCircle} size={18}/> Nachteile</h4><ul className="space-y-2">{active.cons.map((c,i) => <li key={i} className="text-sm text-slate-600 flex gap-2"><span className="text-amber-400">•</span> {c}</li>)}</ul></div>
+                  </div>
+                </div>
+              </div>
+            </div>);
+        };
         const RoamingModal = ({ isOpen, onClose }) => {
   const [zone, setZone] = useState('eu_roam');
   const [tab, setTab] = useState('info');
@@ -5608,7 +5685,8 @@ const resolveUserName = (raw) => {
                         </div>
                     ) : null}
 
-</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}>{htmlOverlay ? (<div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/></div></div>); });
+</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}>{htmlOverlay ? (<div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+            </div></div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
         
@@ -6019,6 +6097,115 @@ const handleOpenStats = () => {
             const [showWlanModal, setShowWlanModal] = useState(false);
             const [showSpeedModal, setShowSpeedModal] = useState(false);
             const [showTechModal, setShowTechModal] = useState(false);
+            const [showCostSection, setShowCostSection] = useState(true);
+            const [checkedTechs, setCheckedTechs] = useState({});
+            const [techUebernommen, setTechUebernommen] = useState([]);
+            const [wlanSnapshot, setWlanSnapshot] = useState(null); // { floors, router, needs:[...], availableFloors:[...], floorKeys:[...], rec }
+            const [netBundleMatched, setNetBundleMatched] = useState(null);
+
+            // ── Firebase Config (gleich wie Aktionsmappe) ──
+            const AM_FB_CONFIG = {
+                apiKey:"AIzaSyCjYCn-X694K1xoUULAin_zDta1r-dSh7Y",
+                authDomain:"verkaufsmappe-7d917.firebaseapp.com",
+                projectId:"verkaufsmappe-7d917",
+                storageBucket:"verkaufsmappe-7d917.firebasestorage.app",
+                messagingSenderId:"916375365270",
+                appId:"1:916375365270:web:5b6bfbc37a4d0be1a004b7"
+            };
+
+            // Firebase einmalig initialisieren
+            const getAmDb = React.useCallback(() => {
+                try {
+                    if (window.__amDb) return window.__amDb;
+                    const existingApp = window.firebase?.apps?.find(a => a.name === 'am-dashboard');
+                    const app = existingApp
+                        ? existingApp
+                        : window.firebase.initializeApp(AM_FB_CONFIG, 'am-dashboard');
+                    window.__amDb = window.firebase.firestore(app);
+                    return window.__amDb;
+                } catch(e) {
+                    console.warn('Firebase init failed:', e);
+                    return null;
+                }
+            }, []);
+
+            // ── Smart-Match: Firebase → passender Netzwerk-Bundle ──
+            const smartMatchNetBundle = React.useCallback(async (wlanRec, techList) => {
+                const WLAN_SLOT_MAP = {
+                    'Mesh':       'net-mesh',
+                    'Powerline':  'net-powerline',
+                    'Repeater':   'net-repeater',
+                    'WiFi 6':     'net-repeater',
+                };
+                const TECH_ROUTER_MAP = {
+                    'DSL':       'net-router-dsl',
+                    'VDSL':      'net-router-dsl',
+                    'Kupfer':    'net-router-dsl',
+                    'Hybrid':    'net-router-dsl',
+                    'Kabel':     'net-router-cable',
+                    'Koax':      'net-router-cable',
+                    'Glasfaser': 'net-router-fiber',
+                    'FTTH':      'net-router-fiber',
+                    '5G':        'net-router-5g',
+                    'LTE':       'net-router-5g',
+                    'Satellit':  'net-router-5g',
+                    'Mobilfunk': 'net-router-5g',
+                };
+
+                let targetSlotIds = [];
+                if (wlanRec?.sol) {
+                    const key = Object.keys(WLAN_SLOT_MAP).find(k => wlanRec.sol.toLowerCase().includes(k.toLowerCase()));
+                    if (key) targetSlotIds.push(WLAN_SLOT_MAP[key]);
+                }
+                if (techList?.length) {
+                    for (const tech of techList) {
+                        const key = Object.keys(TECH_ROUTER_MAP).find(k => tech.toLowerCase().includes(k.toLowerCase()));
+                        if (key) { const s = TECH_ROUTER_MAP[key]; if (!targetSlotIds.includes(s)) targetSlotIds.push(s); break; }
+                    }
+                }
+                if (!targetSlotIds.length) { setNetBundleMatched(null); return; }
+
+                let bundles = [];
+
+                // 1) Firebase lesen
+                try {
+                    const db = getAmDb();
+                    if (db) {
+                        const snap = await db.collection('aktionsmappe').doc('global').get();
+                        if (snap.exists && Array.isArray(snap.data()?.bundles)) {
+                            bundles = snap.data().bundles;
+                        }
+                    }
+                } catch(e) { console.warn('Firebase read error:', e); }
+
+                // 2) Fallback localStorage (gleiche Domain)
+                if (!bundles.length) {
+                    try {
+                        const raw = localStorage.getItem('am_bundles_data');
+                        if (raw) bundles = JSON.parse(raw);
+                    } catch(e) {}
+                }
+
+                // Passenden aktiven Bundle suchen
+                let matched = null;
+                for (const slotId of targetSlotIds) {
+                    const found = bundles.find(b => b.id === slotId && b.active === true && b.titel?.trim());
+                    if (found) { matched = found; break; }
+                }
+
+                setNetBundleMatched(matched || null);
+                if (matched) triggerToast(`📶 Passend gefunden: "${matched.titel}"`);
+
+            }, [getAmDb, triggerToast]);
+
+            // Auto-Trigger
+            React.useEffect(() => {
+                if (wlanSnapshot || techUebernommen.length > 0) {
+                    smartMatchNetBundle(wlanSnapshot?.rec, techUebernommen);
+                } else {
+                    setNetBundleMatched(null);
+                }
+            }, [wlanSnapshot, techUebernommen, smartMatchNetBundle]);
             const [showRoamingModal, setShowRoamingModal] = useState(false);
             const [showTvModal, setShowTvModal] = useState(false);
             const [showSignatureModal, setShowSignatureModal] = useState(false);
@@ -6694,21 +6881,63 @@ const handleFinishOfferClick = () => {
                         if (k) digitalTouchedRef.current[k] = true;
                     }
                 } catch(e){}
-                // ── Auto-Kosten: Betrag aus Tastatureingabe erkennen (kein API) ──
+                // ── Auto-Kosten: Preisbetrag aus Tastatureingabe erkennen ──
                 // Zuordnung: Anbieter/Hardware/WeitereProdukte/Haushalt → Mobilfunk, WiFi → Festnetz, Fernsehen → TV
+                // Erkannte Formate: 19,99 | 19.99 | 19,99€ | €19,99 | 19,99 € | 9€
                 try {
-                    const costFieldMap = { 'Anbieter': 'mobile', 'Hardware': 'mobile', 'WeitereProdukte': 'mobile', 'Weitere Produkte': 'mobile', 'Haushalt': 'mobile', 'WiFi': 'landline', 'Fernsehen': 'tv' };
-                    const costTarget = costFieldMap[key];
-                    if (costTarget && val) {
-                        // Nur Beträge im Format XX,XX (Komma + genau 2 Stellen) erkennen - kein 40GB etc.
-                        const matches = val.match(/\b\d{1,4},\d{2}\b/g);
-                        if (matches && matches.length > 0) {
+                    const COST_MAP = {
+                        'Anbieter': 'mobile', 'Hardware': 'mobile',
+                        'WeitereProdukte': 'mobile', 'Weitere Produkte': 'mobile',
+                        'Haushalt': 'mobile',
+                        'WiFi': 'landline',
+                        'Fernsehen': 'tv'
+                    };
+                    // Alle 4 Mobilfunk-Felder, damit wir immer alle summieren können
+                    const MOBILE_KEYS = ['Anbieter','Hardware','WeitereProdukte','Weitere Produkte','Haushalt'];
+                    const costTarget = COST_MAP[key];
+                    if (costTarget) {
+                        // Preis-Regex: Zahl mit Komma oder Punkt als Dezimaltrenner, optional €
+                        // Matcht: 19,99 | 19.99 | 9,90€ | €24,99 | 9€ | 19,99 €
+                        // Matcht NICHT: 40 (allein, kein Dezimaltrenner + keine €) | 100GB
+                        const extractPrices = (text) => {
+                            if (!text) return 0;
+                            // Mit €-Zeichen: auch ganzzahlig (z.B. 9€ oder €9)
+                            const withEuro = [...text.matchAll(/€\s*(\d{1,4}[.,]\d{2}|\d{1,3})\b|(\d{1,4}[.,]\d{2}|\d{1,3})\s*€/g)];
+                            // Ohne €: nur mit Dezimaltrenner + genau 2 Nachkommastellen
+                            const withDecimal = [...text.matchAll(/\b(\d{1,4}[.,]\d{2})\b(?!\s*(?:GB|MB|kb|ms|Mbit|min|h\b))/gi)];
                             let sum = 0;
-                            matches.forEach(m => { const n = parseFloat(m.replace(',','.')); if (!isNaN(n) && n > 0 && n < 500) sum += n; });
-                            if (sum > 0) {
-                                const formatted = sum.toFixed(2).replace('.',',');
-                                if (window.__costDebounce) clearTimeout(window.__costDebounce);
-                                window.__costDebounce = setTimeout(() => setCostState(prev => ({ ...prev, [costTarget]: formatted })), 500);
+                            const seen = new Set();
+                            [...withEuro, ...withDecimal].forEach(m => {
+                                const raw = (m[1] || m[2] || m[0]).replace(/€/g,'').trim();
+                                if (seen.has(raw)) return; seen.add(raw);
+                                const n = parseFloat(raw.replace(',','.'));
+                                if (!isNaN(n) && n > 0 && n < 500) sum += n;
+                            });
+                            return sum;
+                        };
+                        // Für Mobilfunk: alle 4 Felder zusammen neu berechnen
+                        if (costTarget === 'mobile') {
+                            if (window.__costDebounce_mobile) clearTimeout(window.__costDebounce_mobile);
+                            window.__costDebounce_mobile = setTimeout(() => {
+                                setTextData(currentData => {
+                                    const combined = MOBILE_KEYS.map(k2 => {
+                                        const v2 = k2 === key ? val : (currentData[k2] || currentData[k2.replace(' ','')+''] || '');
+                                        return extractPrices(v2);
+                                    }).reduce((a,b) => a+b, 0);
+                                    if (combined > 0) {
+                                        setCostState(prev => ({ ...prev, mobile: combined.toFixed(2).replace('.',',') }));
+                                    }
+                                    return currentData;
+                                });
+                            }, 600);
+                        } else {
+                            // Festnetz / TV: nur das eine Feld
+                            const amount = extractPrices(val);
+                            if (amount > 0) {
+                                if (window[`__costDebounce_${costTarget}`]) clearTimeout(window[`__costDebounce_${costTarget}`]);
+                                window[`__costDebounce_${costTarget}`] = setTimeout(() => {
+                                    setCostState(prev => ({ ...prev, [costTarget]: amount.toFixed(2).replace('.',',') }));
+                                }, 600);
                             }
                         }
                     }
@@ -8538,9 +8767,9 @@ const handlePDFShare = async () => {
                 <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col overflow-hidden text-sm">
                     <Toast message={toastMessage} />
                     <RestoreToastBanner />
-                    <WlanModal isOpen={showWlanModal} onClose={() => setShowWlanModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setWlanRecommendation(rec)} />
+                    <WlanModal isOpen={showWlanModal} onClose={() => setShowWlanModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setWlanRecommendation(rec)} onUebernehmen={(snap) => setWlanSnapshot(snap)} />
                     <SpeedModal isOpen={showSpeedModal} onClose={() => setShowSpeedModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setSpeedRecommendation(rec)} />
-                    <TechModal isOpen={showTechModal} onClose={() => toggleTech(false)} />
+                    <TechModal isOpen={showTechModal} onClose={() => toggleTech(false)} checkedTechs={checkedTechs} setCheckedTechs={setCheckedTechs} onUebernehmen={(list) => { setTechUebernommen(list); triggerToast('✅ Technologien übernommen!'); }} />
                     <RoamingModal isOpen={showRoamingModal} onClose={() => setShowRoamingModal(false)} />
                     <TvPriceModal isOpen={showTvModal} onClose={() => setShowTvModal(false)} onUebernehmen={(val) => { setCostState(prev => ({ ...prev, tv: val })); triggerToast('TV-Preis übernommen!'); setShowTvModal(false); }} />
                     <QuestionModal isOpen={!!activeCategory && !showAdmin} onClose={() => setActiveCategory(null)} category={activeCategory} question={getCurrentQuestion()} onNextQuestion={handleNextQuestion} />
@@ -8640,47 +8869,194 @@ const handlePDFShare = async () => {
                                     </div>
                                 </div>
 
-                        <aside className="w-[340px] xl:w-[360px] min-w-[340px] bg-[#f0f6ff] p-3 shrink-0 sit-aside-panel flex flex-col border-l border-slate-200 z-10 h-full overflow-hidden">
-                            <div className="flex-1 flex flex-col min-h-0 gap-2 overflow-y-auto custom-scrollbar">
-                                <SectionCard title="Stammdaten" className="shrink-0 flex flex-col"><div className="grid grid-cols-2 gap-2 mb-2 shrink-0"><div className="relative h-8"><select value={customerType} onChange={(e) => setCustomerType(e.target.value)} className={`w-full h-full bg-slate-50 border rounded-lg pl-2 pr-6 text-[10px] font-medium text-slate-700 focus:ring-1 outline-none border-l-4 ${customerType === "" ? "border-l-red-500" : "border-l-green-500"}`}><option value="" disabled hidden>Kundentyp *</option><option value="Neukunde">Neukunde</option><option value="Bestandskunde">Bestandskunde</option></select></div><div className="relative h-8"><select value={segment} onChange={(e) => { setSegment(e.target.value); setSegmentTouched(true); }} className={`w-full h-full bg-slate-50 border rounded-lg pl-2 pr-6 text-[10px] font-medium text-slate-700 focus:ring-1 outline-none border-l-4 ${segmentTouched ? "border-l-green-500" : "border-l-red-500"}`}><option value="" disabled hidden>Segment *</option><option value="Neuvertrag">Neuvertrag</option><option value="Vertragsverlängerung">Vertragsverlängerung</option><option value="Junge Leute">Junge Leute</option><option value="Bestes Alter">Bestes Alter</option></select></div></div><div className="shrink-0"><div className="flex items-center justify-between mb-1"><span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em'}}>E-Mail</span><div className="flex gap-1"><button onClick={()=>setEmailMode('keyboard')} style={{padding:'2px 8px',borderRadius:'6px',fontSize:'10px',fontWeight:700,border:'1px solid',borderColor:emailMode==='keyboard'?'#2563eb':'#e2e8f0',background:emailMode==='keyboard'?'#eff6ff':'#f8fafc',color:emailMode==='keyboard'?'#2563eb':'#94a3b8',cursor:'pointer'}}>⌨</button><button onClick={()=>setEmailMode('pen')} style={{padding:'2px 8px',borderRadius:'6px',fontSize:'10px',fontWeight:700,border:'1px solid',borderColor:emailMode==='pen'?'#2563eb':'#e2e8f0',background:emailMode==='pen'?'#eff6ff':'#f8fafc',color:emailMode==='pen'?'#2563eb':'#94a3b8',cursor:'pointer'}}>✏</button>{emailMode==='pen'&&(<button onClick={()=>clearCanvas(emailCanvasRef,'email')} style={{padding:'2px 8px',borderRadius:'6px',fontSize:'10px',border:'1px solid #e2e8f0',background:'#fef2f2',color:'#ef4444',cursor:'pointer'}}>✕</button>)}</div></div><div style={{position:'relative',height:'52px',border:'1.5px solid',borderColor:emailMode==='pen'?'#2563eb':'#e2e8f0',borderRadius:'10px',background:'#ffffff',overflow:'hidden'}}>{emailMode==='keyboard'?(<input type="email" value={emailText} onChange={(e)=>setEmailText(e.target.value)} placeholder="kunde@email.de" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 12px',fontSize:'13px',fontWeight:500,color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>):(<canvas ref={emailCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={(e)=>startDrawing(e,emailCanvasRef,'email')} onPointerMove={(e)=>draw(e,emailCanvasRef,'email')} onPointerUp={(e)=>stopDrawing(e,emailCanvasRef)} onPointerLeave={(e)=>stopDrawing(e,emailCanvasRef)}/>)}</div></div></SectionCard>
-                                <SectionCard title="Technische Situation" className="shrink-0 flex flex-col"><div className="relative mb-2 w-full h-8 shrink-0">{!isCustomProvider ? (<select value={providerSelect} onChange={(e) => { if (e.target.value === 'Sonstiges') { setIsCustomProvider(true); setProviderSelect('Sonstiges'); } else { setProviderSelect(e.target.value); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); } }} className={`w-full h-full bg-slate-50 border rounded-md pl-2 pr-6 text-[10px] font-medium text-slate-700 focus:ring-1 outline-none border-l-4 ${providerSelect === "" ? "border-l-red-500" : "border-l-green-500"}`}><option value="" disabled hidden>Derzeitiger DSL-Anbieter *</option><option value="Telekom">Telekom</option><option value="1&1">1&1</option><option value="Vodafone">Vodafone</option><option value="O2">O2</option><option value="Sonstiges">Sonstiges / Eingabe</option></select>) : (<div className="relative w-full h-full border border-slate-200 rounded-md bg-white overflow-hidden group flex items-center border-l-4 border-l-green-500"><div className="absolute right-1 top-1/2 -translate-y-1/2 z-20 flex gap-1"><button onClick={() => setProviderMode(prev => prev === 'keyboard' ? 'pen' : 'keyboard')} className="p-1 hover:bg-slate-100 rounded text-slate-400">{providerMode === 'keyboard' ? <Icon d={ICONS.Pen} size={10}/> : <Icon d={ICONS.Keyboard} size={10}/>}</button><button onClick={() => { setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setProviderSelect(''); setCustomProvider(''); }} className="p-1 hover:bg-slate-100 rounded text-slate-400" title="Zurück zur Liste"><Icon d={ICONS.List} size={10}/></button></div>{providerMode === 'keyboard' ? (<input type="text" value={customProvider} onChange={(e) => setCustomProvider(e.target.value)} placeholder="Anbieter..." className="w-full h-full px-3 text-[10px] focus:outline-none bg-transparent pr-16" autoFocus />) : (<><canvas ref={providerCanvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" onPointerDown={(e) => startDrawing(e, providerCanvasRef, 'provider')} onPointerMove={(e) => draw(e, providerCanvasRef, 'provider')} onPointerUp={(e) => stopDrawing(e, providerCanvasRef)} onPointerLeave={(e) => stopDrawing(e, providerCanvasRef)} /><button onClick={() => clearCanvas(providerCanvasRef, 'provider')} className="absolute top-1/2 right-1 -translate-y-1/2 p-1 hover:bg-slate-100 rounded text-slate-400 z-30" title="Löschen"><Icon d={ICONS.Trash} size={10}/></button></>)}</div>)}</div>{wlanRecommendation && (<div className="w-full mb-2 p-2 bg-white border border-blue-100 rounded-lg"><div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Empfehlung (WLAN)</div><div className="text-[11px] font-bold text-slate-700 leading-snug whitespace-pre-wrap">{wlanRecommendation}</div></div>)}<button onClick={() => setShowWlanModal(true)} className={`w-full h-8 text-left px-3 rounded-md text-[10px] font-bold flex items-center gap-2 border transition-colors shrink-0 ${wlanRecommendation?"bg-green-50 border-green-200 text-green-800 hover:bg-green-100":"bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"}`}><div style={{position:"relative",lineHeight:0}}><Icon d={ICONS.Wifi} size={14} className={wlanRecommendation?"text-green-600":"text-slate-500"}/>{wlanRecommendation&&<span style={{position:"absolute",top:-3,right:-3,width:6,height:6,background:"#22c55e",borderRadius:"50%"}}/>}</div>{wlanRecommendation?"✓ WLAN-Empfehlung":"WLAN-Planer öffnen"}</button></SectionCard>
-                                <SectionCard title="Technologie & Speed" className="shrink-0 flex flex-col"><div className="space-y-1 flex flex-col justify-center h-full"><button onClick={() => setShowTechModal(true)} className="w-full h-8 bg-slate-100 text-left px-3 rounded-md text-[10px] font-bold text-slate-700 flex items-center gap-2 border border-slate-200 hover:bg-slate-200 transition-colors"><Icon d={ICONS.Zap} size={14} className="text-slate-500" /> Technologie-Check</button><button onClick={() => setShowSpeedModal(true)} className={`w-full h-8 text-left px-3 rounded-md text-[10px] font-bold flex items-center gap-2 border transition-colors ${speedRecommendation?"bg-green-50 border-green-200 text-green-800 hover:bg-green-100":"bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"}`}><div style={{position:"relative",lineHeight:0}}><Icon d={ICONS.Gauge} size={14} className={speedRecommendation?"text-green-600":"text-slate-500"}/>{speedRecommendation&&<span style={{position:"absolute",top:-3,right:-3,width:6,height:6,background:"#22c55e",borderRadius:"50%"}}/>}</div>{speedRecommendation?"✓ Speed ermittelt":"Speed-Rechner"}</button></div>{speedRecommendation && (<div className="w-full mt-2 p-2 bg-white border border-blue-100 rounded-lg"><div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">Empfehlung (Speed)</div><div className="text-[11px] font-bold text-slate-700 leading-snug whitespace-pre-wrap">{speedRecommendation}</div></div>)}</SectionCard>
-                                <SectionCard title="Roaming" className="shrink-0 flex flex-col print-hide-roaming"><div className="flex-1 flex flex-col gap-1.5 justify-center"><button onClick={() => setShowRoamingModal(true)} className="w-full h-8 bg-slate-100 text-left px-3 rounded-md text-[10px] font-bold text-slate-700 flex items-center gap-2 border border-slate-200 hover:bg-slate-200 transition-colors"><Icon d={ICONS.Globe} size={14} className="text-slate-500" /> Roaming Check</button><button onClick={() => setShowTvModal(true)} className="w-full h-8 bg-slate-100 text-left px-3 rounded-md text-[10px] font-bold text-slate-700 flex items-center gap-2 border border-slate-200 hover:bg-slate-200 transition-colors"><Icon d={ICONS.Tv} size={14} className="text-slate-500" /> TV Preis-Kalkulation</button></div></SectionCard>
-                                <SectionCard title="Kosten (Ist)" className="shrink-0 flex flex-col"><div className="flex flex-col justify-center h-full gap-1">
-                                    {/* Mobilfunk */}
-                                    <div>
-                                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                                            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>Mobilfunk
-                                            <span className="text-[8px] font-normal text-slate-300 ml-1">Anbieter · Hardware · Haushalt · Weiteres</span>
-                                        </div>
-                                        <input className="w-full h-7 border border-blue-200 rounded px-2 text-[11px] font-bold focus:ring-1 focus:ring-blue-300 bg-blue-50/50" placeholder="z.B. 34,99" value={costState.mobile} onChange={(e) => handleCostChange('mobile', e)} inputMode="decimal" />
-                                        <CostBar val={parseCost(costState.mobile)} total={totalCost} colorClass="bg-blue-500" />
+                        <aside className="w-[340px] xl:w-[360px] min-w-[340px] shrink-0 sit-aside-panel flex flex-col border-l border-slate-200/60 z-10 h-full overflow-hidden" style={{background:'linear-gradient(180deg,#f8faff 0%,#f0f6ff 100%)'}}>
+                            
+                            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar" style={{padding:'8px 10px',gap:'6px',display:'flex',flexDirection:'column'}}>
+
+                            {/* ── Karten-Helper: Header ── */}
+                            {/* STAMMDATEN */}
+                            <div style={{background:'#ffffff',borderRadius:'12px',border:'1px solid #e8f0fe',boxShadow:'0 1px 3px rgba(37,99,235,0.05)',overflow:'hidden'}}>
+                                <div style={{padding:'7px 11px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:'7px'}}>
+                                    <div style={{width:'22px',height:'22px',borderRadius:'7px',background:'linear-gradient(135deg,#3b82f6,#6366f1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                     </div>
-                                    {/* Festnetz */}
-                                    <div>
-                                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                                            <span className="w-2 h-2 rounded-full bg-cyan-500 inline-block"></span>Festnetz
-                                            <span className="text-[8px] font-normal text-slate-300 ml-1">WiFi</span>
+                                    <span style={{fontSize:'10px',fontWeight:800,color:'#1e293b',letterSpacing:'0.02em'}}>Stammdaten</span>
+                                </div>
+                                <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'6px'}}>
+                                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px'}}>
+                                        <div style={{position:'relative'}}>
+                                            <select value={customerType} onChange={e=>setCustomerType(e.target.value)}
+                                                style={{width:'100%',height:'30px',background:'#f8fafc',border:`1.5px solid ${customerType?'#22c55e':'#f87171'}`,borderRadius:'8px',paddingLeft:'8px',paddingRight:'20px',fontSize:'10px',fontWeight:600,color:'#374151',outline:'none',appearance:'none',cursor:'pointer'}}>
+                                                <option value="" disabled hidden>Kundentyp *</option>
+                                                <option>Neukunde</option><option>Bestandskunde</option>
+                                            </select>
+                                            <svg style={{position:'absolute',right:'6px',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                                         </div>
-                                        <input className="w-full h-7 border border-cyan-200 rounded px-2 text-[11px] font-bold focus:ring-1 focus:ring-cyan-300 bg-cyan-50/50" placeholder="z.B. 29,99" value={costState.landline} onChange={(e) => handleCostChange('landline', e)} inputMode="decimal" />
-                                        <CostBar val={parseCost(costState.landline)} total={totalCost} colorClass="bg-cyan-500" />
+                                        <div style={{position:'relative'}}>
+                                            <select value={segment} onChange={e=>{setSegment(e.target.value);setSegmentTouched(true);}}
+                                                style={{width:'100%',height:'30px',background:'#f8fafc',border:`1.5px solid ${segmentTouched?'#22c55e':'#f87171'}`,borderRadius:'8px',paddingLeft:'8px',paddingRight:'20px',fontSize:'10px',fontWeight:600,color:'#374151',outline:'none',appearance:'none',cursor:'pointer'}}>
+                                                <option value="" disabled hidden>Segment *</option>
+                                                <option>Neuvertrag</option><option>Vertragsverlängerung</option><option>Junge Leute</option><option>Bestes Alter</option>
+                                            </select>
+                                            <svg style={{position:'absolute',right:'6px',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                        </div>
                                     </div>
-                                    {/* TV */}
-                                    <div>
-                                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                                            <span className="w-2 h-2 rounded-full bg-purple-500 inline-block"></span>TV
-                                            <span className="text-[8px] font-normal text-slate-300 ml-1">Fernsehen</span>
+                                    {/* E-Mail */}
+                                    <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
+                                        <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                                            <div style={{flex:1,position:'relative',height:emailMode==='pen'?'52px':'30px',border:`1.5px solid ${emailMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'height 0.2s ease'}}>
+                                                {emailMode==='keyboard'
+                                                    ?<input type="email" value={emailText} onChange={e=>setEmailText(e.target.value)} placeholder="E-Mail" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 10px',fontSize:'11px',fontWeight:500,color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>
+                                                    :<canvas ref={emailCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={e=>startDrawing(e,emailCanvasRef,'email')} onPointerMove={e=>draw(e,emailCanvasRef,'email')} onPointerUp={e=>stopDrawing(e,emailCanvasRef)} onPointerLeave={e=>stopDrawing(e,emailCanvasRef)}/>
+                                                }
+                                            </div>
+                                            <div style={{display:'flex',gap:'2px',flexShrink:0,alignSelf:'flex-start'}}>
+                                                {[['keyboard','⌨'],['pen','✏']].map(([m,ic])=>(
+                                                    <button key={m} onClick={()=>setEmailMode(m)} style={{width:'26px',height:'30px',borderRadius:'7px',fontSize:'12px',border:`1.5px solid ${emailMode===m?'#3b82f6':'#e2e8f0'}`,background:emailMode===m?'#eff6ff':'#f8fafc',color:emailMode===m?'#2563eb':'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{ic}</button>
+                                                ))}
+                                                {emailMode==='pen'&&<button onClick={()=>clearCanvas(emailCanvasRef,'email')} style={{width:'26px',height:'30px',borderRadius:'7px',fontSize:'11px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
+                                            </div>
                                         </div>
-                                        <input className="w-full h-7 border border-purple-200 rounded px-2 text-[11px] font-bold focus:ring-1 focus:ring-purple-300 bg-purple-50/50" placeholder="z.B. 12,99" value={costState.tv} onChange={(e) => handleCostChange('tv', e)} inputMode="decimal" />
-                                        <CostBar val={parseCost(costState.tv)} total={totalCost} colorClass="bg-purple-500" />
                                     </div>
                                 </div>
-                                <div className="bg-slate-100 rounded-md px-2 h-7 flex items-center justify-between text-[11px] font-bold text-slate-700 border border-slate-200 mt-1 shrink-0"><span className="text-slate-400 font-medium">Gesamt</span><span>{totalCost.toFixed(2).replace('.',',')} €</span></div>
-                                {/* Hinweis: Auto-Erkennung bei Tastatur-Modus */}
-                                {inputMode === 'keyboard' && (
-                                    <div className="mt-1 text-[9px] text-slate-400 text-center leading-tight">✨ Beträge wie <span className="font-bold text-slate-500">34,99</span> werden beim Tippen automatisch erkannt</div>
+                            </div>
+
+                            {/* TECHNISCHE SITUATION */}
+                            <div style={{background:'#ffffff',borderRadius:'12px',border:'1px solid #e8f0fe',boxShadow:'0 1px 3px rgba(37,99,235,0.05)',overflow:'hidden'}}>
+                                <div style={{padding:'7px 11px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:'7px'}}>
+                                    <div style={{width:'22px',height:'22px',borderRadius:'7px',background:'linear-gradient(135deg,#06b6d4,#3b82f6)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                                    </div>
+                                    <span style={{fontSize:'10px',fontWeight:800,color:'#1e293b',letterSpacing:'0.02em'}}>Technische Situation</span>
+                                </div>
+                                <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'5px'}}>
+                                    <div style={{position:'relative'}}>
+                                        {!isCustomProvider
+                                            ?<><select value={providerSelect} onChange={e=>{if(e.target.value==='Sonstiges'){setIsCustomProvider(true);setProviderSelect('Sonstiges');}else{setProviderSelect(e.target.value);setIsCustomProvider(false);setWlanRecommendation('');setSpeedRecommendation('');}}}
+                                                style={{width:'100%',height:'30px',background:'#f8fafc',border:`1.5px solid ${providerSelect?'#22c55e':'#f87171'}`,borderRadius:'8px',paddingLeft:'8px',paddingRight:'20px',fontSize:'10px',fontWeight:600,color:'#374151',outline:'none',appearance:'none',cursor:'pointer'}}>
+                                                <option value="" disabled hidden>DSL-Anbieter *</option>
+                                                <option>Telekom</option><option>1&1</option><option>Vodafone</option><option>O2</option><option value="Sonstiges">Sonstiges</option>
+                                            </select>
+                                            <svg style={{position:'absolute',right:'6px',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg></>
+                                            :<div style={{display:'flex',alignItems:'center',height:'30px',border:'1.5px solid #22c55e',borderRadius:'8px',background:'#f0fdf4',overflow:'hidden',position:'relative'}}>
+                                                <div style={{position:'absolute',right:'3px',top:'50%',transform:'translateY(-50%)',display:'flex',gap:'2px',zIndex:20}}>
+                                                    <button onClick={()=>setProviderMode(p=>p==='keyboard'?'pen':'keyboard')} style={{width:'22px',height:'22px',borderRadius:'5px',border:'1px solid #e2e8f0',background:'#f8fafc',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Icon d={providerMode==='keyboard'?ICONS.Pen:ICONS.Keyboard} size={9}/></button>
+                                                    <button onClick={()=>{setIsCustomProvider(false);setWlanRecommendation('');setSpeedRecommendation('');setProviderSelect('');setCustomProvider('');}} style={{width:'22px',height:'22px',borderRadius:'5px',border:'1px solid #e2e8f0',background:'#f8fafc',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Icon d={ICONS.List} size={9}/></button>
+                                                </div>
+                                                {providerMode==='keyboard'
+                                                    ?<input type="text" value={customProvider} onChange={e=>setCustomProvider(e.target.value)} placeholder="Anbieter..." style={{width:'100%',height:'100%',padding:'0 55px 0 8px',fontSize:'10px',fontWeight:600,color:'#166534',background:'transparent',border:'none',outline:'none'}} autoFocus/>
+                                                    :<><canvas ref={providerCanvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" onPointerDown={e=>startDrawing(e,providerCanvasRef,'provider')} onPointerMove={e=>draw(e,providerCanvasRef,'provider')} onPointerUp={e=>stopDrawing(e,providerCanvasRef)} onPointerLeave={e=>stopDrawing(e,providerCanvasRef)}/><button onClick={()=>clearCanvas(providerCanvasRef,'provider')} style={{position:'absolute',right:'3px',top:'50%',transform:'translateY(-50%)',width:'22px',height:'22px',borderRadius:'5px',border:'1px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',zIndex:30,display:'flex',alignItems:'center',justifyContent:'center'}}><Icon d={ICONS.Trash} size={9}/></button></>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    {wlanRecommendation&&<div style={{padding:'4px 8px',background:'#f0fdf4',border:'1px solid #86efac',borderRadius:'7px',fontSize:'10px',fontWeight:700,color:'#166534'}}>✓ {wlanRecommendation}</div>}
+                                    <button onClick={()=>setShowWlanModal(true)} style={{width:'100%',height:'30px',display:'flex',alignItems:'center',gap:'7px',padding:'0 10px',borderRadius:'8px',border:`1.5px solid ${wlanRecommendation?'#86efac':'#e2e8f0'}`,background:wlanRecommendation?'#f0fdf4':'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
+                                        onMouseEnter={e=>{e.currentTarget.style.borderColor='#3b82f6';e.currentTarget.style.background='#eff6ff';}}
+                                        onMouseLeave={e=>{e.currentTarget.style.borderColor=wlanRecommendation?'#86efac':'#e2e8f0';e.currentTarget.style.background=wlanRecommendation?'#f0fdf4':'#f8fafc';}}>
+                                        <div style={{width:'18px',height:'18px',borderRadius:'5px',background:wlanRecommendation?'#22c55e':'#e2e8f0',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                            <Icon d={ICONS.Wifi} size={10} style={{color:wlanRecommendation?'white':'#94a3b8'}}/>
+                                        </div>
+                                        <span style={{fontSize:'10px',fontWeight:700,color:wlanRecommendation?'#166534':'#64748b'}}>{wlanRecommendation?'✓ WLAN-Empfehlung':'WLAN-Planer öffnen'}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* TECHNOLOGIE & SPEED */}
+                            <div style={{background:'#ffffff',borderRadius:'12px',border:'1px solid #e8f0fe',boxShadow:'0 1px 3px rgba(37,99,235,0.05)',overflow:'hidden'}}>
+                                <div style={{padding:'7px 11px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:'7px'}}>
+                                    <div style={{width:'22px',height:'22px',borderRadius:'7px',background:'linear-gradient(135deg,#f59e0b,#ef4444)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                        <Icon d={ICONS.Zap} size={11} style={{color:'white'}}/>
+                                    </div>
+                                    <span style={{fontSize:'10px',fontWeight:800,color:'#1e293b',letterSpacing:'0.02em'}}>Technologie & Speed</span>
+                                </div>
+                                <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'5px'}}>
+                                    {[
+                                        {label:checkedTechs&&Object.values(checkedTechs).some(Boolean)?`✓ Technologie (${Object.values(checkedTechs).filter(Boolean).length})`:'Technologie-Check',icon:ICONS.Zap,active:checkedTechs&&Object.values(checkedTechs).some(Boolean),onClick:()=>setShowTechModal(true),hov:'#f59e0b',hovBg:'#fffbeb'},
+                                        {label:speedRecommendation?'✓ Speed ermittelt':'Speed-Rechner',icon:ICONS.Gauge,active:!!speedRecommendation,onClick:()=>setShowSpeedModal(true),hov:'#f59e0b',hovBg:'#fffbeb'},
+                                    ].map((btn,i)=>(
+                                        <button key={i} onClick={btn.onClick} style={{width:'100%',height:'30px',display:'flex',alignItems:'center',gap:'7px',padding:'0 10px',borderRadius:'8px',border:`1.5px solid ${btn.active?'#86efac':'#e2e8f0'}`,background:btn.active?'#f0fdf4':'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
+                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.hov;e.currentTarget.style.background=btn.hovBg;}}
+                                            onMouseLeave={e=>{e.currentTarget.style.borderColor=btn.active?'#86efac':'#e2e8f0';e.currentTarget.style.background=btn.active?'#f0fdf4':'#f8fafc';}}>
+                                            <div style={{width:'18px',height:'18px',borderRadius:'5px',background:btn.active?'#22c55e':'#fef3c7',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                                <Icon d={btn.icon} size={10} style={{color:btn.active?'white':'#f59e0b'}}/>
+                                            </div>
+                                            <span style={{fontSize:'10px',fontWeight:700,color:btn.active?'#166534':'#64748b'}}>{btn.label}</span>
+                                        </button>
+                                    ))}
+                                    {speedRecommendation&&<div style={{padding:'4px 8px',background:'#f0fdf4',border:'1px solid #86efac',borderRadius:'7px',fontSize:'10px',fontWeight:700,color:'#166534'}}>✓ {speedRecommendation}</div>}
+                                </div>
+                            </div>
+
+                            {/* ROAMING & TV */}
+                            <div className="print-hide-roaming" style={{background:'#ffffff',borderRadius:'12px',border:'1px solid #e8f0fe',boxShadow:'0 1px 3px rgba(37,99,235,0.05)',overflow:'hidden'}}>
+                                <div style={{padding:'7px 11px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:'7px'}}>
+                                    <div style={{width:'22px',height:'22px',borderRadius:'7px',background:'linear-gradient(135deg,#8b5cf6,#ec4899)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                        <Icon d={ICONS.Globe} size={11} style={{color:'white'}}/>
+                                    </div>
+                                    <span style={{fontSize:'10px',fontWeight:800,color:'#1e293b',letterSpacing:'0.02em'}}>Roaming & TV</span>
+                                </div>
+                                <div style={{padding:'7px 10px',display:'flex',gap:'5px'}}>
+                                    {[
+                                        {label:'Roaming Check',icon:ICONS.Globe,col:'#8b5cf6',bg:'#f5f3ff',onClick:()=>setShowRoamingModal(true)},
+                                        {label:'TV Kalkulation',icon:ICONS.Tv,col:'#ec4899',bg:'#fdf4ff',onClick:()=>setShowTvModal(true)},
+                                    ].map(btn=>(
+                                        <button key={btn.label} onClick={btn.onClick} style={{flex:1,height:'30px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',borderRadius:'8px',border:'1.5px solid #e2e8f0',background:'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
+                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.col;e.currentTarget.style.background=btn.bg;}}
+                                            onMouseLeave={e=>{e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.background='#f8fafc';}}>
+                                            <Icon d={btn.icon} size={11} style={{color:btn.col,flexShrink:0}}/>
+                                            <span style={{fontSize:'10px',fontWeight:700,color:'#64748b'}}>{btn.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* KOSTEN (IST) */}
+                            <div style={{background:'#ffffff',borderRadius:'12px',border:'1px solid #e8f0fe',boxShadow:'0 1px 3px rgba(37,99,235,0.05)',overflow:'hidden'}}>
+                                <div style={{padding:'7px 11px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:'7px'}}>
+                                        <div style={{width:'22px',height:'22px',borderRadius:'7px',background:'linear-gradient(135deg,#10b981,#06b6d4)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                            <Icon d={ICONS.Calculator} size={11} style={{color:'white'}}/>
+                                        </div>
+                                        <span style={{fontSize:'10px',fontWeight:800,color:'#1e293b',letterSpacing:'0.02em'}}>Kosten (Ist)</span>
+                                    </div>
+                                    <button onClick={()=>setShowCostSection(v=>!v)} style={{display:'flex',alignItems:'center',gap:'3px',padding:'2px 8px',borderRadius:'999px',fontSize:'9px',fontWeight:700,border:`1px solid ${showCostSection?'#e2e8f0':'#bfdbfe'}`,background:showCostSection?'#f8fafc':'#eff6ff',color:showCostSection?'#94a3b8':'#2563eb',cursor:'pointer'}}>
+                                        {showCostSection
+                                            ?<><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>Ausblenden</>
+                                            :<><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Einblenden</>
+                                        }
+                                    </button>
+                                </div>
+                                {showCostSection ? (
+                                <div style={{padding:'5px 10px',display:'flex',flexDirection:'column',gap:'3px'}}>
+                                    {[
+                                        {key:'mobile',label:'Mobil',col:'#3b82f6',light:'#eff6ff',bdr:'#bfdbfe'},
+                                        {key:'landline',label:'Festnetz',col:'#06b6d4',light:'#ecfeff',bdr:'#a5f3fc'},
+                                        {key:'tv',label:'TV',col:'#8b5cf6',light:'#f5f3ff',bdr:'#ddd6fe'},
+                                    ].map(f=>{
+                                        const val=parseCost(costState[f.key]);
+                                        return(
+                                        <div key={f.key} style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                                            <span style={{width:'6px',height:'6px',borderRadius:'50%',background:f.col,flexShrink:0}}/>
+                                            <span style={{fontSize:'9px',fontWeight:700,color:'#64748b',width:'44px',flexShrink:0}}>{f.label}</span>
+                                            <input value={costState[f.key]} onChange={e=>handleCostChange(f.key,e)} inputMode="decimal" placeholder="0,00"
+                                                style={{flex:1,height:'24px',background:f.light,border:`1.5px solid ${f.bdr}`,borderRadius:'6px',padding:'0 6px',fontSize:'11px',fontWeight:700,color:'#1e293b',outline:'none',boxSizing:'border-box'}}/>
+                                            {val>0&&<span style={{fontSize:'10px',fontWeight:800,color:f.col,flexShrink:0,minWidth:'38px',textAlign:'right'}}>{costState[f.key]}€</span>}
+                                        </div>);
+                                    })}
+                                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'4px 6px',background:'#f8fafc',borderRadius:'7px',border:'1px solid #e2e8f0',marginTop:'2px'}}>
+                                        <span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8'}}>⚡ Auto · Gesamt</span>
+                                        <span style={{fontSize:'13px',fontWeight:900,color:'#0f172a'}}>{totalCost.toFixed(2).replace('.',',')} <span style={{fontSize:'10px',color:'#64748b'}}>€</span></span>
+                                    </div>
+                                </div>
+                                ):(
+                                <div style={{padding:'6px 10px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                                    <span style={{fontSize:'9px',color:'#94a3b8',fontWeight:600}}>Ausgeblendet</span>
+                                    {totalCost>0&&<span style={{fontSize:'12px',fontWeight:900,color:'#2563eb'}}>{totalCost.toFixed(2).replace('.',',')} €</span>}
+                                </div>
                                 )}
-                                </SectionCard>
+                            </div>
+
                             </div>
                         </aside>
                     </div>
@@ -8697,6 +9073,215 @@ const handlePDFShare = async () => {
                                     );
                                 })}
                             </div>
+
+                            {/* ── Elegante Fusion: WLAN + Technologien ── */}
+                            {(techUebernommen.length > 0 || wlanSnapshot) && (
+                                <div style={{display:'flex',justifyContent:'flex-end'}}>
+                                <div style={{
+                                    position:'relative',
+                                    display:'inline-flex',
+                                    flexDirection:'row',
+                                    alignItems:'stretch',
+                                    borderRadius:'22px',
+                                    overflow:'hidden',
+                                    boxShadow:'0 4px 24px rgba(37,99,235,0.13), 0 1px 4px rgba(15,23,42,0.06)',
+                                    background:'linear-gradient(135deg,#eff6ff 0%,#dbeafe 50%,#e0f2fe 100%)',
+                                    border:'1px solid rgba(147,197,253,0.5)',
+                                    minWidth:0,
+                                }}>
+                                    {/* Dekoratives Glanz-Overlay */}
+                                    <div style={{position:'absolute',inset:0,pointerEvents:'none',
+                                        background:'radial-gradient(ellipse at 20% 0%, rgba(255,255,255,0.7) 0%, transparent 60%)',
+                                        borderRadius:'22px'}}/>
+
+                                    {/* ── Schließen ── */}
+                                    <button onClick={() => { setTechUebernommen([]); setWlanSnapshot(null); }}
+                                        style={{position:'absolute',top:'10px',right:'12px',width:'22px',height:'22px',
+                                        borderRadius:'50%',background:'rgba(148,163,184,0.15)',border:'1px solid rgba(148,163,184,0.25)',
+                                        display:'flex',alignItems:'center',justifyContent:'center',
+                                        cursor:'pointer',color:'#94a3b8',fontSize:'12px',fontWeight:700,
+                                        lineHeight:1,zIndex:10,transition:'all 0.2s'}}
+                                        onMouseEnter={e=>{e.currentTarget.style.background='rgba(239,68,68,0.12)';e.currentTarget.style.color='#ef4444';e.currentTarget.style.borderColor='rgba(239,68,68,0.3)';}}
+                                        onMouseLeave={e=>{e.currentTarget.style.background='rgba(148,163,184,0.15)';e.currentTarget.style.color='#94a3b8';e.currentTarget.style.borderColor='rgba(148,163,184,0.25)';}}
+                                        title="Entfernen">✕</button>
+
+                                    {/* ── WLAN-Haus ── */}
+                                    {wlanSnapshot && (()=>{
+                                        const{router,needs,availableFloors,floorKeys,rec}=wlanSnapshot;
+                                        const FH=36,FG=4,PAD=8;
+                                        const svgH=PAD+36+availableFloors.length*(FH+FG)+PAD;
+                                        const getFC=(key)=>{
+                                            const isR=router===key,isN=needs.includes(key);
+                                            if(isR)return{fill:'#1e40af',stroke:'#1d4ed8',text:'#ffffff'};
+                                            if(isN)return{fill:'rgba(219,234,254,0.9)',stroke:'#3b82f6',text:'#1d4ed8'};
+                                            return{fill:'rgba(255,255,255,0.5)',stroke:'rgba(147,197,253,0.4)',text:'#94a3b8'};
+                                        };
+                                        return(
+                                        <div style={{padding:'16px 18px 16px 20px',display:'flex',flexDirection:'column',
+                                            alignItems:'center',gap:'10px',position:'relative',
+                                            borderRight: techUebernommen.length > 0 ? '1px solid rgba(147,197,253,0.35)' : 'none'}}>
+
+                                            {/* Header */}
+                                            <div style={{display:'flex',alignItems:'center',gap:'6px',alignSelf:'flex-start'}}>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                                                <span style={{fontSize:'9px',fontWeight:800,color:'#2563eb',textTransform:'uppercase',letterSpacing:'0.10em'}}>WLAN-Planer</span>
+                                            </div>
+
+                                            {/* Haus SVG */}
+                                            <svg viewBox={'0 0 176 '+svgH} style={{width:148,height:'auto',display:'block'}}>
+                                                <defs>
+                                                    <linearGradient id="roofGv2" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                        <stop offset="0%" stopColor="#bfdbfe"/>
+                                                        <stop offset="100%" stopColor="#dbeafe"/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <polygon points="88,4 168,36 8,36" fill="url(#roofGv2)" stroke="#93c5fd" strokeWidth="1.2"/>
+                                                {[...availableFloors].reverse().map((lbl,i)=>{
+                                                    const key=floorKeys[availableFloors.length-1-i];
+                                                    const fc=getFC(key);const y=PAD+32+i*(FH+FG);
+                                                    const isR=router===key,isN=needs.includes(key);
+                                                    return(<g key={key}>
+                                                        <rect x={4} y={y} width={168} height={FH} rx={9}
+                                                            fill={fc.fill} stroke={fc.stroke}
+                                                            strokeWidth={isR?0:isN?1.5:0.8}/>
+                                                        {/* Fenster */}
+                                                        {[30,78,120].map(wx=>(<rect key={wx} x={wx} y={y+7} width={13} height={10} rx={2}
+                                                            fill={isR?'rgba(147,197,253,0.35)':isN?'#93c5fd':'rgba(147,197,253,0.2)'}
+                                                            stroke={isR?'rgba(255,255,255,0.3)':isN?'#60a5fa':'rgba(147,197,253,0.3)'}
+                                                            strokeWidth={0.7}/>))}
+                                                        {/* Tür */}
+                                                        {lbl==='EG'&&<rect x={78} y={y+FH-13} width={10} height={13} rx={2}
+                                                            fill={isR?'rgba(255,255,255,0.25)':'#93c5fd'}/>}
+                                                        <text x={18} y={y+FH/2+4} fontSize={10} fontWeight={800} fill={fc.text}>{lbl}</text>
+                                                        {/* Router-Badge */}
+                                                        {isR&&<g transform={'translate(152,'+String(y+10)+')'}>
+                                                            <rect x={-8} y={-5} width={18} height={10} rx={3} fill="#22c55e"/>
+                                                            <circle cx={1} cy={0} r={2} fill="white"/>
+                                                        </g>}
+                                                        {/* WLAN-Wellen */}
+                                                        {isN&&!isR&&<>
+                                                            <circle cx={156} cy={y+13} r={3} fill="#3b82f6"/>
+                                                            <circle cx={156} cy={y+13} r={7} fill="none" stroke="#3b82f6" strokeWidth={1.2} opacity="0.4"/>
+                                                            <circle cx={156} cy={y+13} r={11} fill="none" stroke="#3b82f6" strokeWidth={0.8} opacity="0.2"/>
+                                                        </>}
+                                                    </g>);
+                                                })}
+                                            </svg>
+
+                                            {/* Legende */}
+                                            <div style={{display:'flex',gap:'10px',flexWrap:'wrap',justifyContent:'center'}}>
+                                                {[
+                                                    {fill:'#1e40af',border:'#1d4ed8',label:'Router'},
+                                                    {fill:'#dbeafe',border:'#3b82f6',label:'WLAN'},
+                                                    {fill:'rgba(255,255,255,0.5)',border:'rgba(147,197,253,0.4)',label:'Kein Bedarf'},
+                                                ].map(x=>(
+                                                    <div key={x.label} style={{display:'flex',alignItems:'center',gap:'4px',fontSize:'9px',color:'#64748b'}}>
+                                                        <span style={{width:'9px',height:'9px',borderRadius:'2px',flexShrink:0,
+                                                            background:x.fill,border:'1px solid '+x.border}}/>
+                                                        {x.label}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Empfehlung */}
+                                            {rec&&(
+                                                <div style={{alignSelf:'stretch',
+                                                    background:'linear-gradient(135deg,#1e3a8a,#2563eb)',
+                                                    borderRadius:'12px',padding:'10px 14px',textAlign:'center',
+                                                    boxShadow:'0 2px 12px rgba(37,99,235,0.25)'}}>
+                                                    <div style={{fontSize:'8px',fontWeight:800,color:'rgba(147,197,253,0.7)',
+                                                        textTransform:'uppercase',letterSpacing:'0.14em',marginBottom:'4px'}}>Empfehlung</div>
+                                                    <div style={{fontSize:'16px',fontWeight:900,color:'#ffffff',
+                                                        letterSpacing:'-0.02em',lineHeight:1.1,textShadow:'0 1px 8px rgba(37,99,235,0.4)'}}>{rec.sol}</div>
+                                                    <div style={{fontSize:'9px',color:'rgba(186,230,253,0.7)',marginTop:'4px',lineHeight:1.3}}>{rec.desc}</div>
+                                                </div>
+                                            )}
+                                        </div>);
+                                    })()}
+
+                                    {/* ── Technologie-Chips ── */}
+                                    {techUebernommen.length > 0 && (
+                                        <div style={{padding:'16px 42px 16px 18px',display:'flex',flexDirection:'column',
+                                            gap:'10px',justifyContent:'center',minWidth:'160px',position:'relative'}}>
+                                            <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                <span style={{fontSize:'9px',fontWeight:800,color:'#2563eb',
+                                                    textTransform:'uppercase',letterSpacing:'0.10em'}}>Vorhanden</span>
+                                            </div>
+                                            <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                                                {techUebernommen.map((t,i)=>(
+                                                    <div key={i} style={{
+                                                        display:'inline-flex',alignItems:'center',gap:'8px',
+                                                        padding:'7px 14px',borderRadius:'10px',
+                                                        background:'rgba(255,255,255,0.65)',
+                                                        border:'1px solid rgba(147,197,253,0.5)',
+                                                        fontSize:'12px',fontWeight:700,color:'#1e40af',
+                                                        boxShadow:'0 1px 4px rgba(37,99,235,0.08)',
+                                                        backdropFilter:'blur(6px)',
+                                                    }}>
+                                                        <span style={{width:'7px',height:'7px',borderRadius:'50%',
+                                                            background:'#22c55e',flexShrink:0,
+                                                            boxShadow:'0 0 6px rgba(34,197,94,0.5)'}}/>
+                                                        {t}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* ── Netzwerk-Produkt: rechts in Fusion-Box, automatisch ── */}
+                                    {netBundleMatched && techUebernommen.length > 0 &&
+                                        <div style={{width:'1px',alignSelf:'stretch',background:'rgba(147,197,253,0.35)',flexShrink:0,margin:'0 2px'}}/>
+                                    }
+                                {netBundleMatched && (
+                                    <div style={{padding:'16px 40px 16px 18px',display:'flex',flexDirection:'column',gap:'8px',justifyContent:'center',minWidth:'170px',maxWidth:'220px',position:'relative'}}>
+                                        {/* Slogan */}
+                                        <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                                            <span style={{fontSize:'8px',fontWeight:800,color:'#16a34a',textTransform:'uppercase',letterSpacing:'0.10em',background:'#dcfce7',borderRadius:'999px',padding:'2px 7px',border:'1px solid #86efac'}}>✨ Passend für Sie</span>
+                                        </div>
+                                        <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',lineHeight:1.3}}>Für das beste Netz zuhause</div>
+
+                                        {/* Produktbild */}
+                                        {netBundleMatched.images && netBundleMatched.images[0] && (
+                                            <img src={netBundleMatched.images[0]} alt={netBundleMatched.titel||''} style={{height:'54px',maxWidth:'100%',objectFit:'contain',borderRadius:'8px',background:'rgba(255,255,255,0.7)',padding:'4px',border:'1px solid rgba(147,197,253,0.4)'}}/>
+                                        )}
+
+                                        {/* Produktname */}
+                                        <div style={{fontSize:'12px',fontWeight:800,color:'#1e293b',lineHeight:1.2}}>{netBundleMatched.titel}</div>
+                                        {netBundleMatched.tarifName && (
+                                            <div style={{fontSize:'10px',fontWeight:600,color:'#64748b'}}>{netBundleMatched.tarifName}</div>
+                                        )}
+
+                                        {/* Preis */}
+                                        {(netBundleMatched.preis24||netBundleMatched.angebotspreis) && (
+                                            <div style={{display:'inline-flex',alignItems:'baseline',gap:'3px'}}>
+                                                <span style={{fontSize:'16px',fontWeight:900,color:'#dc2626'}}>{netBundleMatched.preis24||netBundleMatched.angebotspreis}</span>
+                                                <span style={{fontSize:'10px',fontWeight:700,color:'#dc2626'}}>€/Monat</span>
+                                            </div>
+                                        )}
+
+                                        {/* In Canvas laden */}
+                                        <button onClick={()=>{
+                                            const b = netBundleMatched;
+                                            const html = `<div style="padding:18px;font-family:system-ui,sans-serif;background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border-radius:14px;border:2px solid #86efac;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
+                                                <div style="font-size:9px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.10em">✨ Passend für Sie — Für das beste Netz</div>
+                                                ${b.images&&b.images[0]?`<div style="text-align:center"><img src="${b.images[0]}" style="max-height:90px;max-width:100%;object-fit:contain;border-radius:8px"/></div>`:''}
+                                                <div style="font-size:20px;font-weight:900;color:#14532d;line-height:1.2">${b.titel||''}</div>
+                                                ${b.tarifName?`<div style="font-size:13px;font-weight:700;color:#166534">${b.tarifName}</div>`:''}
+                                                ${(b.preis24||b.angebotspreis)?`<div style="display:inline-block;background:#dc2626;color:white;padding:7px 18px;border-radius:9px;font-size:22px;font-weight:900">${b.preis24||b.angebotspreis} €/Monat</div>`:''}
+                                                ${b.rechnungsweg?`<div style="font-size:10px;color:#166534;border-top:1px solid #bbf7d0;padding-top:8px;white-space:pre-line;line-height:1.5">${b.rechnungsweg}</div>`:''}
+                                            </div>`;
+                                            setCanvasHtml(prev=>({...prev,offer3:html}));
+                                            setBundleInsertCounter(prev=>({...prev,offer3:(prev.offer3||0)+1}));
+                                            triggerToast('✅ Netzwerk-Produkt in Canvas 3 geladen!');
+                                        }} style={{padding:'7px 10px',borderRadius:'9px',border:'none',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontWeight:800,fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',boxShadow:'0 2px 8px rgba(22,163,74,0.25)',marginTop:'2px'}}>
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                                            In Canvas 3 laden
+                                        </button>
+                                    </div>
+                                    )}
+                                </div>
+                                </div>
+                            )}
 
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shrink-0 cost-overview-print">
                                 <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Icon d={ICONS.Calculator} size={20} className="text-blue-600"/> {getStaticLabel('CostHeader')}</h3>
