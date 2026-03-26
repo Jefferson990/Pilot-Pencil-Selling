@@ -21,7 +21,7 @@
         html {
             filter: saturate(1.4) contrast(1.05);
             -webkit-font-smoothing: antialiased;
-            -moz-osx-osx-font-smoothing: grayscale;
+            -moz-osx-font-smoothing: grayscale;
             font-family: ui-sans-serif, system-ui, sans-serif;
         }
 
@@ -284,7 +284,7 @@ html, body{
         }
         .wlan-chip:hover { background: #f8fafc; }
         .wlan-chip.toggled { background: #eff6ff; border-color: #3b82f6; color: #2563eb; }
-        .wlan-num { width: 40px; height: 40px; display: flex; items-center; justify-content: center; padding: 0; }
+        .wlan-num { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0; }
         
         .wlan-badge {
             padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; 
@@ -301,7 +301,26 @@ html, body{
         .wlan-svg .keller { fill: #f1f5f9; stroke: #94a3b8; }
         .wlan-svg .floor-line { stroke: #e2e8e0; }
         
-        /* Offer Canvas Styling */
+        /* === OFFER VIEW: Grid und Cards füllen den verfügbaren Raum === */
+        .print-offer-view .offer-print-grid {
+            flex: 0 0 auto;
+            min-height: 0;
+        }
+        @media (min-width: 768px) {
+            .print-offer-view .offer-print-grid {
+                align-items: stretch;
+                grid-template-rows: 1fr;
+            }
+            .print-offer-view .offer-print-grid > div {
+                display: flex;
+                flex-direction: column;
+            }
+            .print-offer-view .offer-print-grid .offer-canvas-container {
+                flex: 1 1 auto;
+            }
+        }
+
+        /* Offer Canvas Container */
         .offer-canvas-container {
             border: 4px solid #e5e5e5;
             border-radius: 1rem;
@@ -309,8 +328,42 @@ html, body{
             position: relative;
             overflow: hidden;
             background: white;
-            min-height: 550px; 
+            min-height: 480px; 
             transition: all 0.25s ease; 
+        }
+
+        /* === SCREEN: Kostenübersicht kompakt (spart Höhe für die 3 Kacheln) === */
+        .cost-overview-print {
+            padding: 24px !important;
+            margin-top: 16px !important;
+        }
+        .cost-overview-print h3 {
+            font-size: 18px !important;
+            margin-bottom: 16px !important;
+        }
+        .cost-overview-print input,
+        .cost-overview-print select,
+        .cost-overview-print textarea {
+            height: 48px !important;
+            min-height: 48px !important;
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+            font-size: 15px !important;
+        }
+        .cost-overview-print .cost-grid-years {
+            gap: 16px !important;
+        }
+        .cost-overview-print .text-\[10px\],
+        .cost-overview-print p,
+        .cost-overview-print .text-xs {
+            font-size: 10px !important;
+            line-height: 1.4 !important;
+            margin-top: 4px !important;
+        }
+        .cost-overview-print label,
+        .cost-overview-print .text-\[9px\],
+        .cost-overview-print .text-\[11px\] {
+            font-size: 12px !important;
         }
         
         .canvas-lines {
@@ -352,8 +405,8 @@ html, body{
         
         
 @media print {
-    @page { size: A4 landscape; margin: 1cm; }
-    @page :first { size: A4 landscape; margin: 1cm; }
+    @page { size: A4 landscape; margin: 0; }
+    @page :first { size: A4 landscape; margin: 0; }
 
     /* Farben + Hintergrundgrafiken drucken */
     * {
@@ -387,7 +440,7 @@ html, body {
     }
 
     /* Bilder in Canva-Bereichen nie durchsichtig drucken */
-    .canvas-image, .canvas-images*{
+    .canvas-image, .canvas-images *{
         opacity: 1 !important;
         -webkit-filter: none !important;
         filter: none !important;
@@ -433,6 +486,7 @@ html, body {
         overflow:hidden !important;
         text-overflow:ellipsis !important;
         display:block !important;
+        text-align:left !important;
     }
     .print-page-header .badge{ background:#2563eb; color:#ffffff; padding:3px 8px; border-radius:999px; font-size:9px; font-weight:800; border:1px solid #1d4ed8; flex-shrink:0; }
 
@@ -512,7 +566,7 @@ html, body {
     }
 
     /* Bilder in Canva-Bereichen nie durchsichtig drucken */
-    .canvas-image, .canvas-images*{
+    .canvas-image, .canvas-images *{
         opacity: 1 !important;
         -webkit-filter: none !important;
         filter: none !important;
@@ -753,7 +807,8 @@ html, body {
 
     .print-offer-view .overflow-hidden,
     .print-offer-view .h-full,
-    .print-offer-view .min-h-0 {
+    .print-offer-view .min-h-0,
+    .print-offer-view .offer-inner-wrapper {
         overflow: visible !important;
         height: auto !important;
         min-height: 0 !important;
@@ -768,7 +823,7 @@ html, body {
     }
 
     /* Bilder in Canva-Bereichen nie durchsichtig drucken */
-    .canvas-image, .canvas-images*{
+    .canvas-image, .canvas-images *{
         opacity: 1 !important;
         -webkit-filter: none !important;
         filter: none !important;
@@ -801,7 +856,7 @@ html, body {
 
     /* Print-Compact: Angebot + Kosten müssen auf 1 Seite passen (ohne Screen zu ändern) */
     .print-offer-view .offer-canvas-container {
-        min-height: 260px !important;
+        min-height: 350px !important;
         margin-bottom: 12px !important;
     }
     .print-offer-view .print-page-header {
@@ -870,7 +925,7 @@ html, body {
     /* ---- PRINT: Seite 2 Layout-Optimierung (Angebote größer, Kostenblock minimal) ---- */
     /* 3 Angebots-Canvas deutlich höher (ca. doppelt) */
     .print-offer-view .offer-canvas-container{
-        min-height: 550px !important; /* ~2x gegenüber 260px */
+        min-height: 640px !important; /* +90px gegenüber Original */
         margin-bottom: 10px !important;
     }
 
@@ -878,29 +933,23 @@ html, body {
     .print-offer-view .cost-overview-print{
         padding: 10px 12px !important;
         box-shadow: none !important;
+        margin-top: 0px !important;
     }
 
     /* Print-Safety: Kostenfelder (1./2. Jahr) bleiben immer nebeneinander -> verhindert zusätzliche Druck-Seite */
-    @media print{
-        .print-offer-view .cost-grid-years {
-    display: grid !important;
-    /* Wir nutzen 1fr statt minmax, damit die Spalten flexibel schrumpfen */
-    grid-template-columns: repeat(3, 1fr) !important; 
-    /* Reduzierter Abstand, damit alles unter die Mine passt */
-    gap: 6px !important; 
-}
-
-.print-offer-view .cost-grid-years > * {
-    min-width: 0 !important;
-    width: 100% !important;
-}
-
-/* Sicherstellen, dass die Inputs zentriert bleiben und nicht ausbrechen */
-.offer-cost-input {
-    width: 100% !important;
-    text-align: center !important;
-    padding: 0 !important;
-}
+    .print-offer-view .cost-grid-years {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+    }
+    .print-offer-view .cost-grid-years > * {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+    .offer-cost-input {
+        width: 100% !important;
+        text-align: center !important;
+        padding: 0 !important;
     }
     .print-offer-view .cost-overview-print h3{
         margin-bottom: 6px !important;
@@ -971,29 +1020,24 @@ html, body {
     }
 
     /* ===== PRINT ONLY: Stammdaten Selects untereinander & volle Breite ===== */
-    @media print {
-
-        /* Container der beiden Selects (Kundentyp / Segment) */
-        .stammdaten-select-row,
-        .stammdaten-selects,
-        .stammdaten select {
-            width: 100% !important;
-        }
-
-        /* Falls sie in einer Flex-Row liegen: untereinander stapeln */
-        .stammdaten-select-row,
-        .stammdaten-selects {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 10px !important;
-        }
-
-        /* Selects selbst */
-        .stammdaten-select-row select,
-        .stammdaten-selects select {
-            width: 100% !important;
-            height: 48px !important;
-        }
+    /* Container der beiden Selects (Kundentyp / Segment) */
+    .stammdaten-select-row,
+    .stammdaten-selects,
+    .stammdaten select {
+        width: 100% !important;
+    }
+    /* Falls sie in einer Flex-Row liegen: untereinander stapeln */
+    .stammdaten-select-row,
+    .stammdaten-selects {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    /* Selects selbst */
+    .stammdaten-select-row select,
+    .stammdaten-selects select {
+        width: 100% !important;
+        height: 48px !important;
     }
 
 
@@ -1065,7 +1109,8 @@ html, body {
     }
 
     /* Linke Spalte (Share) Seite 2 */
-    body.pdf-share-mode .print-offer-view > div.flex-1 {
+    body.pdf-share-mode .print-offer-view > div.flex-1,
+    body.pdf-share-mode .print-offer-view > .offer-inner-wrapper {
         flex: 0 0 750px !important;
         width: 750px !important;
         max-width: 750px !important;
@@ -1183,7 +1228,7 @@ body.pdf-share-mode .share-page:last-child{
 
     .offer-canvas-container{
         flex: 1 1 auto !important;
-        min-height: 320px !important;
+        min-height: 410px !important;
         margin-bottom: 6px !important;
     }
 
@@ -1218,7 +1263,7 @@ body.pdf-share-mode .share-page:last-child{
     .offer-canvas-container{
         order: 1 !important;
         flex: 1 1 auto !important;
-        min-height: 300px !important;
+        min-height: 390px !important;
     }
 }
 
@@ -1586,10 +1631,10 @@ body.pdf-share-mode .share-page:last-child{
         min-height: 0 !important;
       }
 
-      /* Kostenblock: ganz nach unten + extra 30px tiefer */
+      /* Kostenblock: ganz nach unten + extra 45px tiefer */
       .situation-view-wrapper aside .bg-white.rounded-xl.p-4.shadow-sm{
         margin-top: auto !important;
-        margin-bottom: -30px !important;
+        margin-bottom: -45px !important;
         overflow: visible !important;
         transform: none !important; /* transform wird im Print oft ignoriert */
       }
@@ -1612,6 +1657,8 @@ body.pdf-share-mode .share-page:last-child{
   .print-offer-view{
     zoom: 0.76 !important; /* was 0.80-ish in Chrome */
     transform-origin: top left !important;
+    padding-left: 44px !important; /* shift content right on page 2 */
+    padding-top: 20px !important; /* shift content down on page 2 */
   }
 
   /* Prevent Kostenübersicht block from being pushed to a new page */
@@ -1682,19 +1729,18 @@ body.pdf-share-mode .share-page:last-child{
 
 
 
-  /* Mittelgroße Tablets */
-  @media (min-width: 700px) and (max-width: 899px) {
-    .situation-view-wrapper,
-    .print-situation-view,
-    .print-offer-view { margin-left: -24px !important; }
-  }
+/* Mittelgroße Tablets */
+@media (min-width: 700px) and (max-width: 899px) {
+  .situation-view-wrapper,
+  .print-situation-view,
+  .print-offer-view { margin-left: -24px !important; }
+}
 
-  /* Kleine Tablets & große Phones */
-  @media (max-width: 699px) {
-    .situation-view-wrapper,
-    .print-situation-view,
-    .print-offer-view { margin-left: -30px !important; }
-  }
+/* Kleine Tablets & große Phones */
+@media (max-width: 699px) {
+  .situation-view-wrapper,
+  .print-situation-view,
+  .print-offer-view { margin-left: -30px !important; }
 
   .situation-view-wrapper .grid,
   .print-offer-view .grid {
@@ -1716,27 +1762,13 @@ body.pdf-share-mode .share-page:last-child{
   .print-situation-view,
   .print-offer-view{
     transform: translateX(var(--PORTRAIT_SHIFT_PX)) !important;
+    margin-left: var(--PORTRAIT_SHIFT_PX) !important;
     will-change: transform;
   }
   /* Formulare etwas weiter links (wie vorher) */
   .situation-view-wrapper .grid,
   .print-offer-view .grid{
     margin-left: -12px !important;
-  }
-}
-
-
-/* === PORTRAIT SMART SHIFT (AUTO) ===
-   Schiebt im Hochformat automatisch nach links, NUR wenn rechts etwas abgeschnitten wird.
-   Die JS-Logik setzt --PORTRAIT_SHIFT_PX dynamisch (z.B. -18px / -24px / -30px).
-*/
-:root{ --PORTRAIT_SHIFT_PX: 0px; }
-
-@media (orientation: portrait){
-  .situation-view-wrapper,
-  .print-situation-view,
-  .print-offer-view{
-    margin-left: var(--PORTRAIT_SHIFT_PX) !important;
   }
 }
 
@@ -1908,6 +1940,13 @@ body.pdf-share-mode .share-vertical-header {
 
 /* ===== SHARE PDF: hide offer header icon toolbar (phone/zoom/lock/rotate/trash) ===== */
 body.pdf-share-mode .offer-toolbar-icons{ display:none !important; }
+
+@media print {
+  .kosten-block, .kostenuebersicht, .kostenabschluss {
+    margin-top: -200px !important;
+  }
+}
+
 </style>
 
 <style id="export-hardlock-patch-v1">
@@ -1925,7 +1964,7 @@ body.pdf-share-mode .offer-toolbar-icons{ display:none !important; }
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  @page { size: A4 landscape !important; margin: 0.5cm !important; }
+  @page { size: A4 landscape !important; margin: 0 !important; }
   .situation-view-wrapper, .print-offer-view {
     /* PRINT-FIT: nicht hart auf 1120px fixieren */
     width: 100% !important;
@@ -1956,7 +1995,7 @@ body.exporting, body.exporting #root { filter:none !important; background:#fff !
 
 <!-- === PRINT CHROME FIX v28: force A4 landscape on ALL pages + hard page breaks === -->
 <style id="print-chrome-fix-v28">
-@page { size: A4 landscape; margin: 0.5cm; }
+@page { size: A4 landscape; margin: 0; }
 
 /* Chrome sometimes applies @page only to first page when multiple conflicting print blocks exist.
    This override enforces landscape sizing + deterministic 2-page layout. */
@@ -2057,7 +2096,7 @@ body.pdf-share-mode .situation-view-wrapper { height:100%!important; max-height:
 @media print { * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; } canvas { background-color:#ffffff!important; } textarea,input { color:#000000!important; -webkit-text-fill-color:#000000!important; hyphens:none!important; -webkit-hyphens:none!important; word-break:break-word!important; } }
 
 /* ── Querformat ── */
-@page { size:A4 landscape!important; margin:0.8cm!important; }
+@page { size:A4 landscape!important; margin:0!important; }
 
 /* ── Situation Layout ── */
 .sit-card-grid { overflow:hidden!important; grid-template-columns:1fr 1fr!important; grid-auto-rows:1fr!important; align-content:stretch!important; }
@@ -4045,7 +4084,7 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
     /* Abstand zwischen den Angebots-Canvas (1, 2, 3) reduzieren */
     .print-offer-view .offer-canvas-container {
         margin-bottom: 8px !important;
-        min-height: 540px !important;
+        min-height: 630px !important;
     }
 
     /* Disclaimer Text ganz unten noch etwas kleiner */
@@ -5334,7 +5373,7 @@ const resolveUserName = (raw) => {
                     }
                 };
 
-                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col min-h-[420px] md:min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '22px' : '17px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '22px' : '17px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
                 // Immer wenn ein neues Bundle/Bild eingefügt wird: Edit-Modus aktivieren (blau = bewegbar).
                 // bundleInsertCount wird bei jedem Import erhöht – dadurch feuert dieser Effect garantiert,
                 // auch wenn dasselbe Bundle nochmals eingefügt wird.
@@ -6125,6 +6164,16 @@ const fileInputRef = useRef(null);
                 window.__canvasHtmlOffer2 = canvasHtml.offer2 || null;
                 window.__canvasHtmlOffer3 = canvasHtml.offer3 || null;
             }, [canvasHtml.offer1, canvasHtml.offer2, canvasHtml.offer3]);
+
+            // PRINT-FIX: setView global verfügbar machen, damit afterprint React-Reset triggern kann
+            React.useEffect(() => {
+                window.__printResetView = () => {
+                    const currentView = view;
+                    setView('situation');
+                    requestAnimationFrame(() => requestAnimationFrame(() => setView(currentView)));
+                };
+                window.__currentView = view;
+            }, [view]);
 
             const [isImageSelectModalOpen, setIsImageSelectModalOpen] = useState(false);
             const [currentImagePayload, setCurrentImagePayload] = useState(null);
@@ -7148,7 +7197,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
 
                     // ULTRA SHARP v37: avoid blur from CSS transforms/filters during rasterization
                     try{
-                        clonedDoc.querySelectorAll('.offer-html-overlay-wrap, .bundle-import-wrap, .canvas-image, img, canvas, svg').forEach(el=>{
+                        doc.querySelectorAll('.offer-html-overlay-wrap, .bundle-import-wrap, .canvas-image, img, canvas, svg').forEach(el=>{
                             try { el.style.transform = 'none'; } catch(e){}
                             try { el.style.filter = 'none'; } catch(e){}
                             try { el.style.backfaceVisibility = 'hidden'; } catch(e){}
@@ -7164,7 +7213,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                     // Lösung: Im Clone die Overlay-HTML gezielt "shrink-to-fit" + responsive Medien.
                     try{
                         const EXTRA = 1.18; // v35: enlarge overlay for readability in PDF // zusätzlicher Shrink nur im Share-PDF (nicht Web-Ansicht)
-                        clonedDoc.querySelectorAll('.offer-html-overlay-wrap').forEach(el=>{
+                        doc.querySelectorAll('.offer-html-overlay-wrap').forEach(el=>{
                             try{
                                 // 1) Transform scale(...) innerhalb "scale(x) rotate(...)" anpassen
                                 const t = String(el.style.transform||'');
@@ -7204,7 +7253,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                         });
 
                         // Bundle-Wrapper zusätzlich absichern (falls HTML direkt diese Klasse nutzt)
-                        clonedDoc.querySelectorAll('.bundle-import-wrap').forEach(w=>{
+                        doc.querySelectorAll('.bundle-import-wrap').forEach(w=>{
                             w.style.transformOrigin = 'top left';
                             w.style.transform = 'scale(1.0)';
                             w.style.maxWidth = '100%';
@@ -7213,7 +7262,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                     }catch(e){}
 
                     // Hard-override gegen Landscape-Fullscreen-Shift (nur Share-PDF)
-                    const __centerStyle = clonedDoc.createElement('style');
+                    const __centerStyle = doc.createElement('style');
                     __centerStyle.textContent = `
                       body.pdf-share-mode{ --FULLSCREEN_SHIFT_X: 0px !important; }
                       @media (orientation: landscape) and (min-width: 1100px){
@@ -7229,12 +7278,12 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                         margin-right: auto !important;
                       }
                     `;
-                    clonedDoc.head.appendChild(__centerStyle);
+                    doc.head.appendChild(__centerStyle);
 
                     // Hide voucher / Gutscheincode area during export (prevents it showing in screenshot/PDF)
                     try {
                         const txt = (el) => (el && (el.textContent || el.innerText) || '').toLowerCase();
-                        const all = Array.from(clonedDoc.querySelectorAll('div,section,article,p,span,strong,small,label,h1,h2,h3,h4'));
+                        const all = Array.from(doc.querySelectorAll('div,section,article,p,span,strong,small,label,h1,h2,h3,h4'));
                         const hit = all.find(n => txt(n).includes('gutscheincode') || txt(n).includes('gutschein'));
                         if (hit) {
                             // hide nearest "row/card/section" container
@@ -7243,7 +7292,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                         }
                     } catch(e){}
                     // Force exact colors inside clone
-                    try { clonedDoc.querySelectorAll('*').forEach(el => { el.style.webkitPrintColorAdjust='exact'; el.style.printColorAdjust='exact'; }); } catch(e){}
+                    try { doc.querySelectorAll('*').forEach(el => { el.style.webkitPrintColorAdjust='exact'; el.style.printColorAdjust='exact'; }); } catch(e){}
  } catch(e){}
 
     // Styles kopieren und Print-Regeln immer aktiv machen
@@ -7318,7 +7367,8 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
          .pdf-share-mode .situation-view-wrapper{padding:10mm !important; gap:6mm !important;}
          .pdf-share-mode .print-offer-view{padding:10mm !important; gap:6mm !important;}
          .pdf-share-mode .situation-view-wrapper > div.flex-1,
-         .pdf-share-mode .print-offer-view > div.flex-1{
+         .pdf-share-mode .print-offer-view > div.flex-1,
+         .pdf-share-mode .print-offer-view > .offer-inner-wrapper{
            flex:0 0 190mm !important;
            width:190mm !important;
            max-width:190mm !important;
@@ -8537,7 +8587,7 @@ const handlePDFShare = async () => {
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
                         <span>{darkMode ? '🌙' : '☀️'}</span>
                     </button>
-                    <h1 className="text-3xl font-black text-[#0b1e42] tracking-tighter truncate">{view === 'situation' ? 'Ihre Aktuelle Situation' : 'Ihr Persönliches Angebot'}</h1><div className="hida-logo-screen" aria-hidden="true">
+                    <h1 className="text-2xl font-black text-[#0b1e42] tracking-tighter flex-1 min-w-0 overflow-hidden" style={{whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{view === 'situation' ? 'Ihre Aktuelle Situation' : 'Ihr Persönliches Angebot'}</h1><div className="hida-logo-screen" aria-hidden="true">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190">
     <rect width="100%" height="100%" fill="transparent"/>
     <text x="360" y="55" textAnchor="middle" fontSize="36" letterSpacing="6"
@@ -8636,7 +8686,7 @@ const handlePDFShare = async () => {
                     </div>
 
                     <div className={`flex-1 w-full relative bg-[#f0f6ff] ${view === 'offer' ? 'flex overflow-y-auto' : 'hidden'} print-offer-view`}>
-                        <div className="w-full flex-1 flex flex-col space-y-6 min-h-0 p-4 md:p-8">
+                        <div className="w-full offer-inner-wrapper flex flex-col space-y-6 p-4 md:p-8">
                             <div className="flex flex-col gap-6 w-full md:grid md:grid-cols-3 offer-print-grid"> 
                                 {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }) => {
                                     const orderClass = key === 'offer1' ? 'order-1' : key === 'offer2' ? 'order-2' : 'order-3';
@@ -8746,7 +8796,7 @@ const handlePDFShare = async () => {
             'order:-1',
         ].join(';');
         h.innerHTML = `
-            <div style="flex:1 1 auto; min-width:0; font-size:20px; font-weight:900; color:#0b1e42; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${titleText}</div>
+            <div style="flex:1 1 auto; min-width:0; font-size:20px; font-weight:900; color:#0b1e42; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; text-align:left;">${titleText}</div>
             <div style="flex-shrink:0; display:flex; align-items:center;">
                 <img src="${HIDA_LOGO_DATA_URI}" style="height:26px; width:auto; max-width:160px; object-fit:contain; display:block;" />
             </div>
@@ -8803,6 +8853,24 @@ const handlePDFShare = async () => {
                         _printCardOrig.set('__offer_overflow_' + i, el.style.overflow);
                         el.style.overflow = 'visible';
                     });
+                    // Offer-Canvas-Container: Styles per data-Attribut sichern (robust gegen React Re-render)
+                    offerWrapper.querySelectorAll('.offer-canvas-container').forEach((el) => {
+                        el.setAttribute('data-pre-print-mh',   el.style.minHeight || '');
+                        el.setAttribute('data-pre-print-h',    el.style.height    || '');
+                        el.setAttribute('data-pre-print-flex', el.style.flex      || '');
+                    });
+                    // flex-1 Kinder: ebenfalls per data sichern
+                    offerWrapper.querySelectorAll('.flex-1, .offer-print-grid, .offer-print-grid > div').forEach(el => {
+                        el.setAttribute('data-pre-print-flex', el.style.flex      || '');
+                        el.setAttribute('data-pre-print-h',    el.style.height    || '');
+                        el.setAttribute('data-pre-print-mh',   el.style.minHeight || '');
+                        el.setAttribute('data-pre-print-ov',   el.style.overflow  || '');
+                    });
+                    // cost-overview-print margin sichern
+                    offerWrapper.querySelectorAll('.cost-overview-print').forEach(el => {
+                        el.setAttribute('data-pre-print-mt', el.style.marginTop || '');
+                        el.setAttribute('data-pre-print-mb', el.style.marginBottom || '');
+                    });
                 }
 
                 document.querySelectorAll('.sit-card-grid > div').forEach((card, i) => {
@@ -8837,53 +8905,110 @@ const handlePDFShare = async () => {
             window.addEventListener('afterprint', () => {
                 document.querySelectorAll('.print-page-header').forEach(el => el.remove());
 
-                // Situation-View zurücksetzen
-                const sitWrapper = document.querySelector('.situation-view-wrapper');
-                if (sitWrapper) {
-                    sitWrapper.style.display = _printCardOrig.get('__sit_display') || '';
-                    if (_printCardOrig.get('__sit_cls_hidden')) sitWrapper.classList.add('hidden');
-                    sitWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
-                        el.style.overflow = _printCardOrig.get('__sit_overflow_' + i) || '';
-                        el.style.height = _printCardOrig.get('__sit_height_' + i) || '';
-                    });
-                    sitWrapper.querySelectorAll('.flex-1').forEach((el, i) => {
-                        el.style.flex = _printCardOrig.get('__sit_flex1_' + i) || '';
-                    });
-                }
-                // Offer-View zurücksetzen
-                const offerWrapper = document.querySelector('.print-offer-view');
-                if (offerWrapper) {
-                    offerWrapper.style.display = _printCardOrig.get('__offer_display') || '';
-                    if (_printCardOrig.get('__offer_cls_hidden')) offerWrapper.classList.add('hidden');
-                    offerWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
-                        el.style.overflow = _printCardOrig.get('__offer_overflow_' + i) || '';
-                    });
-                }
+                const doRestore = () => {
+                    // ── 1. Situation-View ──
+                    const sitWrapper = document.querySelector('.situation-view-wrapper');
+                    if (sitWrapper) {
+                        sitWrapper.style.display = _printCardOrig.get('__sit_display') || '';
+                        if (_printCardOrig.get('__sit_cls_hidden')) sitWrapper.classList.add('hidden');
+                        sitWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
+                            el.style.overflow  = _printCardOrig.get('__sit_overflow_' + i) || '';
+                            el.style.height    = _printCardOrig.get('__sit_height_'   + i) || '';
+                        });
+                        sitWrapper.querySelectorAll('.flex-1').forEach((el, i) => {
+                            el.style.flex = _printCardOrig.get('__sit_flex1_' + i) || '';
+                        });
+                    }
 
-                // Inline-Styles der Kacheln zuruecksetzen
-                document.querySelectorAll('.sit-card-grid').forEach((grid, i) => {
-                    grid.style.overflowY = _printCardOrig.get('__grid_overflow_' + i) || '';
-                    grid.style.overflow = '';
-                    grid.style.flex = _printCardOrig.get('__grid_flex_' + i) || '';
-                    grid.style.height = _printCardOrig.get('__grid_height_' + i) || '';
-                    grid.style.maxHeight = '';
-                });
-                document.querySelectorAll('.sit-card-grid > div').forEach((card, i) => {
-                    card.style.minHeight = _printCardOrig.get('card_' + i) || '';
-                    card.style.height = '';
-                });
-                document.querySelectorAll('.sit-card-canvas').forEach((area, i) => {
-                    const orig = (_printCardOrig.get('area_' + i) || '|').split('|');
-                    area.style.flex      = orig[0] || '';
-                    area.style.height    = orig[1] || '';
-                    area.style.minHeight = '';
-                    area.style.maxHeight = '';
-                });
-                // Frage-Chips wiederherstellen
-                document.querySelectorAll('.sit-question-chips').forEach(el => {
-                    el.style.display = el.getAttribute('data-print-hidden') || '';
-                    el.removeAttribute('data-print-hidden');
-                });
+                    // ── 2. Offer-View: HART alle Print-Inline-Styles entfernen ──
+                    const offerWrapper = document.querySelector('.print-offer-view');
+                    if (offerWrapper) {
+                        // Gespeicherten Ursprungs-Display-Wert zurücksetzen
+                        const origDisplay = _printCardOrig.get('__offer_display') || '';
+                        offerWrapper.style.display = origDisplay;
+                        if (_printCardOrig.get('__offer_cls_hidden')) {
+                            offerWrapper.classList.add('hidden');
+                        }
+
+                        // Alle Print-Inline-Styles hart löschen (zoom, height, overflow, flex, transform, padding)
+                        const resetProps = [
+                            'zoom','height','minHeight','maxHeight',
+                            'overflow','overflowY','overflowX',
+                            'flex','flexDirection',
+                            'transform','transformOrigin',
+                            'width','maxWidth','minWidth',
+                            'padding','paddingTop','paddingLeft','paddingRight','paddingBottom',
+                            'margin','marginTop','marginBottom',
+                        ];
+                        resetProps.forEach(p => { offerWrapper.style[p] = ''; });
+                        offerWrapper.style.display = origDisplay;
+
+                        // Canvas-Container + flex-1 Kinder: per data-Attribut wiederherstellen (robust nach React Re-render)
+                        offerWrapper.querySelectorAll('[data-pre-print-mh]').forEach(el => {
+                            el.style.minHeight = el.getAttribute('data-pre-print-mh') || '';
+                            el.style.height    = el.getAttribute('data-pre-print-h')    || '';
+                            el.style.flex      = el.getAttribute('data-pre-print-flex') || '';
+                            el.style.overflow  = el.getAttribute('data-pre-print-ov')   || '';
+                            el.removeAttribute('data-pre-print-mh');
+                            el.removeAttribute('data-pre-print-h');
+                            el.removeAttribute('data-pre-print-flex');
+                            el.removeAttribute('data-pre-print-ov');
+                        });
+
+                        // overflow-Werte zurücksetzen (index-basiert als Fallback)
+                        offerWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
+                            if (!el.hasAttribute('data-pre-print-ov')) {
+                                el.style.overflow = _printCardOrig.get('__offer_overflow_' + i) || '';
+                            }
+                        });
+                        // cost-overview-print margin wiederherstellen
+                        offerWrapper.querySelectorAll('.cost-overview-print').forEach(el => {
+                            el.style.marginTop    = el.getAttribute('data-pre-print-mt') || '';
+                            el.style.marginBottom = el.getAttribute('data-pre-print-mb') || '';
+                            el.removeAttribute('data-pre-print-mt');
+                            el.removeAttribute('data-pre-print-mb');
+                        });
+                    }
+
+                    // ── 3. Kacheln (sit-card-grid) ──
+                    document.querySelectorAll('.sit-card-grid').forEach((grid, i) => {
+                        grid.style.overflowY  = _printCardOrig.get('__grid_overflow_' + i) || '';
+                        grid.style.overflow   = '';
+                        grid.style.flex       = _printCardOrig.get('__grid_flex_'     + i) || '';
+                        grid.style.height     = _printCardOrig.get('__grid_height_'   + i) || '';
+                        grid.style.maxHeight  = '';
+                    });
+                    document.querySelectorAll('.sit-card-grid > div').forEach((card, i) => {
+                        card.style.minHeight = _printCardOrig.get('card_' + i) || '';
+                        card.style.height    = '';
+                    });
+                    document.querySelectorAll('.sit-card-canvas').forEach((area, i) => {
+                        const orig = (_printCardOrig.get('area_' + i) || '|').split('|');
+                        area.style.flex      = orig[0] || '';
+                        area.style.height    = orig[1] || '';
+                        area.style.minHeight = '';
+                        area.style.maxHeight = '';
+                    });
+
+                    // ── 4. Frage-Chips ──
+                    document.querySelectorAll('.sit-question-chips').forEach(el => {
+                        el.style.display = el.getAttribute('data-print-hidden') || '';
+                        el.removeAttribute('data-print-hidden');
+                    });
+                };
+
+                // Sofort + 2× rAF: stellt sicher dass Browser Print-Styles aufgeräumt hat
+                // und React fertig re-gerendert hat bevor wir zurücksetzen
+                doRestore();
+                requestAnimationFrame(() => requestAnimationFrame(doRestore));
+
+                // KERN-FIX: React-Reset triggern — simuliert den Seitenwechsel der alles repariert
+                // (situation→currentView zwingt React zu vollem Re-render aller Inline-Styles)
+                setTimeout(() => {
+                    if (typeof window.__printResetView === 'function') {
+                        window.__printResetView();
+                    }
+                }, 50);
             });
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -8939,10 +9064,9 @@ const handlePDFShare = async () => {
           }
         });
 
-        window.addEventListener('DOMContentLoaded', ()=>{
-          fixTermSelectStyles(document);
-          obs.observe(document.body, {subtree:true, childList:true});
-        });
+        // DOM ist beim Babel-Compile bereits bereit – direkt aufrufen statt auf DOMContentLoaded warten
+        fixTermSelectStyles(document);
+        obs.observe(document.body, {subtree:true, childList:true});
       })();
 
     </script>
@@ -8969,6 +9093,37 @@ const handlePDFShare = async () => {
             }
             document.documentElement.style.removeProperty('width');
             document.body.style.removeProperty('width');
+
+            // Hard-Reset der Offer-View nach Print/Abbruch:
+            // Entfernt zoom, height, overflow etc. die durch @media print gesetzt wurden
+            // und manchmal im Browser-Render hängen bleiben.
+            // Doppeltes rAF: stellt sicher dass Browser Print-CSS aufgeräumt hat BEVOR wir Inline-Styles löschen
+            requestAnimationFrame(function() { requestAnimationFrame(function() {
+            var resetProps = [
+                'zoom','height','minHeight','maxHeight',
+                'overflow','overflowY','overflowX',
+                'flex','flexDirection',
+                'transform','transformOrigin',
+                'width','maxWidth','minWidth',
+                'padding','paddingTop','paddingLeft','paddingRight','paddingBottom',
+                'margin','marginTop','marginBottom','marginLeft','marginRight'
+            ];
+            var offerView = document.querySelector('.print-offer-view');
+            if (offerView) {
+                resetProps.forEach(function(p) { offerView.style[p] = ''; });
+                offerView.querySelectorAll(
+                    '.offer-canvas-container, .offer-print-grid, .offer-print-grid > div, .flex-1, .cost-overview-print'
+                ).forEach(function(el) {
+                    resetProps.forEach(function(p) { el.style[p] = ''; });
+                });
+            }
+            // KERN-FIX: React-Reset triggern
+            setTimeout(function() {
+                if (typeof window.__printResetView === 'function') {
+                    window.__printResetView();
+                }
+            }, 100);
+            }); });
         }
 
         window.addEventListener('beforeprint', forcePrintLandscape);
