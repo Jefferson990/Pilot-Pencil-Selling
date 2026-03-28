@@ -210,8 +210,10 @@
                 break-before: always !important;
             }
         }
-        /* Seite 3 auf Bildschirm komplett verstecken */
-        .print-netzwerk-anlage { display: none !important; }
+        /* Seite 3 auf Bildschirm komplett verstecken — @media screen damit @media print gewinnt */
+        @media screen {
+            .print-netzwerk-anlage { display: none !important; }
+        }
         /* Auch im PDF-Export ausblenden */
         body.pdf-share-mode .print-hide-kosten { display: none !important; }
         body.pdf-share-mode .sit-aside-panel {
@@ -8871,6 +8873,179 @@ const handlePDFShare = async () => {
 
 
 
+            // ── SEITE 3 HTML-BUILDER ── Premium Sales Design ──
+            const buildPage3Html = () => {
+                const ws = wlanSnapshot;
+                const techs = techUebernommen || [];
+                const nb = netBundleMatched;
+                if (!ws && techs.length === 0 && !nb) return '';
+
+                // WLAN-Haus SVG aufbauen
+                let wlanCardHtml = '';
+                let empfehlungLabel = '';
+                let empfehlungDesc = '';
+                if (ws) {
+                    const { router, needs, availableFloors, floorKeys, rec } = ws;
+                    empfehlungLabel = rec ? rec.sol : '';
+                    empfehlungDesc  = rec ? rec.desc : '';
+                    const FH=44, FG=6, PAD=10;
+                    const svgH = PAD+44+availableFloors.length*(FH+FG)+PAD;
+                    const svgW = 220;
+                    const floors = [...availableFloors].reverse().map((lbl, i) => {
+                        const key = floorKeys[availableFloors.length-1-i];
+                        const isR = router===key, isN = needs.includes(key);
+                        const fill   = isR ? '#1e40af' : isN ? '#dbeafe' : '#f1f5f9';
+                        const stroke = isR ? '#1d4ed8' : isN ? '#3b82f6' : '#cbd5e1';
+                        const tFill  = isR ? '#ffffff' : isN ? '#1d4ed8' : '#94a3b8';
+                        const y = PAD+40+i*(FH+FG);
+                        const wins = [36,90,144].map(wx=>`<rect x="${wx}" y="${y+9}" width="16" height="12" rx="3" fill="${isR?'rgba(147,197,253,0.3)':isN?'#93c5fd':'#e2e8f0'}" stroke="${isR?'rgba(255,255,255,0.25)':isN?'#60a5fa':'#cbd5e1'}" stroke-width="0.8"/>`).join('');
+                        const door  = lbl==='EG' ? `<rect x="96" y="${y+FH-18}" width="14" height="18" rx="3" fill="${isR?'rgba(255,255,255,0.2)':'#bfdbfe'}"/>` : '';
+                        const routerBadge = isR ? `<rect x="174" y="${y+12}" width="36" height="14" rx="4" fill="#22c55e"/><text x="192" y="${y+23}" font-size="8" font-weight="800" fill="white" text-anchor="middle">Router</text>` : '';
+                        const wlanWave = (isN&&!isR) ? `<circle cx="188" cy="${y+17}" r="4" fill="#3b82f6" opacity="0.9"/><circle cx="188" cy="${y+17}" r="9" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.35"/>` : '';
+                        return `<g><rect x="4" y="${y}" width="208" height="${FH}" rx="11" fill="${fill}" stroke="${stroke}" stroke-width="${isR?0:1.5}"/>${wins}${door}<text x="20" y="${y+FH/2+5}" font-size="12" font-weight="800" fill="${tFill}" font-family="system-ui,sans-serif">${lbl}</text>${routerBadge}${wlanWave}</g>`;
+                    }).join('');
+                    wlanCardHtml = `
+                      <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(145deg,#e0f2fe 0%,#dbeafe 60%,#ede9fe 100%);border-radius:20px;padding:28px 24px 24px;border:1.5px solid #bfdbfe;position:relative;overflow:hidden">
+                        <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.15),transparent 70%);pointer-events:none"></div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+                          <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#6366f1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                          </div>
+                          <div>
+                            <div style="font-size:13px;font-weight:900;color:#1e3a8a;letter-spacing:-0.01em">WLAN-Hausplan</div>
+                            <div style="font-size:10px;color:#6366f1;font-weight:600">Ihre persönliche Abdeckung</div>
+                          </div>
+                        </div>
+                        <svg viewBox="0 0 216 ${svgH}" style="width:100%;max-width:240px;height:auto;display:block;margin:0 auto 16px">
+                          <defs>
+                            <linearGradient id="roofGp3" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stop-color="#bfdbfe"/>
+                              <stop offset="100%" stop-color="#dbeafe"/>
+                            </linearGradient>
+                          </defs>
+                          <polygon points="108,4 208,44 8,44" fill="url(#roofGp3)" stroke="#93c5fd" stroke-width="1.5"/>
+                          ${floors}
+                        </svg>
+                        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:${empfehlungLabel?'16':'0'}px">
+                          <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#374151"><span style="width:10px;height:10px;border-radius:50%;background:#1e40af;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>Router</span>
+                          <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#374151"><span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>WLAN-Bedarf</span>
+                          <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#94a3b8"><span style="width:10px;height:10px;border-radius:50%;background:#e2e8f0;border:1px solid #cbd5e1;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>Kein Bedarf</span>
+                        </div>
+                        ${empfehlungLabel ? `
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(135deg,#1e3a8a,#2563eb,#3b82f6);border-radius:14px;padding:14px 18px;text-align:center;box-shadow:0 4px 16px rgba(37,99,235,0.3)">
+                          <div style="font-size:9px;font-weight:800;color:rgba(147,197,253,0.85);text-transform:uppercase;letter-spacing:0.16em;margin-bottom:5px">Unsere Empfehlung</div>
+                          <div style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.03em;line-height:1">${empfehlungLabel}</div>
+                          <div style="font-size:10px;color:rgba(186,230,253,0.85);margin-top:6px;line-height:1.4">${empfehlungDesc}</div>
+                        </div>` : ''}
+                      </div>`;
+                }
+
+                // Technologie-Chips
+                let techCardHtml = '';
+                if (techs.length > 0) {
+                    techCardHtml = `
+                      <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(145deg,#f0fdf4,#dcfce7 70%,#d1fae5);border-radius:20px;padding:28px 24px;border:1.5px solid #86efac">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+                          <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#16a34a,#15803d);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          </div>
+                          <div>
+                            <div style="font-size:13px;font-weight:900;color:#14532d;letter-spacing:-0.01em">Vorhandene Technik</div>
+                            <div style="font-size:10px;color:#16a34a;font-weight:600">Bereits bei Ihnen vorhanden</div>
+                          </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                          ${techs.map(t=>`
+                          <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,0.75);border:1.5px solid #86efac;box-shadow:0 1px 4px rgba(22,163,74,0.08)">
+                            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:0 0 0 3px rgba(34,197,94,0.2)"></div>
+                            <span style="font-size:13px;font-weight:700;color:#166534">${t}</span>
+                          </div>`).join('')}
+                        </div>
+                      </div>`;
+                }
+
+                // Produkt-Empfehlung
+                let nbCardHtml = '';
+                if (nb) {
+                    nbCardHtml = `
+                      <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(145deg,#fff7ed,#ffedd5 60%,#fed7aa);border-radius:20px;padding:28px 24px;border:1.5px solid #fdba74;position:relative;overflow:hidden">
+                        <div style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(251,146,60,0.2),transparent 70%);pointer-events:none"></div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+                          <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#ea580c,#dc2626);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                          </div>
+                          <div>
+                            <div style="font-size:13px;font-weight:900;color:#7c2d12;letter-spacing:-0.01em">Produkt-Empfehlung</div>
+                            <div style="font-size:10px;color:#ea580c;font-weight:600">Perfekt für Sie ausgewählt</div>
+                          </div>
+                        </div>
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:rgba(255,255,255,0.8);border-radius:14px;padding:16px;border:1px solid rgba(253,186,116,0.5);margin-bottom:14px;text-align:center">
+                          ${nb.images&&nb.images[0] ? `<img src="${nb.images[0]}" style="height:80px;max-width:100%;object-fit:contain;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto"/>` : ''}
+                          <div style="font-size:14px;font-weight:900;color:#1e293b;line-height:1.3;margin-bottom:4px">${nb.titel||''}</div>
+                          ${nb.tarifName ? `<div style="font-size:11px;font-weight:600;color:#64748b">${nb.tarifName}</div>` : ''}
+                        </div>
+                        ${(nb.preis24||nb.angebotspreis) ? `
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(135deg,#dc2626,#ea580c);border-radius:12px;padding:12px 16px;text-align:center">
+                          <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.8);margin-bottom:3px">Ihr Preis</div>
+                          <div style="display:flex;align-items:baseline;justify-content:center;gap:4px">
+                            <span style="font-size:32px;font-weight:900;color:#ffffff;letter-spacing:-0.04em;line-height:1">${nb.preis24||nb.angebotspreis}</span>
+                            <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.9)">€/Monat</span>
+                          </div>
+                        </div>` : ''}
+                      </div>`;
+                }
+
+                const cards = [wlanCardHtml, techCardHtml, nbCardHtml].filter(Boolean);
+                const gridCols = cards.length === 3 ? '1fr 1fr 1fr' : cards.length === 2 ? '1fr 1fr' : '1fr';
+
+                return `
+                <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;width:100%;min-height:100vh;background:linear-gradient(160deg,#f0f6ff 0%,#f8faff 40%,#ffffff 100%);box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif;padding:0">
+
+                  <!-- Premium Header Banner -->
+                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(135deg,#0b1e42 0%,#1e3a8a 50%,#2563eb 100%);padding:28px 40px 24px;position:relative;overflow:hidden">
+                    <div style="position:absolute;top:-40px;right:60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.25),transparent 70%);pointer-events:none"></div>
+                    <div style="position:absolute;bottom:-30px;right:20px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.2),transparent 70%);pointer-events:none"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1">
+                      <div style="display:flex;align-items:center;gap:16px">
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                        </div>
+                        <div>
+                          <div style="font-size:9px;font-weight:700;color:rgba(147,197,253,0.9);text-transform:uppercase;letter-spacing:0.18em;margin-bottom:4px">Persönliche Anlage</div>
+                          <div style="font-size:26px;font-weight:900;color:#ffffff;letter-spacing:-0.03em;line-height:1">Ihre Netzwerk-Empfehlung</div>
+                          <div style="font-size:12px;color:rgba(186,230,253,0.8);margin-top:4px;font-weight:500">Individuell für Sie zusammengestellt · HeTec WIR GESTALTEN ZUKUNFT</div>
+                        </div>
+                      </div>
+                      <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:10px 18px;text-align:right">
+                        <div style="font-size:9px;font-weight:700;color:rgba(147,197,253,0.8);text-transform:uppercase;letter-spacing:0.12em">Anlage</div>
+                        <div style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.02em;line-height:1.1">3</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Subheader / Intro -->
+                  <div style="padding:18px 40px 0;display:flex;align-items:center;gap:12px">
+                    <div style="flex:1;height:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(90deg,#dbeafe,transparent)"></div>
+                    <span style="font-size:11px;font-weight:700;color:#64748b;white-space:nowrap">Auf Basis Ihrer Angaben empfehlen wir</span>
+                    <div style="flex:1;height:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(90deg,transparent,#dbeafe)"></div>
+                  </div>
+
+                  <!-- Cards Grid -->
+                  <div style="padding:20px 40px 32px;display:grid;grid-template-columns:${gridCols};gap:20px;align-items:start">
+                    ${cards.join('')}
+                  </div>
+
+                  <!-- Footer -->
+                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0 40px 28px;padding:14px 20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;-webkit-print-color-adjust:exact;print-color-adjust:exact"></div>
+                      <span style="font-size:10px;font-weight:600;color:#64748b">Alle Angaben ohne Gewähr · Preise können abweichen · Stand: ${new Date().toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</span>
+                    </div>
+                    <span style="font-size:10px;font-weight:800;color:#2563eb;letter-spacing:0.02em">HeTec — WIR GESTALTEN ZUKUNFT</span>
+                  </div>
+                </div>`;
+            };
+
             return (
                 <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col overflow-hidden text-sm">
                     <Toast message={toastMessage} />
@@ -9530,6 +9705,15 @@ const handlePDFShare = async () => {
                         </div>
                     </div>
 
+                    {/* ── SEITE 3: Portal nach document.body — entkommt overflow:hidden des App-Wrappers ── */}
+                    {(wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched)
+                        ? ReactDOM.createPortal(
+                            <div className="print-netzwerk-anlage" dangerouslySetInnerHTML={{__html: buildPage3Html()}} />,
+                            document.body
+                          )
+                        : null
+                    }
+
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
                         {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => setShowSkipReasonModal(true)} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
@@ -9678,99 +9862,21 @@ const handlePDFShare = async () => {
                     el.style.display = 'none';
                 });
 
-                // ── SEITE 3: Netzwerk-Empfehlung — direkt aus React-Closure ──
-                const snap3 = printSnap3Ref.current || {};
-                if (snap3.wlanSnapshot || (snap3.techUebernommen && snap3.techUebernommen.length > 0) || snap3.netBundleMatched) {
-                    const ws = snap3.wlanSnapshot;
-                    const techs = snap3.techUebernommen || [];
-                    const nb = snap3.netBundleMatched;
+                // ── Fusion-Box (Empfehlung Seite 2) per Inline-Style explizit ausblenden ──
+                // Sicherheitsnetz: React setzt display:'flex' inline → überschreibt in manchen
+                // Browsern den @media print CSS-Block trotz !important. Hier wird per JS
+                // zusätzlich display:none gesetzt, damit die Empfehlung NICHT auf Seite 2
+                // erscheint, sondern ausschließlich auf der exklusiven Seite 3.
+                document.querySelectorAll('.print-hide-fusion').forEach((el, i) => {
+                    _printCardOrig.set('__fusion_' + i, el.style.display);
+                    el.style.setProperty('display', 'none', 'important');
+                });
 
-                    // Haus-SVG aufbauen
-                    let hausHtml = '';
-                    if (ws) {
-                        const { router, needs, availableFloors, floorKeys, rec } = ws;
-                        const FH=36, FG=4, PAD=8;
-                        const svgH = PAD+36+availableFloors.length*(FH+FG)+PAD;
-                        const floors = [...availableFloors].reverse().map((lbl, i) => {
-                            const key = floorKeys[availableFloors.length-1-i];
-                            const isR = router===key, isN = needs.includes(key);
-                            const fill = isR?'#1e40af': isN?'rgba(219,234,254,0.9)':'rgba(255,255,255,0.5)';
-                            const stroke = isR?'#1d4ed8': isN?'#3b82f6':'rgba(147,197,253,0.4)';
-                            const textFill = isR?'#ffffff': isN?'#1d4ed8':'#94a3b8';
-                            const y = PAD+32+i*(FH+FG);
-                            const wins = [30,78,120].map(wx=>`<rect x="${wx}" y="${y+7}" width="13" height="10" rx="2" fill="${isR?'rgba(147,197,253,0.35)':isN?'#93c5fd':'rgba(147,197,253,0.2)'}" stroke="${isR?'rgba(255,255,255,0.3)':isN?'#60a5fa':'rgba(147,197,253,0.3)'}" stroke-width="0.7"/>`).join('');
-                            const door = lbl==='EG'?`<rect x="78" y="${y+FH-13}" width="10" height="13" rx="2" fill="${isR?'rgba(255,255,255,0.25)':'#93c5fd'}"/>`:'';
-                            const badge = isR?`<g transform="translate(152,${y+10})"><rect x="-8" y="-5" width="18" height="10" rx="3" fill="#22c55e"/><circle cx="1" cy="0" r="2" fill="white"/></g>`:'';
-                            const waves = (isN&&!isR)?`<circle cx="156" cy="${y+13}" r="3" fill="#3b82f6"/><circle cx="156" cy="${y+13}" r="7" fill="none" stroke="#3b82f6" stroke-width="1.2" opacity="0.4"/>`:'';
-                            return `<g><rect x="4" y="${y}" width="168" height="${FH}" rx="9" fill="${fill}" stroke="${stroke}" stroke-width="${isR?0:isN?1.5:0.8}"/>${wins}${door}<text x="18" y="${y+FH/2+4}" font-size="10" font-weight="800" fill="${textFill}">${lbl}</text>${badge}${waves}</g>`;
-                        }).join('');
-                        const empf = rec ? `<div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);border-radius:12px;padding:10px 14px;text-align:center;margin-top:8px"><div style="font-size:8px;font-weight:800;color:rgba(147,197,253,0.7);text-transform:uppercase;letter-spacing:0.14em;margin-bottom:4px">Empfehlung</div><div style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.02em">${rec.sol}</div><div style="font-size:9px;color:rgba(186,230,253,0.8);margin-top:4px">${rec.desc}</div></div>` : '';
-                        hausHtml = `
-                            <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
-                                <div style="display:flex;align-items:center;gap:6px;align-self:flex-start">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-                                    <span style="font-size:10px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:0.10em">WLAN-Planer</span>
-                                </div>
-                                <svg viewBox="0 0 176 ${svgH}" style="width:200px;height:auto;display:block">
-                                    <defs><linearGradient id="roofP3" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#bfdbfe"/><stop offset="100%" stop-color="#dbeafe"/></linearGradient></defs>
-                                    <polygon points="88,4 168,36 8,36" fill="url(#roofP3)" stroke="#93c5fd" stroke-width="1.2"/>
-                                    ${floors}
-                                </svg>
-                                <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-                                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#475569"><span style="width:9px;height:9px;border-radius:50%;background:#1e40af;display:inline-block"></span>Router</span>
-                                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#475569"><span style="width:9px;height:9px;border-radius:50%;background:#dbeafe;border:1px solid #3b82f6;display:inline-block"></span>WLAN</span>
-                                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#94a3b8"><span style="width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.5);border:1px solid rgba(147,197,253,0.4);display:inline-block"></span>Kein Bedarf</span>
-                                </div>
-                                ${empf}
-                            </div>`;
-                    }
-
-                    // Technologie-Chips
-                    const techsHtml = techs.length > 0 ? `
-                        <div style="display:flex;flex-direction:column;gap:8px">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                <span style="font-size:10px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:0.10em">Vorhanden</span>
-                            </div>
-                            ${techs.map(t=>`<div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;background:rgba(255,255,255,0.8);border:1px solid rgba(147,197,253,0.6);font-size:13px;font-weight:700;color:#1e40af"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>${t}</div>`).join('')}
-                        </div>` : '';
-
-                    // Produkt-Block
-                    const nbHtml = nb ? `
-                        <div style="display:flex;flex-direction:column;gap:10px">
-                            <span style="font-size:9px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.10em;background:#dcfce7;border-radius:999px;padding:3px 10px;border:1px solid #86efac;align-self:flex-start">✨ Passend für Sie</span>
-                            <div style="font-size:10px;font-weight:700;color:#64748b">Für das beste Netz zuhause</div>
-                            ${nb.images&&nb.images[0]?`<img src="${nb.images[0]}" style="height:70px;max-width:160px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,0.9);padding:6px;border:1px solid rgba(147,197,253,0.4);-webkit-print-color-adjust:exact;print-color-adjust:exact"/>`:'' }
-                            <div style="font-size:14px;font-weight:800;color:#1e293b;line-height:1.2">${nb.titel||''}</div>
-                            ${nb.tarifName?`<div style="font-size:11px;font-weight:600;color:#64748b">${nb.tarifName}</div>`:''}
-                            ${(nb.preis24||nb.angebotspreis)?`<div style="display:flex;align-items:baseline;gap:3px"><span style="font-size:20px;font-weight:900;color:#dc2626">${nb.preis24||nb.angebotspreis}</span><span style="font-size:11px;font-weight:700;color:#dc2626">€/Monat</span></div>`:''}
-                        </div>` : '';
-
-                    const page3 = document.createElement('div');
-                    page3.className = 'print-netzwerk-anlage';
-                    page3.innerHTML = `
-                        <div style="width:100%;min-height:100vh;background:#ffffff;padding:32px 40px;box-sizing:border-box;font-family:system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact">
-                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;padding-bottom:16px;border-bottom:2px solid #e2e8f0">
-                                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#06b6d4);display:flex;align-items:center;justify-content:center">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-                                </div>
-                                <div>
-                                    <div style="font-size:20px;font-weight:900;color:#0b1e42;letter-spacing:-0.02em">Netzwerk-Empfehlung</div>
-                                    <div style="font-size:11px;color:#64748b;font-weight:600">Individuell für Sie zusammengestellt</div>
-                                </div>
-                            </div>
-                            <div style="display:grid;grid-template-columns:${[hausHtml,techsHtml,nbHtml].filter(Boolean).length===3?'1fr 1fr 1fr':[hausHtml,techsHtml||nbHtml].filter(Boolean).length===2?'1fr 1fr':'1fr'};gap:32px;align-items:start">
-                                ${hausHtml?`<div style="background:linear-gradient(135deg,#eff6ff,#dbeafe,#e0f2fe);border-radius:18px;padding:24px;border:1px solid rgba(147,197,253,0.5)">${hausHtml}</div>`:''}
-                                ${techsHtml?`<div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:18px;padding:24px;border:1px solid rgba(134,239,172,0.4)">${techsHtml}</div>`:''}
-                                ${nbHtml?`<div style="background:linear-gradient(135deg,#fefce8,#fef9c3);border-radius:18px;padding:24px;border:1px solid rgba(253,224,71,0.4)">${nbHtml}</div>`:''}
-                            </div>
-                        </div>`;
-                    document.body.appendChild(page3);
-                }
+                // ── SEITE 3: Wird jetzt als statisches React-Element gerendert (kein DOM-Inject nötig) ──
             });
             window.addEventListener('afterprint', () => {
                 document.querySelectorAll('.print-page-header').forEach(el => el.remove());
-                document.querySelectorAll('.print-netzwerk-anlage').forEach(el => el.remove());
+                // print-netzwerk-anlage wird von React verwaltet → kein Remove nötig
 
                 const doRestore = () => {
                     // ── 1. Situation-View ──
@@ -9861,6 +9967,11 @@ const handlePDFShare = async () => {
                     document.querySelectorAll('.sit-question-chips').forEach(el => {
                         el.style.display = el.getAttribute('data-print-hidden') || '';
                         el.removeAttribute('data-print-hidden');
+                    });
+
+                    // ── 5. Fusion-Box (Empfehlung) wiederherstellen ──
+                    document.querySelectorAll('.print-hide-fusion').forEach((el, i) => {
+                        el.style.display = _printCardOrig.get('__fusion_' + i) || '';
                     });
                 };
 
