@@ -6123,6 +6123,10 @@ const handleOpenStats = () => {
             // Schritt-für-Schritt Modus
             const [sitLayoutMode, setSitLayoutMode] = useState('grid');
             const [currentSitStep, setCurrentSitStep] = useState(0);
+            // FIX: Dedizierter Ref für Schritt-Modus Canvas (verhindert Ref-Konflikt mit Grid-Canvas)
+            const stepOverlayCanvasRef = useRef(null);
+            const currentSitStepRef = useRef(0);
+            useEffect(() => { currentSitStepRef.current = currentSitStep; }, [currentSitStep]);
             const [offerLayoutMode, setOfferLayoutMode] = useState('grid');
             const [currentOfferStep, setCurrentOfferStep] = useState(0);
             const [checkedTechs, setCheckedTechs] = useState({});
@@ -7083,14 +7087,34 @@ const handleFinishOfferClick = () => {
                     }); 
                     if (view === 'offer') { 
                         offerCanvasMap.forEach(({ ref, key }) => { resizeCanvas(ref, key); }); 
-                    } 
+                    }
+                    // FIX Bug 1: Schritt-Modus — aktive Kachel-Canvas nach Layout-Settle neu skalieren
+                    // Nutzt jetzt den dedizierten stepOverlayCanvasRef statt des geteilten Grid-Refs
+                    if (sitLayoutMode === 'step' && inputMode === 'pen') {
+                        // Zwei rAF-Zyklen warten: DOM muss fertig gerendert sein bevor getBoundingClientRect stimmt
+                        requestAnimationFrame(() => requestAnimationFrame(() => {
+                            resizeCanvas(stepOverlayCanvasRef, 'step_overlay');
+                            setRedrawCounter(r => r + 1);
+                        }));
+                    }
                     setRedrawCounter(r => r + 1); 
-                }; 
+                };
+
+                // FIX Bug 2: E-Mail-Canvas — nach CSS-Transition (200ms height anim) neu skalieren
+                // Ohne Delay: resizeCanvas läuft sofort beim emailMode-Wechsel (Container noch 30px)
+                // → Canvas-Buffer zu klein → Stift-Koordinaten 2mm versetzt
+                if (emailMode === 'pen') {
+                    const emailTimer = setTimeout(() => {
+                        resizeCanvas(emailCanvasRef, 'email');
+                        setRedrawCounter(r => r + 1);
+                    }, 220); // 20ms Puffer nach der 200ms CSS-Transition
+                    // resizeAll() läuft danach sowieso noch — Timer ist nur für den ersten Render
+                }
 
                 resizeAll(); 
                 window.addEventListener('resize', resizeAll); 
                 return () => window.removeEventListener('resize', resizeAll); 
-            }, [emailMode, providerMode, isCustomProvider, notesMode, skipReasonMode, view, inputMode]); 
+            }, [emailMode, providerMode, isCustomProvider, notesMode, skipReasonMode, view, inputMode, sitLayoutMode, currentSitStep]); 
             useEffect(() => { 
                 if (view !== 'situation') return; 
                 const list = [
@@ -7105,12 +7129,62 @@ const handleFinishOfferClick = () => {
                     { ref: sitCanvasRef_WiFi, key: 'sit_WiFi' },
                     { ref: sitCanvasRef_Gesamtkosten, key: 'sit_Gesamtkosten' }
                 ];
-                list.forEach(({ ref, key }) => {
-                    const c = ref.current;
+
+                const doRedraw = () => {
+                    const dpr = window.devicePixelRatio || 1;
+                    list.forEach(({ ref, key }) => {
+                        const c = ref.current;
+                        if (!c) return;
+                        // Canvas neu skalieren falls nötig (Grid-Kacheln nach Step-Wechsel haben Größe 0)
+                        const rect = c.getBoundingClientRect();
+                        if (rect.width > 0 && rect.height > 0) {
+                            const needW = Math.round(rect.width * dpr);
+                            const needH = Math.round(rect.height * dpr);
+                            if (c.width !== needW || c.height !== needH) {
+                                c.width = needW;
+                                c.height = needH;
+                                const ctx = c.getContext('2d');
+                                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                                ctx.lineCap = 'round';
+                                ctx.lineJoin = 'round';
+                            }
+                        }
+                        redrawCanvas(c, drawnStrokes[key] || [], 1, key);
+                    });
+                };
+
+                // Sofort versuchen (für normalen State-Update)
+                doRedraw();
+                // Nach 2 rAF sicher nochmal: Grid-Canvases brauchen 1-2 Frames bis sie Größe haben
+                requestAnimationFrame(() => requestAnimationFrame(doRedraw));
+            }, [view, drawnStrokes, redrawCounter, sitLayoutMode]);
+
+            // FIX: Schritt-Modus Canvas neuzeichnen wenn Step wechselt oder Modus aktiv wird
+            useEffect(() => {
+                if (view !== 'situation' || sitLayoutMode !== 'step' || inputMode !== 'pen') return;
+                const STEP_KEYS_DRAW = ['sit_Kundenname','sit_Rufnummer','sit_Anbieter','sit_Hardware','sit_Nutzung','sit_Haushalt','sit_WeitereProdukte','sit_Fernsehen','sit_WiFi','sit_Gesamtkosten'];
+                const key = STEP_KEYS_DRAW[currentSitStep];
+                if (!key) return;
+                const doRedrawStep = () => {
+                    const c = stepOverlayCanvasRef.current;
                     if (!c) return;
-                    redrawCanvas(c, drawnStrokes[key] || [], 1, key);
-                });
-            }, [view, drawnStrokes, redrawCounter]);
+                    const rect = c.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        const dpr = window.devicePixelRatio || 1;
+                        const needW = Math.round(rect.width * dpr);
+                        const needH = Math.round(rect.height * dpr);
+                        if (c.width !== needW || c.height !== needH) {
+                            c.width = needW; c.height = needH;
+                            const ctx = c.getContext('2d');
+                            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                        }
+                        redrawCanvas(c, drawnStrokes[key] || [], 1, key);
+                    }
+                };
+                doRedrawStep();
+                requestAnimationFrame(() => requestAnimationFrame(doRedrawStep));
+            }, [view, sitLayoutMode, currentSitStep, drawnStrokes, redrawCounter, inputMode]);
             // --- Migration: altes 'main' (großes Overlay) -> neue 'sit_*' Zeilen-Canvas ---
             useEffect(() => {
                 if (view !== 'situation') return;
@@ -7252,7 +7326,8 @@ const handleFinishOfferClick = () => {
 
                 const isPenInput = pointerType === 'pen';
                 const isMainCanvasPenActive = ref === canvasRef && inputMode === 'pen';
-                const isSituationCanvasActive = key && key.startsWith('sit_') && inputMode === 'pen';
+                // FIX: stepOverlayCanvasRef ist ein Situations-Canvas im Schritt-Modus
+                const isSituationCanvasActive = (key && key.startsWith('sit_') && inputMode === 'pen') || (ref === stepOverlayCanvasRef && inputMode === 'pen');
                 const isSmallCanvasPenActive = (ref === emailCanvasRef && emailMode === 'pen') || (ref === providerCanvasRef && providerMode === 'pen') || (ref === notesCanvasRef && notesMode === 'pen') || (ref === skipReasonCanvasRef && skipReasonMode === 'pen');
                 const isOfferCanvasActive = (ref === offerCanvasRef1 || ref === offerCanvasRef2 || ref === offerCanvasRef3) && inputMode === 'pen';
                 const isOfferInputActive = (ref === offerCost1Ref || ref === offerCost2Ref || ref === offerCost3Ref || ref === offerAgentRef || ref === offerDateRef) && inputMode === 'pen';
@@ -7379,6 +7454,11 @@ const handleFinishOfferClick = () => {
                     else if (ref === offerAgentRef) key = 'agent_name';
                     else if (ref === offerDateRef) key = 'date_field';
                     else if (ref === offerValidUntilRef || ref === offerValidUntilModalRef) key = 'offer_valid_until';
+                    else if (ref === stepOverlayCanvasRef) {
+                        // FIX: Schritt-Modus Canvas → Key aus aktuellem Step ableiten
+                        const STEP_KEYS_SD = ['sit_Kundenname','sit_Rufnummer','sit_Anbieter','sit_Hardware','sit_Nutzung','sit_Haushalt','sit_WeitereProdukte','sit_Fernsehen','sit_WiFi','sit_Gesamtkosten'];
+                        key = STEP_KEYS_SD[currentSitStepRef.current] || null;
+                    }
                     else if (ref === skipReasonCanvasRef) key = 'skip_reason';
 
                     if (key) {
@@ -8314,6 +8394,20 @@ if (costBlock) {
 
 outroContentWrap.appendChild(makeOutroContent());
 
+// ── SEITE 3 IM PDF-SHARE: Netzwerk-Empfehlung direkt vor dem Outro einfügen ──
+// Holt die HTML aus dem bereits gerenderten React-Portal im DOM
+const portalEl = document.querySelector('.print-netzwerk-anlage');
+if (portalEl) {
+    const p3content = doc.createElement('div');
+    p3content.style.cssText = 'width:100%;height:100%;overflow:hidden;box-sizing:border-box;';
+    p3content.innerHTML = portalEl.innerHTML;
+    // print-page-header den wir ggf. reingebaut haben ausblenden (hat eigenen Premium-Header)
+    p3content.querySelectorAll('.print-page-header').forEach(h => h.remove());
+    const p3page = wrapSharePage('Netzwerk-Empfehlung', p3content, { includeHeader: false });
+    p3page.style.cssText += 'width:297mm;max-width:297mm;height:210mm;min-height:210mm;max-height:210mm;box-sizing:border-box;overflow:hidden;';
+    stage.appendChild(p3page);
+}
+
 // Outro als letzte Seite (ohne Header)
 const outroPage = wrapSharePage('Danke & Bonus', outroContentWrap, { includeHeader: false });
 stage.appendChild(outroPage);
@@ -8333,10 +8427,11 @@ stage.appendChild(outroPage);
     ) + 80;
 
     
-    // === HARD-FIX: Maximal so viele Seiten wie tatsächlich gebaut (Cover+Sit+Angebote+Outro)
-    // Dynamisch: 2 (Cover+Sit) + offerPageCount + 1 (Outro)
+    // === HARD-FIX: Maximal so viele Seiten wie tatsächlich gebaut (Cover+Sit+Angebote+Seite3+Outro)
+    // Dynamisch: 2 (Cover+Sit) + offerPageCount + 1 (Seite3 wenn vorhanden) + 1 (Outro)
     try {
-        const maxPages = 2 + offerPageCount + 1;
+        const hasSeite3 = !!document.querySelector('.print-netzwerk-anlage');
+        const maxPages = 2 + offerPageCount + (hasSeite3 ? 1 : 0) + 1;
         const pages = Array.from(doc.querySelectorAll('.share-page'));
         if (pages.length > maxPages) {
             pages.slice(maxPages).forEach(p => { try { p.remove(); } catch(_){} });
@@ -8997,17 +9092,27 @@ const handlePDFShare = async () => {
 
                 const cards = [wlanCardHtml, techCardHtml, nbCardHtml].filter(Boolean);
                 const gridCols = cards.length === 3 ? '1fr 1fr 1fr' : cards.length === 2 ? '1fr 1fr' : '1fr';
+                // Scale: passt den Inhalt automatisch auf 1 Seite an — egal wie viele Karten
+                // transform:scale statt zoom → funktioniert in Chrome UND Firefox
+                const z = cards.length === 3 ? 0.78 : cards.length === 2 ? 0.88 : 1.0;
+                const invW = Math.round(10000/z)/100;
 
                 return `
-                <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;width:100%;min-height:100vh;background:linear-gradient(160deg,#f0f6ff 0%,#f8faff 40%,#ffffff 100%);box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif;padding:0">
+                <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;
+                     width:1122px;height:794px;overflow:hidden;position:relative;
+                     background:linear-gradient(160deg,#f0f6ff 0%,#f8faff 40%,#ffffff 100%);
+                     box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif;">
+
+                  <!-- Skalierungscontainer: scale() skaliert alles gleichmäßig auf 1 Seite (Chrome+Firefox) -->
+                  <div style="transform:scale(${z});transform-origin:top left;width:${invW}%;position:absolute;top:0;left:0;">
 
                   <!-- Premium Header Banner -->
-                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(135deg,#0b1e42 0%,#1e3a8a 50%,#2563eb 100%);padding:28px 40px 24px;position:relative;overflow:hidden">
+                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(135deg,#0b1e42 0%,#1e3a8a 50%,#2563eb 100%);padding:26px 40px 22px;position:relative;overflow:hidden">
                     <div style="position:absolute;top:-40px;right:60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.25),transparent 70%);pointer-events:none"></div>
                     <div style="position:absolute;bottom:-30px;right:20px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.2),transparent 70%);pointer-events:none"></div>
                     <div style="display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1">
                       <div style="display:flex;align-items:center;gap:16px">
-                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center">
                           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
                         </div>
                         <div>
@@ -9023,26 +9128,28 @@ const handlePDFShare = async () => {
                     </div>
                   </div>
 
-                  <!-- Subheader / Intro -->
-                  <div style="padding:18px 40px 0;display:flex;align-items:center;gap:12px">
+                  <!-- Subheader -->
+                  <div style="padding:16px 40px 0;display:flex;align-items:center;gap:12px">
                     <div style="flex:1;height:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(90deg,#dbeafe,transparent)"></div>
                     <span style="font-size:11px;font-weight:700;color:#64748b;white-space:nowrap">Auf Basis Ihrer Angaben empfehlen wir</span>
                     <div style="flex:1;height:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(90deg,transparent,#dbeafe)"></div>
                   </div>
 
                   <!-- Cards Grid -->
-                  <div style="padding:20px 40px 32px;display:grid;grid-template-columns:${gridCols};gap:20px;align-items:start">
+                  <div style="padding:16px 40px 24px;display:grid;grid-template-columns:${gridCols};gap:18px;align-items:start">
                     ${cards.join('')}
                   </div>
 
                   <!-- Footer -->
-                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0 40px 28px;padding:14px 20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0 40px 24px;padding:12px 20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
                     <div style="display:flex;align-items:center;gap:8px">
                       <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;-webkit-print-color-adjust:exact;print-color-adjust:exact"></div>
                       <span style="font-size:10px;font-weight:600;color:#64748b">Alle Angaben ohne Gewähr · Preise können abweichen · Stand: ${new Date().toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</span>
                     </div>
                     <span style="font-size:10px;font-weight:800;color:#2563eb;letter-spacing:0.02em">HeTec — WIR GESTALTEN ZUKUNFT</span>
                   </div>
+
+                  </div><!-- Ende Skalierungscontainer -->
                 </div>`;
             };
 
@@ -9178,8 +9285,7 @@ const handlePDFShare = async () => {
                                     {sitLayoutMode === 'step' && (()=>{
                                         const item = SITUATION_ITEMS[currentSitStep];
                                         const sitKey = `sit_${item.id.replace(/\s+/g,'')}`;
-                                        const sitRefMap = {Kundenname:sitCanvasRef_Kundenname,Rufnummer:sitCanvasRef_Rufnummer,Anbieter:sitCanvasRef_Anbieter,Hardware:sitCanvasRef_Hardware,Nutzung:sitCanvasRef_Nutzung,Haushalt:sitCanvasRef_Haushalt,'Weitere Produkte':sitCanvasRef_WeitereProdukte,Fernsehen:sitCanvasRef_Fernsehen,WiFi:sitCanvasRef_WiFi,Gesamtkosten:sitCanvasRef_Gesamtkosten};
-                                        const sitRef = sitRefMap[item.id];
+                                        // FIX: sitRefMap/sitRef entfernt — Canvas nutzt jetzt dedizierter stepOverlayCanvasRef
                                         const itemQuestions = (questionsData[item.id]||questionsData['default']||[]).slice(0,2);
                                         const _text = String(getDisplayText(item.id)||'').trim();
                                         const _pen = ((drawnStrokes&&drawnStrokes[sitKey])||[]).filter(s=>s&&s.tool!=='eraser'&&s.points&&s.points.length>=2).length;
@@ -9200,19 +9306,34 @@ const handlePDFShare = async () => {
                                                     <div style={{width:'12px',height:'12px',borderRadius:'50%',background:hasContent?'#22c55e':'#e2e8f0',flexShrink:0}}/>
                                                 </div>
                                                 <div style={{flex:1,position:'relative',overflow:'hidden'}}>
-                                                    <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(to bottom,transparent,transparent 31px,#e2e8f0 32px)',opacity:0.5,pointerEvents:'none'}}/>
+                                                    {/* Linierter Hintergrund mit Notizbuch-Rand */}
+                                                    <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundImage:'repeating-linear-gradient(to bottom,transparent,transparent 31px,#e2e8f0 32px)',backgroundPosition:'0 12px',opacity:0.6,pointerEvents:'none',zIndex:1}}/>
+                                                    {/* Rand-Linie links (Notizbuch-Stil) */}
+                                                    <div style={{position:'absolute',top:0,left:'28px',bottom:0,width:'1.5px',background:'#fca5a5',opacity:0.5,pointerEvents:'none',zIndex:2}}/>
                                                     {inputMode==='keyboard'
-                                                        ?<textarea value={getDisplayText(item.id)||''} onChange={e=>handleTextChange(item.id,e.target.value)} placeholder="Hier tippen..." style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'12px 14px',fontSize:'15px',lineHeight:'32px',background:'transparent',border:'none',outline:'none',resize:'none',color:'#1e293b',zIndex:10,boxSizing:'border-box'}}/>
-                                                        :<canvas ref={sitRef} onPointerDown={e=>startDrawing(e,sitRef,sitKey)} onPointerMove={e=>draw(e,sitRef,sitKey)} onPointerUp={e=>stopDrawing(e,sitRef)} onPointerLeave={e=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}}/>
+                                                        ?<textarea value={getDisplayText(item.id)||''} onChange={e=>handleTextChange(item.id,e.target.value)} placeholder="Hier tippen..." style={{position:'absolute',top:'8px',left:'36px',right:'12px',bottom:'8px',width:'calc(100% - 48px)',height:'calc(100% - 16px)',padding:'2px 4px',fontSize:'15px',lineHeight:'32px',background:'transparent',border:'none',outline:'none',resize:'none',color:'#1e293b',zIndex:10,boxSizing:'border-box'}}/>
+                                                        /* FIX: Dedizierter stepOverlayCanvasRef mit großzügigem linken Abstand */
+                                                        :<canvas ref={stepOverlayCanvasRef} onPointerDown={e=>startDrawing(e,stepOverlayCanvasRef,sitKey)} onPointerMove={e=>draw(e,stepOverlayCanvasRef,sitKey)} onPointerUp={e=>stopDrawing(e,stepOverlayCanvasRef)} onPointerLeave={e=>stopDrawing(e,stepOverlayCanvasRef)} className="drawing-canvas" style={{position:'absolute',top:'8px',left:'36px',right:'12px',bottom:'8px',width:'calc(100% - 48px)',height:'calc(100% - 16px)',touchAction:'none',cursor:'crosshair',zIndex:10}}/>
                                                     }
                                                 </div>
                                             </div>
                                             <div style={{display:'flex',gap:'8px',flexShrink:0}}>
-                                                <button onClick={()=>setCurrentSitStep(s=>Math.max(0,s-1))} disabled={currentSitStep===0} style={{flex:1,height:'46px',borderRadius:'12px',border:'1.5px solid #e2e8f0',background:currentSitStep===0?'#f8fafc':'#fff',color:currentSitStep===0?'#cbd5e1':'#374151',fontSize:'14px',fontWeight:700,cursor:currentSitStep===0?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
+                                                <button onClick={()=>{
+                                                    // FIX: Laufenden Stroke vor Navigation abschließen
+                                                    if(isDrawingRef.current && stepOverlayCanvasRef.current) stopDrawing({pointerId:null,pointerType:'pen',preventDefault:()=>{}},stepOverlayCanvasRef);
+                                                    setCurrentSitStep(s=>Math.max(0,s-1));
+                                                }} disabled={currentSitStep===0} style={{flex:1,height:'46px',borderRadius:'12px',border:'1.5px solid #e2e8f0',background:currentSitStep===0?'#f8fafc':'#fff',color:currentSitStep===0?'#cbd5e1':'#374151',fontSize:'14px',fontWeight:700,cursor:currentSitStep===0?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
                                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>Zurück
                                                 </button>
-                                                <div style={{display:'flex',gap:'4px',alignItems:'center'}}>{SITUATION_ITEMS.map((_,i)=><div key={i} onClick={()=>setCurrentSitStep(i)} style={{width:i===currentSitStep?22:8,height:'8px',borderRadius:'4px',background:i===currentSitStep?'#2563eb':'#e2e8f0',cursor:'pointer',transition:'all 0.15s'}}/>)}</div>
-                                                <button onClick={()=>currentSitStep===SITUATION_ITEMS.length-1?setSitLayoutMode('grid'):setCurrentSitStep(s=>s+1)} style={{flex:1,height:'46px',borderRadius:'12px',border:'none',background:currentSitStep===SITUATION_ITEMS.length-1?'#16a34a':'#2563eb',color:'white',fontSize:'14px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',boxShadow:'0 2px 8px rgba(37,99,235,0.3)'}}>
+                                                <div style={{display:'flex',gap:'4px',alignItems:'center'}}>{SITUATION_ITEMS.map((_,i)=><div key={i} onClick={()=>{
+                                                    if(isDrawingRef.current && stepOverlayCanvasRef.current) stopDrawing({pointerId:null,pointerType:'pen',preventDefault:()=>{}},stepOverlayCanvasRef);
+                                                    setCurrentSitStep(i);
+                                                }} style={{width:i===currentSitStep?22:8,height:'8px',borderRadius:'4px',background:i===currentSitStep?'#2563eb':'#e2e8f0',cursor:'pointer',transition:'all 0.15s'}}/>)}</div>
+                                                <button onClick={()=>{
+                                                    // FIX: Laufenden Stroke vor Navigation abschließen
+                                                    if(isDrawingRef.current && stepOverlayCanvasRef.current) stopDrawing({pointerId:null,pointerType:'pen',preventDefault:()=>{}},stepOverlayCanvasRef);
+                                                    if(currentSitStep===SITUATION_ITEMS.length-1) setSitLayoutMode('grid'); else setCurrentSitStep(s=>s+1);
+                                                }} style={{flex:1,height:'46px',borderRadius:'12px',border:'none',background:currentSitStep===SITUATION_ITEMS.length-1?'#16a34a':'#2563eb',color:'white',fontSize:'14px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',boxShadow:'0 2px 8px rgba(37,99,235,0.3)'}}>
                                                     {currentSitStep===SITUATION_ITEMS.length-1?'✓ Fertig':'Weiter'}{currentSitStep<SITUATION_ITEMS.length-1&&<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
                                                 </button>
                                             </div>
@@ -9772,9 +9893,18 @@ const handlePDFShare = async () => {
         sit.parentNode.insertBefore(h1, sit);
     }
 
-    // Seite 3 Header - Umbenannt auf Wunsch
+    // Seite 2 Header
     const off = document.querySelector('.print-offer-view');
     if (off) off.prepend(mkHeader('Ihr Persönliches Angebot'));
+
+    // Seite 3 Header — ins Portal-Element in document.body
+    const p3 = document.querySelector('.print-netzwerk-anlage');
+    if (p3 && !p3.querySelector('.print-page-header')) {
+        const h3 = mkHeader('Netzwerk-Empfehlung · Persönliche Anlage');
+        h3.style.cssText += ';position:absolute;top:10px;left:20px;right:20px;width:auto;z-index:10;margin:0;';
+        p3.style.position = 'relative';
+        p3.insertBefore(h3, p3.firstChild);
+    }
 };
 
             window.addEventListener('beforeprint', ensurePrintHeaders);
