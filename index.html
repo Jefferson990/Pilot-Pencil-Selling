@@ -5361,8 +5361,14 @@ const resolveUserName = (raw) => {
                 const rawStrokeWidth = stroke.width; 
                 let visualBaseWidth; 
                 if (isOfferCanvas) { visualBaseWidth = rawStrokeWidth === 2 ? 2.5 : rawStrokeWidth === 4 ? 5 : 8; } else { visualBaseWidth = rawStrokeWidth === 2 ? 2 : rawStrokeWidth === 4 ? 3 : 5; } 
-                const normalizedBaseLineWidth = (visualBaseWidth * responsiveScaleFactor); 
-                if (stroke.tool === 'eraser') { ctx.lineWidth = normalizedBaseLineWidth * 4; ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; } else if (stroke.tool === 'highlighter') { ctx.lineWidth = normalizedBaseLineWidth * 3; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; ctx.globalCompositeOperation = 'destination-over'; } else { ctx.lineWidth = normalizedBaseLineWidth; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; ctx.globalCompositeOperation = 'source-over'; } 
+                const normalizedBaseLineWidth = (visualBaseWidth * responsiveScaleFactor);
+                // Sit-Kacheln: Mindestlinienstärke + volle Deckkraft damit Striche nicht blass wirken
+                const isSitCanvas = key.startsWith('sit_');
+                const finalLineWidth = isSitCanvas ? Math.max(1.8, normalizedBaseLineWidth) : normalizedBaseLineWidth;
+                const finalOpacity  = isSitCanvas && stroke.tool !== 'eraser' && stroke.tool !== 'highlighter'
+                    ? Math.min(1, stroke.opacity * 1.35)  // ~35% kräftiger in kleinen Kacheln
+                    : stroke.opacity;
+                if (stroke.tool === 'eraser') { ctx.lineWidth = finalLineWidth * 4; ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; } else if (stroke.tool === 'highlighter') { ctx.lineWidth = finalLineWidth * 3; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; ctx.globalCompositeOperation = 'destination-over'; } else { ctx.lineWidth = finalLineWidth; ctx.strokeStyle = stroke.color; ctx.globalAlpha = finalOpacity; ctx.globalCompositeOperation = 'source-over'; } 
                 if (stroke.points.length > 0) {
                     const pts = stroke.points.map(p => ({ x: p.x * responsiveScaleFactor, y: p.y * responsiveScaleFactor }));
                     ctx.moveTo(pts[0].x, pts[0].y);
@@ -6120,13 +6126,16 @@ const handleOpenStats = () => {
             const [showSpeedModal, setShowSpeedModal] = useState(false);
             const [showTechModal, setShowTechModal] = useState(false);
             const [showCostSection, setShowCostSection] = useState(true);
-            // Schritt-für-Schritt Modus
+            // ═══════════════════════════════════════════════════════
+            // SCHRITT-MODUS — komplett neue, saubere Implementierung
+            // Eigener Canvas-Ref → kein Ref-Sharing mit Grid-Kacheln
+            // ═══════════════════════════════════════════════════════
             const [sitLayoutMode, setSitLayoutMode] = useState('grid');
             const [currentSitStep, setCurrentSitStep] = useState(0);
-            // FIX: Dedizierter Ref für Schritt-Modus Canvas (verhindert Ref-Konflikt mit Grid-Canvas)
-            const stepOverlayCanvasRef = useRef(null);
-            const currentSitStepRef = useRef(0);
-            useEffect(() => { currentSitStepRef.current = currentSitStep; }, [currentSitStep]);
+            const stepCanvasRef      = useRef(null);   // Canvas NUR im Overlay
+            const stepDrawingRef     = useRef(false);  // Läuft gerade ein Strich?
+            const stepStrokeRef      = useRef(null);   // Aktueller Strich-Datensatz
+            const STEP_KEYS          = ['sit_Kundenname','sit_Rufnummer','sit_Anbieter','sit_Hardware','sit_Nutzung','sit_Haushalt','sit_WeitereProdukte','sit_Fernsehen','sit_WiFi','sit_Gesamtkosten'];
             const [offerLayoutMode, setOfferLayoutMode] = useState('grid');
             const [currentOfferStep, setCurrentOfferStep] = useState(0);
             const [checkedTechs, setCheckedTechs] = useState({});
@@ -7088,15 +7097,6 @@ const handleFinishOfferClick = () => {
                     if (view === 'offer') { 
                         offerCanvasMap.forEach(({ ref, key }) => { resizeCanvas(ref, key); }); 
                     }
-                    // FIX Bug 1: Schritt-Modus — aktive Kachel-Canvas nach Layout-Settle neu skalieren
-                    // Nutzt jetzt den dedizierten stepOverlayCanvasRef statt des geteilten Grid-Refs
-                    if (sitLayoutMode === 'step' && inputMode === 'pen') {
-                        // Zwei rAF-Zyklen warten: DOM muss fertig gerendert sein bevor getBoundingClientRect stimmt
-                        requestAnimationFrame(() => requestAnimationFrame(() => {
-                            resizeCanvas(stepOverlayCanvasRef, 'step_overlay');
-                            setRedrawCounter(r => r + 1);
-                        }));
-                    }
                     setRedrawCounter(r => r + 1); 
                 };
 
@@ -7159,32 +7159,32 @@ const handleFinishOfferClick = () => {
                 requestAnimationFrame(() => requestAnimationFrame(doRedraw));
             }, [view, drawnStrokes, redrawCounter, sitLayoutMode]);
 
-            // FIX: Schritt-Modus Canvas neuzeichnen wenn Step wechselt oder Modus aktiv wird
+            // ── Step-Overlay Canvas neu zeichnen wenn Step wechselt / Overlay öffnet ──
             useEffect(() => {
-                if (view !== 'situation' || sitLayoutMode !== 'step' || inputMode !== 'pen') return;
-                const STEP_KEYS_DRAW = ['sit_Kundenname','sit_Rufnummer','sit_Anbieter','sit_Hardware','sit_Nutzung','sit_Haushalt','sit_WeitereProdukte','sit_Fernsehen','sit_WiFi','sit_Gesamtkosten'];
-                const key = STEP_KEYS_DRAW[currentSitStep];
+                if (view !== 'situation' || sitLayoutMode !== 'step') return;
+                const key = STEP_KEYS[currentSitStep];
                 if (!key) return;
-                const doRedrawStep = () => {
-                    const c = stepOverlayCanvasRef.current;
+                const doStepRedraw = () => {
+                    const c = stepCanvasRef.current;
                     if (!c) return;
                     const rect = c.getBoundingClientRect();
-                    if (rect.width > 0 && rect.height > 0) {
-                        const dpr = window.devicePixelRatio || 1;
-                        const needW = Math.round(rect.width * dpr);
-                        const needH = Math.round(rect.height * dpr);
-                        if (c.width !== needW || c.height !== needH) {
-                            c.width = needW; c.height = needH;
-                            const ctx = c.getContext('2d');
-                            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                        }
-                        redrawCanvas(c, drawnStrokes[key] || [], 1, key);
+                    if (rect.width === 0 || rect.height === 0) return;
+                    const dpr = window.devicePixelRatio || 1;
+                    const needW = Math.round(rect.width * dpr);
+                    const needH = Math.round(rect.height * dpr);
+                    if (c.width !== needW || c.height !== needH) {
+                        c.width = needW; c.height = needH;
+                        const ctx = c.getContext('2d');
+                        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                     }
+                    // Striche wurden mit echter Overlay-Breite gespeichert.
+                    // redrawCanvas skaliert korrekt: scale = overlayBreite / overlayBreite = 1.0 ✓
+                    redrawCanvas(c, drawnStrokes[key] || [], 1, key);
                 };
-                doRedrawStep();
-                requestAnimationFrame(() => requestAnimationFrame(doRedrawStep));
-            }, [view, sitLayoutMode, currentSitStep, drawnStrokes, redrawCounter, inputMode]);
+                doStepRedraw();
+                requestAnimationFrame(() => requestAnimationFrame(doStepRedraw));
+            }, [view, sitLayoutMode, currentSitStep, drawnStrokes]);
             // --- Migration: altes 'main' (großes Overlay) -> neue 'sit_*' Zeilen-Canvas ---
             useEffect(() => {
                 if (view !== 'situation') return;
@@ -7326,8 +7326,7 @@ const handleFinishOfferClick = () => {
 
                 const isPenInput = pointerType === 'pen';
                 const isMainCanvasPenActive = ref === canvasRef && inputMode === 'pen';
-                // FIX: stepOverlayCanvasRef ist ein Situations-Canvas im Schritt-Modus
-                const isSituationCanvasActive = (key && key.startsWith('sit_') && inputMode === 'pen') || (ref === stepOverlayCanvasRef && inputMode === 'pen');
+                const isSituationCanvasActive = key && key.startsWith('sit_') && inputMode === 'pen';
                 const isSmallCanvasPenActive = (ref === emailCanvasRef && emailMode === 'pen') || (ref === providerCanvasRef && providerMode === 'pen') || (ref === notesCanvasRef && notesMode === 'pen') || (ref === skipReasonCanvasRef && skipReasonMode === 'pen');
                 const isOfferCanvasActive = (ref === offerCanvasRef1 || ref === offerCanvasRef2 || ref === offerCanvasRef3) && inputMode === 'pen';
                 const isOfferInputActive = (ref === offerCost1Ref || ref === offerCost2Ref || ref === offerCost3Ref || ref === offerAgentRef || ref === offerDateRef) && inputMode === 'pen';
@@ -7454,11 +7453,6 @@ const handleFinishOfferClick = () => {
                     else if (ref === offerAgentRef) key = 'agent_name';
                     else if (ref === offerDateRef) key = 'date_field';
                     else if (ref === offerValidUntilRef || ref === offerValidUntilModalRef) key = 'offer_valid_until';
-                    else if (ref === stepOverlayCanvasRef) {
-                        // FIX: Schritt-Modus Canvas → Key aus aktuellem Step ableiten
-                        const STEP_KEYS_SD = ['sit_Kundenname','sit_Rufnummer','sit_Anbieter','sit_Hardware','sit_Nutzung','sit_Haushalt','sit_WeitereProdukte','sit_Fernsehen','sit_WiFi','sit_Gesamtkosten'];
-                        key = STEP_KEYS_SD[currentSitStepRef.current] || null;
-                    }
                     else if (ref === skipReasonCanvasRef) key = 'skip_reason';
 
                     if (key) {
@@ -8394,23 +8388,33 @@ if (costBlock) {
 
 outroContentWrap.appendChild(makeOutroContent());
 
-// ── SEITE 3 IM PDF-SHARE: Netzwerk-Empfehlung direkt vor dem Outro einfügen ──
-// Holt die HTML aus dem bereits gerenderten React-Portal im DOM
-const portalEl = document.querySelector('.print-netzwerk-anlage');
-if (portalEl) {
-    const p3content = doc.createElement('div');
-    p3content.style.cssText = 'width:100%;height:100%;overflow:hidden;box-sizing:border-box;';
-    p3content.innerHTML = portalEl.innerHTML;
-    // print-page-header den wir ggf. reingebaut haben ausblenden (hat eigenen Premium-Header)
-    p3content.querySelectorAll('.print-page-header').forEach(h => h.remove());
-    const p3page = wrapSharePage('Netzwerk-Empfehlung', p3content, { includeHeader: false });
-    p3page.style.cssText += 'width:297mm;max-width:297mm;height:210mm;min-height:210mm;max-height:210mm;box-sizing:border-box;overflow:hidden;';
-    stage.appendChild(p3page);
-}
-
-// Outro als letzte Seite (ohne Header)
+// Kosten + Dankeschön-Seite ZUERST (vor Anlage)
 const outroPage = wrapSharePage('Danke & Bonus', outroContentWrap, { includeHeader: false });
 stage.appendChild(outroPage);
+
+// ── ANLAGE: Netzwerk-Empfehlung als LETZTE Seite nach Kosten ──
+try {
+    // Methode 1: gecachter HTML-String (wird bei jedem React-Render aktualisiert)
+    let anlageHtml = window.__anlageHtml || '';
+    // Methode 2: Fallback über React-Funktion
+    if ((!anlageHtml || anlageHtml.trim().length < 10) && typeof window.__buildPage3Html === 'function') {
+        try { anlageHtml = window.__buildPage3Html() || ''; } catch(e) {}
+    }
+    // Methode 3: Fallback über Portal-DOM-Element
+    if (!anlageHtml || anlageHtml.trim().length < 10) {
+        const pel = document.querySelector('.print-netzwerk-anlage');
+        if (pel) anlageHtml = pel.innerHTML || '';
+    }
+    if (anlageHtml && anlageHtml.trim().length > 10) {
+        const p3content = doc.createElement('div');
+        p3content.style.cssText = 'width:100%;height:100%;overflow:hidden;box-sizing:border-box;background:#ffffff;';
+        p3content.innerHTML = anlageHtml;
+        p3content.querySelectorAll('.print-page-header').forEach(h => h.remove());
+        const p3page = wrapSharePage('Netzwerk-Empfehlung', p3content, { includeHeader: false });
+        p3page.style.cssText = 'width:297mm;max-width:297mm;height:210mm;min-height:210mm;max-height:210mm;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;';
+        stage.appendChild(p3page);
+    }
+} catch(e) { console.warn('Anlage export error:', e); }
 
 // Share: Seitenzähler deaktiviert (Fix: kein "Seite X / N")
 
@@ -8427,16 +8431,8 @@ stage.appendChild(outroPage);
     ) + 80;
 
     
-    // === HARD-FIX: Maximal so viele Seiten wie tatsächlich gebaut (Cover+Sit+Angebote+Seite3+Outro)
-    // Dynamisch: 2 (Cover+Sit) + offerPageCount + 1 (Seite3 wenn vorhanden) + 1 (Outro)
-    try {
-        const hasSeite3 = !!document.querySelector('.print-netzwerk-anlage');
-        const maxPages = 2 + offerPageCount + (hasSeite3 ? 1 : 0) + 1;
-        const pages = Array.from(doc.querySelectorAll('.share-page'));
-        if (pages.length > maxPages) {
-            pages.slice(maxPages).forEach(p => { try { p.remove(); } catch(_){} });
-        }
-    } catch(e) { /* ignore */ }
+    // Keine Seiten abschneiden — die Anzahl basiert exakt auf dem was oben gebaut wurde
+    // (offerPageCount + Cover + Sit + Outro + ggf. Anlage)
 
 const opt = {
         margin: 0,
@@ -8756,7 +8752,9 @@ const opt = {
         if (pdf && typeof pdf.getNumberOfPages === 'function') {
             try {
                 const total = pdf.getNumberOfPages();
-                const maxPages = 2 + offerPageCount + 1; // Cover + Sit + Angebote + Outro
+                // Anlage-Seite mitrechnen wenn vorhanden
+                const hasAnlage = !!(window.__anlageHtml && window.__anlageHtml.trim().length > 10);
+                const maxPages = 2 + offerPageCount + 1 + (hasAnlage ? 1 : 0); // Cover + Sit + Angebote + Outro + ggf. Anlage
                 if (typeof pdf.deletePage === 'function') {
                     for (let i = total; i > maxPages; i--) {
                         try { pdf.deletePage(i); } catch(_) {}
@@ -8983,54 +8981,56 @@ const handlePDFShare = async () => {
                     const { router, needs, availableFloors, floorKeys, rec } = ws;
                     empfehlungLabel = rec ? rec.sol : '';
                     empfehlungDesc  = rec ? rec.desc : '';
-                    const FH=44, FG=6, PAD=10;
-                    const svgH = PAD+44+availableFloors.length*(FH+FG)+PAD;
-                    const svgW = 220;
                     const floors = [...availableFloors].reverse().map((lbl, i) => {
                         const key = floorKeys[availableFloors.length-1-i];
                         const isR = router===key, isN = needs.includes(key);
-                        const fill   = isR ? '#1e40af' : isN ? '#dbeafe' : '#f1f5f9';
+                        const fill   = isR ? '#1e40af' : isN ? '#bfdbfe' : '#f1f5f9';
                         const stroke = isR ? '#1d4ed8' : isN ? '#3b82f6' : '#cbd5e1';
                         const tFill  = isR ? '#ffffff' : isN ? '#1d4ed8' : '#94a3b8';
+                        const FH=44, FG=6, PAD=10;
                         const y = PAD+40+i*(FH+FG);
-                        const wins = [36,90,144].map(wx=>`<rect x="${wx}" y="${y+9}" width="16" height="12" rx="3" fill="${isR?'rgba(147,197,253,0.3)':isN?'#93c5fd':'#e2e8f0'}" stroke="${isR?'rgba(255,255,255,0.25)':isN?'#60a5fa':'#cbd5e1'}" stroke-width="0.8"/>`).join('');
-                        const door  = lbl==='EG' ? `<rect x="96" y="${y+FH-18}" width="14" height="18" rx="3" fill="${isR?'rgba(255,255,255,0.2)':'#bfdbfe'}"/>` : '';
-                        const routerBadge = isR ? `<rect x="174" y="${y+12}" width="36" height="14" rx="4" fill="#22c55e"/><text x="192" y="${y+23}" font-size="8" font-weight="800" fill="white" text-anchor="middle">Router</text>` : '';
-                        const wlanWave = (isN&&!isR) ? `<circle cx="188" cy="${y+17}" r="4" fill="#3b82f6" opacity="0.9"/><circle cx="188" cy="${y+17}" r="9" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.35"/>` : '';
-                        return `<g><rect x="4" y="${y}" width="208" height="${FH}" rx="11" fill="${fill}" stroke="${stroke}" stroke-width="${isR?0:1.5}"/>${wins}${door}<text x="20" y="${y+FH/2+5}" font-size="12" font-weight="800" fill="${tFill}" font-family="system-ui,sans-serif">${lbl}</text>${routerBadge}${wlanWave}</g>`;
+                        const winFill   = isR ? '#93c5fd' : isN ? '#93c5fd' : '#e2e8f0';
+                        const winStroke = isR ? '#60a5fa' : isN ? '#60a5fa' : '#cbd5e1';
+                        const wins = [36,90,144].map(wx=>`<rect x="${wx}" y="${y+9}" width="16" height="12" rx="3" fill="${winFill}" stroke="${winStroke}" stroke-width="0.8"/>`).join('');
+                        const door = lbl==='EG' ? `<rect x="96" y="${y+26}" width="14" height="18" rx="3" fill="${isR?'#60a5fa':'#bfdbfe'}"/>` : '';
+                        const badge = isR ? `<rect x="174" y="${y+12}" width="36" height="14" rx="4" fill="#22c55e"/><text x="192" y="${y+23}" font-size="8" font-weight="800" fill="white" text-anchor="middle" font-family="Arial,sans-serif">Router</text>` : '';
+                        const dot   = (isN&&!isR) ? `<circle cx="192" cy="${y+22}" r="5" fill="#3b82f6"/>` : '';
+                        return `<g><rect x="4" y="${y}" width="208" height="${FH}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>${wins}${door}<text x="18" y="${y+27}" font-size="12" font-weight="bold" fill="${tFill}" font-family="Arial,sans-serif">${lbl}</text>${badge}${dot}</g>`;
                     }).join('');
+
+                    // Gesamthöhe berechnen
+                    const FH=44, FG=6, PAD=10;
+                    const svgH = PAD+44+availableFloors.length*(FH+FG)+PAD;
+
+                    // SVG als Data-URI → html2canvas rendert <img> zuverlässig
+                    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 ${svgH}" width="216" height="${svgH}">
+                      <polygon points="108,4 208,44 8,44" fill="#bfdbfe" stroke="#93c5fd" stroke-width="1.5"/>
+                      ${floors}
+                    </svg>`;
+                    const svgDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+
                     wlanCardHtml = `
-                      <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(145deg,#e0f2fe 0%,#dbeafe 60%,#ede9fe 100%);border-radius:20px;padding:28px 24px 24px;border:1.5px solid #bfdbfe;position:relative;overflow:hidden">
-                        <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.15),transparent 70%);pointer-events:none"></div>
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
-                          <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#6366f1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                      <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#e0f2fe;border-radius:20px;padding:20px 18px 18px;border:1.5px solid #bfdbfe">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+                          <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:28px;height:28px;border-radius:8px;background:#3b82f6;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
                           </div>
                           <div>
-                            <div style="font-size:13px;font-weight:900;color:#1e3a8a;letter-spacing:-0.01em">WLAN-Hausplan</div>
+                            <div style="font-size:13px;font-weight:900;color:#1e3a8a">WLAN-Hausplan</div>
                             <div style="font-size:10px;color:#6366f1;font-weight:600">Ihre persönliche Abdeckung</div>
                           </div>
                         </div>
-                        <svg viewBox="0 0 216 ${svgH}" style="width:100%;max-width:240px;height:auto;display:block;margin:0 auto 16px">
-                          <defs>
-                            <linearGradient id="roofGp3" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stop-color="#bfdbfe"/>
-                              <stop offset="100%" stop-color="#dbeafe"/>
-                            </linearGradient>
-                          </defs>
-                          <polygon points="108,4 208,44 8,44" fill="url(#roofGp3)" stroke="#93c5fd" stroke-width="1.5"/>
-                          ${floors}
-                        </svg>
-                        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:${empfehlungLabel?'16':'0'}px">
-                          <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#374151"><span style="width:10px;height:10px;border-radius:50%;background:#1e40af;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>Router</span>
-                          <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#374151"><span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>WLAN-Bedarf</span>
-                          <span style="display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#94a3b8"><span style="width:10px;height:10px;border-radius:50%;background:#e2e8f0;border:1px solid #cbd5e1;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>Kein Bedarf</span>
+                        <img src="${svgDataUri}" width="200" height="${Math.round(svgH*200/216)}" style="display:block;margin:0 auto 12px;max-width:100%" alt="Hausplan"/>
+                        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:${empfehlungLabel?'12':'0'}px">
+                          <span style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:#374151"><span style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:8px;height:8px;border-radius:50%;background:#1e40af;display:inline-block"></span>Router</span>
+                          <span style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:#374151"><span style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:8px;height:8px;border-radius:50%;background:#3b82f6;display:inline-block"></span>WLAN-Bedarf</span>
+                          <span style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:#94a3b8"><span style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:8px;height:8px;border-radius:50%;background:#e2e8f0;border:1px solid #cbd5e1;display:inline-block"></span>Kein Bedarf</span>
                         </div>
                         ${empfehlungLabel ? `
-                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(135deg,#1e3a8a,#2563eb,#3b82f6);border-radius:14px;padding:14px 18px;text-align:center;box-shadow:0 4px 16px rgba(37,99,235,0.3)">
-                          <div style="font-size:9px;font-weight:800;color:rgba(147,197,253,0.85);text-transform:uppercase;letter-spacing:0.16em;margin-bottom:5px">Unsere Empfehlung</div>
-                          <div style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.03em;line-height:1">${empfehlungLabel}</div>
-                          <div style="font-size:10px;color:rgba(186,230,253,0.85);margin-top:6px;line-height:1.4">${empfehlungDesc}</div>
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#1e3a8a;border-radius:12px;padding:12px 16px;text-align:center">
+                          <div style="font-size:9px;font-weight:800;color:#93c5fd;text-transform:uppercase;letter-spacing:0.15em;margin-bottom:4px">Unsere Empfehlung</div>
+                          <div style="font-size:20px;font-weight:900;color:#ffffff">${empfehlungLabel}</div>
+                          <div style="font-size:10px;color:#bfdbfe;margin-top:4px">${empfehlungDesc}</div>
                         </div>` : ''}
                       </div>`;
                 }
@@ -9252,7 +9252,7 @@ const handlePDFShare = async () => {
                                         return (<div className="sit-progress-bar" style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}><div style={{flex:1,height:'8px',background:'#e2e8f0',borderRadius:'999px',overflow:'hidden',minWidth:80}}><div style={{width:pct+'%',height:'100%',background:pct===100?'#16a34a':'#2563eb',borderRadius:'999px',transition:'width 0.5s ease'}}/></div><span style={{fontSize:'11px',fontWeight:800,color:pct===100?'#16a34a':'#94a3b8',flexShrink:0}}>{pct===100?'✓ Vollständig':filled+'/'+SITUATION_ITEMS.length+' Felder'}</span></div>);
                                     })()}
                                     {/* Grid — IMMER im DOM (auch für Druck wenn Step aktiv) */}
-                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display: sitLayoutMode==='step'?'none':'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'stretch',gridTemplateRows:'repeat(5, 1fr)',overflowY:'auto'}}>
+                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'stretch',gridTemplateRows:'repeat(5, 1fr)',overflowY:'auto',visibility:sitLayoutMode==='step'?'hidden':'visible',pointerEvents:sitLayoutMode==='step'?'none':'auto'}}>
                                         {SITUATION_ITEMS.map((item) => {
                                             const sitKey = `sit_${item.id.replace(/\s+/g,'')}`;
                                             const sitRefMap = {Kundenname:sitCanvasRef_Kundenname,Rufnummer:sitCanvasRef_Rufnummer,Anbieter:sitCanvasRef_Anbieter,Hardware:sitCanvasRef_Hardware,Nutzung:sitCanvasRef_Nutzung,Haushalt:sitCanvasRef_Haushalt,'Weitere Produkte':sitCanvasRef_WeitereProdukte,Fernsehen:sitCanvasRef_Fernsehen,WiFi:sitCanvasRef_WiFi,Gesamtkosten:sitCanvasRef_Gesamtkosten};
@@ -9281,60 +9281,169 @@ const handlePDFShare = async () => {
                                             );
                                         })}
                                     </div>
-                                    {/* ── SCHRITT-MODUS OVERLAY ── */}
+                                    {/* ══════════════════════════════════════════════
+                                        SCHRITT-MODUS OVERLAY — komplett neu
+                                        - Eigener stepCanvasRef (kein Sharing mit Grid)
+                                        - Eigene Pointer-Handler (kein startDrawing/stopDrawing)
+                                        - Striche in STEP_TILE_W/H normalisiert gespeichert
+                                        ══════════════════════════════════════════════ */}
                                     {sitLayoutMode === 'step' && (()=>{
-                                        const item = SITUATION_ITEMS[currentSitStep];
-                                        const sitKey = `sit_${item.id.replace(/\s+/g,'')}`;
-                                        // FIX: sitRefMap/sitRef entfernt — Canvas nutzt jetzt dedizierter stepOverlayCanvasRef
-                                        const itemQuestions = (questionsData[item.id]||questionsData['default']||[]).slice(0,2);
-                                        const _text = String(getDisplayText(item.id)||'').trim();
-                                        const _pen = ((drawnStrokes&&drawnStrokes[sitKey])||[]).filter(s=>s&&s.tool!=='eraser'&&s.points&&s.points.length>=2).length;
-                                        const hasContent = _text.length>=2 || _pen>=1;
+                                        const item      = SITUATION_ITEMS[currentSitStep];
+                                        const sitKey    = STEP_KEYS[currentSitStep];
+                                        const questions = (questionsData[item.id]||questionsData['default']||[]).slice(0,2);
+                                        const hasText   = String(getDisplayText(item.id)||'').trim().length >= 2;
+                                        const hasPen    = ((drawnStrokes[sitKey])||[]).filter(s=>s.tool!=='eraser').length > 0;
+                                        const hasContent = hasText || hasPen;
+
+                                        // ── Pointer-Handler ──────────────────────────────────────
+                                        // Koordinaten RAW gespeichert (baseWidth = echte Overlay-Breite).
+                                        // redrawCanvas berechnet: scale = ZielBreite / Overlay-Breite
+                                        // → Position bleibt in jeder Ansicht proportional korrekt.
+                                        const onDown = (e) => {
+                                            const c = stepCanvasRef.current;
+                                            if (!c) return;
+                                            e.preventDefault();
+                                            const rect = c.getBoundingClientRect();
+                                            const dpr  = window.devicePixelRatio || 1;
+                                            const needW = Math.round(rect.width  * dpr);
+                                            const needH = Math.round(rect.height * dpr);
+                                            if (c.width !== needW || c.height !== needH) {
+                                                c.width = needW; c.height = needH;
+                                                const ctx2 = c.getContext('2d');
+                                                ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+                                                redrawCanvas(c, drawnStrokes[sitKey]||[], 1, sitKey);
+                                            }
+                                            const rawX = e.clientX - rect.left;
+                                            const rawY = e.clientY - rect.top;
+                                            const col  = colorRef.current;
+                                            const w    = strokeWidthRef.current;
+                                            const op   = opacityRef.current;
+                                            const tool = toolRef.current;
+                                            const vw   = w === 2 ? 2 : w === 4 ? 3 : 5;
+                                            const ctx  = c.getContext('2d');
+                                            ctx.save();
+                                            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                                            if (tool === 'eraser')           { ctx.lineWidth = vw*4; ctx.globalCompositeOperation='destination-out'; ctx.globalAlpha=1; }
+                                            else if (tool==='highlighter')   { ctx.lineWidth = vw*3; ctx.strokeStyle=col; ctx.globalAlpha=op*0.4; ctx.globalCompositeOperation='destination-over'; }
+                                            else                             { ctx.lineWidth = vw;   ctx.strokeStyle=col; ctx.globalAlpha=op;     ctx.globalCompositeOperation='source-over'; }
+                                            ctx.beginPath(); ctx.moveTo(rawX, rawY);
+                                            stepDrawingRef.current = true;
+                                            // RAW-Koordinaten + echte Overlay-Größe als Basis speichern
+                                            stepStrokeRef.current  = {
+                                                tool, color:col, width:w, opacity:op,
+                                                points:[{x:rawX, y:rawY}],
+                                                baseWidth:  rect.width,
+                                                baseHeight: rect.height
+                                            };
+                                            try { c.setPointerCapture(e.pointerId); } catch(_){}
+                                        };
+                                        const onMove = (e) => {
+                                            if (!stepDrawingRef.current || !stepStrokeRef.current) return;
+                                            const c = stepCanvasRef.current; if (!c) return;
+                                            e.preventDefault();
+                                            const rect = c.getBoundingClientRect();
+                                            const rawX = e.clientX - rect.left;
+                                            const rawY = e.clientY - rect.top;
+                                            stepStrokeRef.current.points.push({x: rawX, y: rawY});
+                                            const ctx = c.getContext('2d');
+                                            ctx.lineTo(rawX, rawY); ctx.stroke();
+                                        };
+                                        const onUp = (e) => {
+                                            if (!stepDrawingRef.current) return;
+                                            stepDrawingRef.current = false;
+                                            const stroke = stepStrokeRef.current;
+                                            stepStrokeRef.current = null;
+                                            const c = stepCanvasRef.current;
+                                            if (c) { const ctx=c.getContext('2d'); ctx.restore(); }
+                                            // Strich in State speichern → Grid-Kacheln zeigen ihn sofort
+                                            if (stroke && stroke.points.length > 1) {
+                                                setDrawnStrokes(prev => ({...prev, [sitKey]: [...(prev[sitKey]||[]), stroke]}));
+                                                setRedrawCounter(r => r + 1);
+                                            }
+                                        };
+                                        // ── Navigation ───────────────────────────────────────────
+                                        const goBack  = () => setCurrentSitStep(s => Math.max(0, s-1));
+                                        const goNext  = () => {
+                                            if (currentSitStep === SITUATION_ITEMS.length-1) {
+                                                setSitLayoutMode('grid');
+                                                setTimeout(() => setRedrawCounter(r=>r+1), 80);
+                                            } else {
+                                                setCurrentSitStep(s => s+1);
+                                            }
+                                        };
+                                        const goTo    = (i) => setCurrentSitStep(i);
+
                                         return (
                                         <div className="sit-step-overlay" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',gap:'8px',background:'#f0f6ff',zIndex:10}}>
+
+                                            {/* Fortschritts-Leiste */}
                                             <div style={{display:'flex',alignItems:'center',gap:'5px',flexShrink:0}}>
-                                                {SITUATION_ITEMS.map((it,i)=>{const sk=`sit_${it.id.replace(/\s+/g,'')}`;const f=!!(getDisplayText(it.id)||(drawnStrokes&&drawnStrokes[sk]&&drawnStrokes[sk].length));const isAct=i===currentSitStep;return <div key={i} onClick={()=>setCurrentSitStep(i)} style={{height:'6px',flex:isAct?2:1,borderRadius:'3px',cursor:'pointer',transition:'all 0.2s',background:isAct?'#2563eb':f?'#22c55e':'#e2e8f0'}}/>;  })}
+                                                {SITUATION_ITEMS.map((it,i)=>{
+                                                    const sk=STEP_KEYS[i];
+                                                    const filled=!!(getDisplayText(it.id)||(drawnStrokes[sk]&&drawnStrokes[sk].length));
+                                                    const act=i===currentSitStep;
+                                                    return <div key={i} onClick={()=>goTo(i)} style={{height:'6px',flex:act?2:1,borderRadius:'3px',cursor:'pointer',transition:'all 0.2s',background:act?'#2563eb':filled?'#22c55e':'#e2e8f0'}}/>;
+                                                })}
                                                 <span style={{fontSize:'11px',fontWeight:800,color:'#94a3b8',flexShrink:0,marginLeft:'4px'}}>{currentSitStep+1}/{SITUATION_ITEMS.length}</span>
                                             </div>
+
+                                            {/* Eingabe-Karte */}
                                             <div style={{flex:1,display:'flex',flexDirection:'column',borderRadius:'16px',overflow:'hidden',border:'2px solid #2563eb',boxShadow:'0 4px 20px rgba(37,99,235,0.12)',background:'#ffffff',minHeight:0}}>
-                                                <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8faff'}}>
-                                                    <div style={{width:'32px',height:'32px',borderRadius:'10px',background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><Icon d={item.icon} size={16} style={{color:'#2563eb'}}/></div>
+                                                {/* Karten-Header */}
+                                                <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'12px 16px',borderBottom:'1px solid #f1f5f9',background:'#f8faff',flexShrink:0}}>
+                                                    <div style={{width:'32px',height:'32px',borderRadius:'10px',background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                                        <Icon d={item.icon} size={16} style={{color:'#2563eb'}}/>
+                                                    </div>
                                                     <div style={{flex:1,minWidth:0}}>
                                                         <div style={{fontSize:'17px',fontWeight:800,color:'#0b1e42'}}>{item.label}</div>
-                                                        {itemQuestions.length>0&&<div style={{display:'flex',gap:'6px',marginTop:'4px',flexWrap:'wrap'}}>{itemQuestions.map((q,qi)=><span key={qi} style={{fontSize:'11px',padding:'2px 8px',borderRadius:'999px',background:'#f1f5f9',color:'#64748b',fontWeight:600}}>{q}</span>)}</div>}
+                                                        {questions.length>0 && (
+                                                            <div style={{display:'flex',gap:'6px',marginTop:'4px',flexWrap:'wrap'}}>
+                                                                {questions.map((q,qi)=><span key={qi} style={{fontSize:'11px',padding:'2px 8px',borderRadius:'999px',background:'#f1f5f9',color:'#64748b',fontWeight:600}}>{q}</span>)}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <div style={{width:'12px',height:'12px',borderRadius:'50%',background:hasContent?'#22c55e':'#e2e8f0',flexShrink:0}}/>
+                                                    <div style={{width:'12px',height:'12px',borderRadius:'50%',flexShrink:0,background:hasContent?'#22c55e':'#e2e8f0'}}/>
                                                 </div>
+                                                {/* Eingabe-Fläche */}
                                                 <div style={{flex:1,position:'relative',overflow:'hidden'}}>
-                                                    {/* Linierter Hintergrund mit Notizbuch-Rand */}
-                                                    <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundImage:'repeating-linear-gradient(to bottom,transparent,transparent 31px,#e2e8f0 32px)',backgroundPosition:'0 12px',opacity:0.6,pointerEvents:'none',zIndex:1}}/>
-                                                    {/* Rand-Linie links (Notizbuch-Stil) */}
-                                                    <div style={{position:'absolute',top:0,left:'28px',bottom:0,width:'1.5px',background:'#fca5a5',opacity:0.5,pointerEvents:'none',zIndex:2}}/>
+                                                    {/* Linienpapier-Hintergrund */}
+                                                    <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(to bottom,transparent,transparent 31px,#e2e8f0 32px)',backgroundPosition:'0 14px',opacity:0.45,pointerEvents:'none',zIndex:1}}/>
                                                     {inputMode==='keyboard'
-                                                        ?<textarea value={getDisplayText(item.id)||''} onChange={e=>handleTextChange(item.id,e.target.value)} placeholder="Hier tippen..." style={{position:'absolute',top:'8px',left:'36px',right:'12px',bottom:'8px',width:'calc(100% - 48px)',height:'calc(100% - 16px)',padding:'2px 4px',fontSize:'15px',lineHeight:'32px',background:'transparent',border:'none',outline:'none',resize:'none',color:'#1e293b',zIndex:10,boxSizing:'border-box'}}/>
-                                                        /* FIX: Dedizierter stepOverlayCanvasRef mit großzügigem linken Abstand */
-                                                        :<canvas ref={stepOverlayCanvasRef} onPointerDown={e=>startDrawing(e,stepOverlayCanvasRef,sitKey)} onPointerMove={e=>draw(e,stepOverlayCanvasRef,sitKey)} onPointerUp={e=>stopDrawing(e,stepOverlayCanvasRef)} onPointerLeave={e=>stopDrawing(e,stepOverlayCanvasRef)} className="drawing-canvas" style={{position:'absolute',top:'8px',left:'36px',right:'12px',bottom:'8px',width:'calc(100% - 48px)',height:'calc(100% - 16px)',touchAction:'none',cursor:'crosshair',zIndex:10}}/>
+                                                        ? <textarea
+                                                            value={getDisplayText(item.id)||''}
+                                                            onChange={e=>handleTextChange(item.id,e.target.value)}
+                                                            placeholder="Hier tippen…"
+                                                            style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'14px 16px',fontSize:'16px',lineHeight:'32px',background:'transparent',border:'none',outline:'none',resize:'none',color:'#1e293b',zIndex:10,boxSizing:'border-box'}}
+                                                          />
+                                                        : <canvas
+                                                            ref={stepCanvasRef}
+                                                            onPointerDown={onDown}
+                                                            onPointerMove={onMove}
+                                                            onPointerUp={onUp}
+                                                            onPointerLeave={onUp}
+                                                            onPointerCancel={onUp}
+                                                            className="drawing-canvas"
+                                                            style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10,display:'block'}}
+                                                          />
                                                     }
                                                 </div>
                                             </div>
+
+                                            {/* Navigation */}
                                             <div style={{display:'flex',gap:'8px',flexShrink:0}}>
-                                                <button onClick={()=>{
-                                                    // FIX: Laufenden Stroke vor Navigation abschließen
-                                                    if(isDrawingRef.current && stepOverlayCanvasRef.current) stopDrawing({pointerId:null,pointerType:'pen',preventDefault:()=>{}},stepOverlayCanvasRef);
-                                                    setCurrentSitStep(s=>Math.max(0,s-1));
-                                                }} disabled={currentSitStep===0} style={{flex:1,height:'46px',borderRadius:'12px',border:'1.5px solid #e2e8f0',background:currentSitStep===0?'#f8fafc':'#fff',color:currentSitStep===0?'#cbd5e1':'#374151',fontSize:'14px',fontWeight:700,cursor:currentSitStep===0?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
+                                                <button onClick={goBack} disabled={currentSitStep===0}
+                                                    style={{flex:1,height:'46px',borderRadius:'12px',border:'1.5px solid #e2e8f0',background:currentSitStep===0?'#f8fafc':'#fff',color:currentSitStep===0?'#cbd5e1':'#374151',fontSize:'14px',fontWeight:700,cursor:currentSitStep===0?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
                                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>Zurück
                                                 </button>
-                                                <div style={{display:'flex',gap:'4px',alignItems:'center'}}>{SITUATION_ITEMS.map((_,i)=><div key={i} onClick={()=>{
-                                                    if(isDrawingRef.current && stepOverlayCanvasRef.current) stopDrawing({pointerId:null,pointerType:'pen',preventDefault:()=>{}},stepOverlayCanvasRef);
-                                                    setCurrentSitStep(i);
-                                                }} style={{width:i===currentSitStep?22:8,height:'8px',borderRadius:'4px',background:i===currentSitStep?'#2563eb':'#e2e8f0',cursor:'pointer',transition:'all 0.15s'}}/>)}</div>
-                                                <button onClick={()=>{
-                                                    // FIX: Laufenden Stroke vor Navigation abschließen
-                                                    if(isDrawingRef.current && stepOverlayCanvasRef.current) stopDrawing({pointerId:null,pointerType:'pen',preventDefault:()=>{}},stepOverlayCanvasRef);
-                                                    if(currentSitStep===SITUATION_ITEMS.length-1) setSitLayoutMode('grid'); else setCurrentSitStep(s=>s+1);
-                                                }} style={{flex:1,height:'46px',borderRadius:'12px',border:'none',background:currentSitStep===SITUATION_ITEMS.length-1?'#16a34a':'#2563eb',color:'white',fontSize:'14px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',boxShadow:'0 2px 8px rgba(37,99,235,0.3)'}}>
-                                                    {currentSitStep===SITUATION_ITEMS.length-1?'✓ Fertig':'Weiter'}{currentSitStep<SITUATION_ITEMS.length-1&&<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
+                                                <div style={{display:'flex',gap:'4px',alignItems:'center'}}>
+                                                    {SITUATION_ITEMS.map((_,i)=>(
+                                                        <div key={i} onClick={()=>goTo(i)} style={{width:i===currentSitStep?22:8,height:'8px',borderRadius:'4px',cursor:'pointer',transition:'all 0.15s',background:i===currentSitStep?'#2563eb':'#e2e8f0'}}/>
+                                                    ))}
+                                                </div>
+                                                <button onClick={goNext}
+                                                    style={{flex:1,height:'46px',borderRadius:'12px',border:'none',background:currentSitStep===SITUATION_ITEMS.length-1?'#16a34a':'#2563eb',color:'white',fontSize:'14px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',boxShadow:'0 2px 8px rgba(37,99,235,0.3)'}}>
+                                                    {currentSitStep===SITUATION_ITEMS.length-1?'✓ Fertig':'Weiter'}
+                                                    {currentSitStep<SITUATION_ITEMS.length-1 && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>}
                                                 </button>
                                             </div>
                                         </div>);
@@ -9834,6 +9943,8 @@ const handlePDFShare = async () => {
                           )
                         : null
                     }
+                    {/* Anlage-HTML direkt cachen — zuverlässiger als Closure-Bridge */}
+                    {(window.__anlageHtml = (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched) ? buildPage3Html() : '', null)}
 
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
                         {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
@@ -9897,16 +10008,8 @@ const handlePDFShare = async () => {
     const off = document.querySelector('.print-offer-view');
     if (off) off.prepend(mkHeader('Ihr Persönliches Angebot'));
 
-    // Seite 3 Header — ins Portal-Element in document.body
-    const p3 = document.querySelector('.print-netzwerk-anlage');
-    if (p3 && !p3.querySelector('.print-page-header')) {
-        const h3 = mkHeader('Netzwerk-Empfehlung · Persönliche Anlage');
-        h3.style.cssText += ';position:absolute;top:10px;left:20px;right:20px;width:auto;z-index:10;margin:0;';
-        p3.style.position = 'relative';
-        p3.insertBefore(h3, p3.firstChild);
-    }
+    // Seite 3 hat bereits einen eingebauten Header in buildPage3Html — kein extra Header nötig
 };
-
             window.addEventListener('beforeprint', ensurePrintHeaders);
 
             // === PRINT: Kacheln kompakter machen (überschreibt Inline-Styles) ===
