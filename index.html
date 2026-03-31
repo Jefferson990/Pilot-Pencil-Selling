@@ -7588,7 +7588,9 @@ const SHARE_DOC_WIDTH_PX   = SHARE_PAGE_WIDTH_PX;
 const SHARE_SAFE_SCALE     = 1.0; // keep size; CSS share-mode adds its own safety // extra safety to prevent any right-edge clipping
 const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: pushes PDF content down (px). Increase if top is too tight.
 
-    try { if (typeof ensurePrintHeaders === 'function') ensurePrintHeaders(); } catch(e){}
+    // ensurePrintHeaders() wird hier NICHT aufgerufen — der PDF-Share baut eigene
+    // Seiten-Header via makeShareHeader(). Ein Aufruf hier würde den echten DOM
+    // modifizieren und React nach dem Cleanup desynchonisieren → nächster Papier-Druck leer.
 
     const sourceSituation = document.querySelector('.situation-view-wrapper');
     const sourceOffer = document.querySelector('.print-offer-view');
@@ -8779,7 +8781,6 @@ const opt = {
     } finally {
         try { document.body.classList.remove('exporting'); } catch(e){}
         try { document.body.removeChild(iframe); } catch(e){}
-        try { document.querySelectorAll('.print-page-header').forEach(el => el.remove()); } catch(e){}
     }
 };
 
@@ -8956,8 +8957,8 @@ const handlePDFShare = async () => {
         } catch (e2) {}
         try { triggerToast('Teilen/Export nicht möglich.'); } catch(e){}
     } finally {
-        try { document.querySelectorAll('.print-page-header').forEach(el => el.remove()); } catch(e){}
         hideOverlay();
+        try { document.body.classList.remove('exporting'); } catch(e){}
     }
 };
 
