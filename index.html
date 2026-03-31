@@ -3877,6 +3877,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             const [prevTV,     setPrevTV]     = useState('');
             const [prevHD,     setPrevHD]     = useState('');
             const [prevStream, setPrevStream] = useState('');
+            const [selectedCol, setSelectedCol] = useState(null);
 
             if (!isOpen) return null;
 
@@ -3884,7 +3885,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 
             const providerData = {
                 o2: {
-                    label: 'o2 TV XL', color: '#003CA6',
+                    label: 'o2 TV XL', color: '#003CA6', colorLight: '#EEF3FF',
                     tagline: 'Bei o2 TV XL immer dabei:',
                     features: ['Über 150 Sender in HD','Kostenlose Mediathek','Für zuhause und unterwegs','Sendung neu starten & aufnehmen'],
                     rows: [
@@ -3893,190 +3894,194 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                         { icon:'🎬', label:'Netflix',                   range:'4,99 – 19,99 €', tarif:{ s:4.99,  m:4.99,  xl:6.99  } },
                     ],
                     cols: [
-                        { id:'s',  label:'o2 TV Netflix Standard', sub:'mit Werbung',  checks:[true, false, true] },
-                        { id:'m',  label:'o2 TV Netflix Standard', sub:'ohne Werbung', checks:[true, false, true] },
-                        { id:'xl', label:'o2 TV Netflix Premium',  sub:'',             checks:[true, true,  true] },
+                        { id:'s',  label:'Standard', sub:'mit Werbung',    checks:[true,false,true],  badge:null },
+                        { id:'m',  label:'Standard', sub:'ohne Werbung',   checks:[true,false,true],  badge:null },
+                        { id:'xl', label:'Premium',  sub:'Netflix Premium',checks:[true,true, true],  badge:'⭐ Empfohlen' },
                     ],
                     totals:{ s:12.99, m:19.99, xl:24.99 }, recommended:'xl',
                 },
                 telekom: {
-                    label: 'MagentaTV', color: '#E2007A',
+                    label: 'MagentaTV', color: '#E2007A', colorLight: '#FFF0F8',
                     tagline: 'Bei MagentaTV immer dabei:',
                     features: ['Über 180 Sender (167 in HD)','MagentaTV+ Mediathek','Für zuhause und unterwegs','Restart & Aufnahme-Funktion'],
                     rows: [
-                        { icon:'🔌', label:'Tarif- & Anschlusskosten', range:'7 – 30 €',   tarif:{ flex:11, smart:7,  mega:30 } },
-                        { icon:'🎬', label:'Netflix',                   range:'enthalten',  tarif:{ flex:0,  smart:0,  mega:0  } },
-                        { icon:'🎥', label:'Disney+',                   range:'enthalten',  tarif:{ flex:0,  smart:0,  mega:0  } },
+                        { icon:'🔌', label:'Tarif- & Anschlusskosten', range:'7 – 30 €',  tarif:{ flex:11, smart:7,  mega:30 } },
+                        { icon:'🎬', label:'Netflix',                   range:'enthalten', tarif:{ flex:0,  smart:0,  mega:0  } },
+                        { icon:'🎥', label:'Disney+',                   range:'enthalten', tarif:{ flex:0,  smart:0,  mega:0  } },
                     ],
                     cols: [
-                        { id:'flex',  label:'MagentaTV Flex',       sub:'monatl. kündbar', checks:[true, false, false] },
-                        { id:'smart', label:'MagentaTV Smart',      sub:'+ RTL+ Premium',  checks:[true, false, false] },
-                        { id:'mega',  label:'MagentaTV MegaStream', sub:'All-Inclusive',   checks:[true, true,  true ] },
+                        { id:'flex',  label:'Flex',       sub:'monatl. kündbar', checks:[true,false,false], badge:null },
+                        { id:'smart', label:'Smart',      sub:'+ RTL+ Premium',  checks:[true,false,false], badge:'⭐ Empfohlen' },
+                        { id:'mega',  label:'MegaStream', sub:'All-Inclusive',   checks:[true,true, true],  badge:null },
                     ],
                     totals:{ flex:11, smart:7, mega:30 }, recommended:'smart',
                 },
                 vodafone: {
-                    label: 'Giga TV', color: '#E50000',
+                    label: 'Giga TV', color: '#E50000', colorLight: '#FFF0F0',
                     tagline: 'Bei Giga TV immer dabei:',
                     features: ['82 Sender (57 in HD)','4K-fähig','GigaTV Mobile App','Restart & Aufnahme'],
                     rows: [
                         { icon:'🔌', label:'Tarif- & Anschlusskosten', range:'9,99 – 14,99 €', tarif:{ s:9.99, m:14.99, xl:14.99 } },
-                        { icon:'📡', label:'Vodafone Premium',          range:'9,99 €',          tarif:{ s:0,    m:0,     xl:9.99  } },
-                        { icon:'🎬', label:'Netflix (optional)',         range:'ab 4,99 €',       tarif:{ s:0,    m:0,     xl:4.99  } },
+                        { icon:'📡', label:'Vodafone Premium',          range:'9,99 €',         tarif:{ s:0,    m:0,     xl:9.99  } },
+                        { icon:'🎬', label:'Netflix (optional)',         range:'ab 4,99 €',      tarif:{ s:0,    m:0,     xl:4.99  } },
                     ],
                     cols: [
-                        { id:'s',  label:'GigaTV Home',     sub:'1.–6. Monat',   checks:[true, false, false] },
-                        { id:'m',  label:'GigaTV Home',     sub:'ab 7. Monat',   checks:[true, false, false] },
-                        { id:'xl', label:'GigaTV + Premium',sub:'inkl. Netflix', checks:[true, true,  true ] },
+                        { id:'s',  label:'Home',     sub:'1.–6. Monat',   checks:[true,false,false], badge:null },
+                        { id:'m',  label:'Home',     sub:'ab 7. Monat',   checks:[true,false,false], badge:'⭐ Empfohlen' },
+                        { id:'xl', label:'+Premium', sub:'inkl. Netflix', checks:[true,true, true],  badge:null },
                     ],
                     totals:{ s:9.99, m:14.99, xl:29.97 }, recommended:'m',
                 },
             };
 
-            const pd        = providerData[provider];
+            const pd = providerData[provider];
+            const activeCol = selectedCol || pd.recommended;
             const prevTotal = parse(prevTV) + parse(prevHD) + parse(prevStream);
-            const recTotal  = pd.totals[pd.recommended];
+            const recTotal  = pd.totals[activeCol];
+            const recCol    = pd.cols.find(c => c.id === activeCol);
             const ersparnis = prevTotal > 0 ? (prevTotal - recTotal) : null;
-            const recCol    = pd.cols.find(c => c.id === pd.recommended);
+            const providers = [{id:'o2',label:'o2 TV',color:'#003CA6'},{id:'telekom',label:'MagentaTV',color:'#E2007A'},{id:'vodafone',label:'Giga TV',color:'#E50000'}];
 
             return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 animate-in fade-in duration-200">
-                    <div className="bg-white w-full rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200" style={{maxWidth:'800px', maxHeight:'95vh'}}>
+                <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(15,23,42,0.65)',backdropFilter:'blur(8px)',padding:'16px'}}>
+                  <div style={{background:'#ffffff',width:'100%',maxWidth:'820px',maxHeight:'92vh',borderRadius:'24px',boxShadow:'0 32px 80px rgba(0,0,0,0.25)',overflow:'hidden',display:'flex',flexDirection:'column',border:'1px solid #e2e8f0'}}>
 
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-slate-50 rounded-t-2xl shrink-0">
-                            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                <Icon d={ICONS.Tv} size={20} className="text-blue-600"/> TV Preisvergleich
-                            </h2>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition-colors">
-                                <Icon d={ICONS.X} size={18}/>
-                            </button>
+                    {/* HEADER */}
+                    <div style={{padding:'20px 24px 16px',borderBottom:'1px solid #f1f5f9',background:'#fafcff',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                        <div style={{width:'40px',height:'40px',borderRadius:'12px',background:'linear-gradient(135deg,#3b82f6,#6366f1)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                          <Icon d={ICONS.Tv} size={20} style={{color:'white'}}/>
                         </div>
-
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="flex gap-0 px-5 pt-4 border-b border-slate-200">
-                                {[{id:'o2',label:'o2 TV'},{id:'telekom',label:'MagentaTV'},{id:'vodafone',label:'Giga TV'}].map(p => (
-                                    <button key={p.id} onClick={() => setProvider(p.id)}
-                                        className={`px-5 py-2.5 font-black text-sm border-b-2 transition-all ${provider===p.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-                                        {p.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="p-5 flex flex-col gap-4">
-                                <div className="flex gap-3 items-stretch">
-                                    <div className="rounded-xl px-5 py-4 text-white font-black text-xl flex items-center justify-center shrink-0" style={{background: pd.color, minWidth:'110px'}}>
-                                        {pd.label}
-                                    </div>
-                                    <div className="flex-1 border border-slate-200 rounded-xl p-3 bg-slate-50">
-                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">{pd.tagline}</div>
-                                        <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                                            {pd.features.map((f,i) => (
-                                                <div key={i} className="flex items-start gap-1.5 text-[11px] text-slate-600 font-medium">
-                                                    <span className="font-black shrink-0 mt-px" style={{color: pd.color}}>✓</span>{f}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                                    <table className="w-full text-[11px] border-collapse">
-                                        <thead>
-                                            <tr className="bg-slate-50 border-b-2 border-slate-200">
-                                                <th className="text-left px-3 py-3 font-black text-slate-500 w-40"> </th>
-                                                <th className="text-center px-3 py-3 font-black text-slate-600 border-l border-slate-200 w-28">
-                                                    <div>Bisherige</div><div>Ausgaben</div>
-                                                </th>
-                                                {pd.cols.map((col,i) => (
-                                                    <th key={i} className={`text-center px-2 py-3 font-black border-l border-slate-200 ${col.id===pd.recommended ? 'text-blue-800' : 'text-slate-600'}`}
-                                                        style={col.id===pd.recommended ? {background: pd.color+'15'} : {}}>
-                                                        <div className="text-[11px]">{col.label}</div>
-                                                        {col.sub && <div className="text-[9px] font-semibold text-slate-400 mt-0.5">{col.sub}</div>}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {pd.rows.map((row, ri) => (
-                                                <tr key={ri} className="border-b border-slate-100">
-                                                    <td className="px-3 py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-base">{row.icon}</span>
-                                                            <div>
-                                                                <div className="font-bold text-slate-700 text-[11px]">{row.label}</div>
-                                                                <div className="text-[9px] text-slate-400 font-semibold">{row.range}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-2 py-3 border-l border-slate-200 text-center">
-                                                        <input type="text" inputMode="decimal" placeholder="0 €"
-                                                            value={ri===0 ? prevTV : ri===1 ? prevHD : prevStream}
-                                                            onChange={e => { if(ri===0) setPrevTV(e.target.value); else if(ri===1) setPrevHD(e.target.value); else setPrevStream(e.target.value); }}
-                                                            className="w-20 h-8 border border-slate-300 rounded-lg px-2 text-[11px] text-center focus:ring-1 focus:ring-blue-300 focus:outline-none bg-white font-semibold"
-                                                        />
-                                                    </td>
-                                                    {pd.cols.map((col,ci) => (
-                                                        <td key={ci} className="px-2 py-3 border-l border-slate-100 text-center"
-                                                            style={col.id===pd.recommended ? {background: pd.color+'08'} : {}}>
-                                                            {col.checks[ri]
-                                                                ? <div>
-                                                                    <span className="text-xl font-black" style={{color: pd.color}}>✓</span>
-                                                                    {row.tarif[col.id] > 0 && <div className="text-[9px] text-slate-400 font-semibold mt-0.5">{row.tarif[col.id].toFixed(2)} €</div>}
-                                                                  </div>
-                                                                : <span className="text-slate-200 text-xl font-bold">—</span>
-                                                            }
-                                                        </td>
-                                                    ))}
-                                                </tr>
-                                            ))}
-                                            <tr className="border-t-2 border-slate-300 bg-slate-50">
-                                                <td className="px-3 py-3 font-black text-slate-700 text-[11px]">Mtl. Gesamtkosten TV & Streaming</td>
-                                                <td className="px-2 py-3 border-l border-slate-200 text-center font-black text-slate-700">
-                                                    {prevTotal > 0 ? prevTotal.toFixed(2)+' €' : <span className="text-slate-300 font-normal">—</span>}
-                                                </td>
-                                                {pd.cols.map((col,ci) => (
-                                                    <td key={ci} className="px-2 py-3 border-l border-slate-200 text-center font-black text-[12px]"
-                                                        style={col.id===pd.recommended ? {background: pd.color+'15', color: pd.color} : {color:'#334155'}}>
-                                                        {pd.totals[col.id].toFixed(2)} €
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="border-2 rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap"
-                                    style={{borderColor: pd.color+'66', background: pd.color+'08'}}>
-                                    <div className="text-[12px] text-slate-700 leading-relaxed flex-1">
-                                        <span className="font-black" style={{color: pd.color}}>Empfehlung: </span>
-                                        <span className="font-bold">{recCol ? recCol.label : ''}</span>
-                                        {recCol && recCol.sub && <span className="text-slate-500"> ({recCol.sub})</span>}
-                                        {' '}für <strong>{recTotal.toFixed(2)} €</strong> mtl.
-                                        {ersparnis !== null && ersparnis > 0 && (
-                                            <span className="text-emerald-700 font-black"> · Ersparnis: {ersparnis.toFixed(2)} €/Mon.</span>
-                                        )}
-                                        {ersparnis !== null && ersparnis <= 0 && (
-                                            <span className="text-amber-600 font-semibold"> · Bereits günstig aufgestellt</span>
-                                        )}
-                                    </div>
-                                    <button onClick={() => { if(onUebernehmen) onUebernehmen(recTotal.toFixed(2)); }}
-                                        className="px-4 py-2.5 text-white font-black rounded-xl shadow text-[12px] flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity"
-                                        style={{background: pd.color}}>
-                                        <Icon d={ICONS.CheckCircle} size={15}/> {recTotal.toFixed(2)} € übernehmen
-                                    </button>
-                                </div>
-                            </div>
+                        <div>
+                          <div style={{fontSize:'17px',fontWeight:900,color:'#0b1e42',letterSpacing:'-0.02em'}}>TV Preisvergleich</div>
+                          <div style={{fontSize:'11px',color:'#94a3b8',fontWeight:600}}>Anbieter vergleichen & Tarif auswählen</div>
                         </div>
-
-                        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-between items-center shrink-0">
-                            <span className="text-[10px] text-slate-400">Preise ohne Gewähr · Stand März 2026</span>
-                            <button onClick={onClose} className="px-5 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors text-sm">Schließen</button>
-                        </div>
+                      </div>
+                      <button onClick={onClose} style={{width:'36px',height:'36px',borderRadius:'50%',border:'1px solid #e2e8f0',background:'#f8fafc',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#64748b'}}>
+                        <Icon d={ICONS.X} size={16}/>
+                      </button>
                     </div>
+
+                    {/* PROVIDER TABS */}
+                    <div style={{display:'flex',gap:'4px',padding:'12px 24px 0',background:'#fafcff',flexShrink:0,borderBottom:'1px solid #f1f5f9'}}>
+                      {providers.map(p => (
+                        <button key={p.id} onClick={() => { setProvider(p.id); setSelectedCol(null); }}
+                          style={{padding:'8px 20px',borderRadius:'10px 10px 0 0',fontWeight:800,fontSize:'13px',cursor:'pointer',border:'none',transition:'all 0.15s',
+                            background: provider===p.id ? '#ffffff' : 'transparent',
+                            color: provider===p.id ? p.color : '#94a3b8',
+                            boxShadow: provider===p.id ? '0 -2px 0 0 '+p.color+' inset' : 'none',
+                            borderTop: provider===p.id ? '2px solid '+p.color : '2px solid transparent',
+                            outline:'none'}}>
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* CONTENT */}
+                    <div style={{flex:1,overflowY:'auto',padding:'20px 24px',display:'flex',flexDirection:'column',gap:'16px'}}>
+
+                      {/* Provider Hero */}
+                      <div style={{borderRadius:'16px',padding:'14px 18px',display:'flex',alignItems:'center',gap:'16px',background:pd.colorLight,border:'1.5px solid '+pd.color+'33'}}>
+                        <div style={{borderRadius:'12px',padding:'10px 16px',background:pd.color,color:'white',fontWeight:900,fontSize:'16px',flexShrink:0,textAlign:'center',lineHeight:1.2,minWidth:'90px'}}>
+                          {pd.label}
+                        </div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:'10px',fontWeight:800,color:pd.color,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:'6px'}}>{pd.tagline}</div>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'3px 14px'}}>
+                            {pd.features.map((f,i) => (
+                              <div key={i} style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'11px',color:'#374151',fontWeight:600}}>
+                                <span style={{color:pd.color,fontWeight:900}}>✓</span>{f}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cards Grid */}
+                      <div style={{display:'grid',gridTemplateColumns:'180px repeat('+pd.cols.length+', 1fr)',gap:'10px',alignItems:'stretch'}}>
+
+                        {/* Bisherige Kosten Spalte */}
+                        <div style={{borderRadius:'14px',border:'2px dashed #e2e8f0',padding:'14px',display:'flex',flexDirection:'column',background:'#f8fafc',gap:'8px'}}>
+                          <div style={{fontSize:'10px',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em',textAlign:'center'}}>Bisherige Ausgaben</div>
+                          {pd.rows.map((row,ri) => (
+                            <div key={ri} style={{display:'flex',flexDirection:'column',gap:'3px'}}>
+                              <div style={{fontSize:'9px',color:'#94a3b8',fontWeight:700,display:'flex',alignItems:'center',gap:'4px'}}>
+                                <span>{row.icon}</span>{row.label}
+                              </div>
+                              <input type="text" inputMode="decimal" placeholder="0 €"
+                                value={ri===0 ? prevTV : ri===1 ? prevHD : prevStream}
+                                onChange={e => { if(ri===0) setPrevTV(e.target.value); else if(ri===1) setPrevHD(e.target.value); else setPrevStream(e.target.value); }}
+                                style={{width:'100%',height:'32px',border:'1.5px solid #e2e8f0',borderRadius:'8px',padding:'0 8px',fontSize:'12px',textAlign:'center',fontWeight:700,background:'white',outline:'none',boxSizing:'border-box'}}
+                              />
+                            </div>
+                          ))}
+                          <div style={{marginTop:'auto',padding:'8px',borderRadius:'8px',background:'#f1f5f9',textAlign:'center'}}>
+                            <div style={{fontSize:'9px',color:'#94a3b8',fontWeight:700,marginBottom:'2px'}}>GESAMT</div>
+                            <div style={{fontSize:'15px',fontWeight:900,color:'#334155'}}>{prevTotal > 0 ? prevTotal.toFixed(2)+' €' : '—'}</div>
+                          </div>
+                        </div>
+
+                        {/* Tarif-Karten */}
+                        {pd.cols.map(col => {
+                          const isActive = col.id === activeCol;
+                          return (
+                            <button key={col.id} onClick={() => setSelectedCol(col.id)}
+                              style={{borderRadius:'14px',border:'2px solid '+(isActive ? pd.color : '#e2e8f0'),padding:'14px',display:'flex',flexDirection:'column',gap:'8px',background:isActive ? pd.colorLight : '#ffffff',cursor:'pointer',textAlign:'left',transition:'all 0.15s',boxShadow:isActive ? '0 4px 16px '+pd.color+'22' : 'none',outline:'none'}}>
+                              <div>
+                                {col.badge && <div style={{display:'inline-block',background:pd.color,color:'white',fontSize:'9px',fontWeight:800,padding:'2px 8px',borderRadius:'999px',marginBottom:'5px'}}>{col.badge}</div>}
+                                <div style={{fontSize:'13px',fontWeight:900,color:isActive ? pd.color : '#1e293b',lineHeight:1.2}}>{col.label}</div>
+                                {col.sub && <div style={{fontSize:'10px',color:'#64748b',fontWeight:600,marginTop:'2px'}}>{col.sub}</div>}
+                              </div>
+                              <div style={{display:'flex',flexDirection:'column',gap:'5px',flex:1}}>
+                                {pd.rows.map((row,ri) => (
+                                  <div key={ri} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 8px',borderRadius:'7px',background:col.checks[ri] ? (isActive ? pd.color+'15' : '#f8fafc') : '#f8fafc'}}>
+                                    {col.checks[ri] ? (
+                                      <>
+                                        <span style={{fontSize:'13px',fontWeight:900,color:pd.color}}>✓</span>
+                                        <span style={{fontSize:'10px',fontWeight:700,color:'#475569'}}>{row.tarif[col.id] > 0 ? row.tarif[col.id].toFixed(2)+' €' : 'inkl.'}</span>
+                                      </>
+                                    ) : (
+                                      <span style={{fontSize:'15px',color:'#cbd5e1',margin:'0 auto'}}>—</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{padding:'10px',borderRadius:'10px',background:isActive ? pd.color : '#f1f5f9',textAlign:'center',marginTop:'auto'}}>
+                                <div style={{fontSize:'9px',fontWeight:800,color:isActive ? 'rgba(255,255,255,0.7)' : '#94a3b8',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:'2px'}}>mtl. gesamt</div>
+                                <div style={{fontSize:'17px',fontWeight:900,color:isActive ? 'white' : '#334155'}}>{pd.totals[col.id].toFixed(2)} €</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Empfehlung Bar */}
+                      <div style={{borderRadius:'16px',padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'16px',flexWrap:'wrap',background:'linear-gradient(135deg,'+pd.color+'18,'+pd.color+'08)',border:'2px solid '+pd.color+'33'}}>
+                        <div style={{flex:1,minWidth:'200px'}}>
+                          <div style={{fontSize:'10px',fontWeight:800,color:pd.color,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'3px'}}>{selectedCol ? 'Ausgewählt' : 'Empfehlung'}</div>
+                          <div style={{fontSize:'14px',fontWeight:900,color:'#0b1e42'}}>
+                            {recCol ? recCol.label : ''}{recCol && recCol.sub ? <span style={{fontWeight:600,color:'#64748b',fontSize:'12px'}}> · {recCol.sub}</span> : ''}
+                            <span style={{color:pd.color}}> → {recTotal.toFixed(2)} € mtl.</span>
+                          </div>
+                          {ersparnis !== null && ersparnis > 0 && <div style={{marginTop:'3px',fontSize:'11px',fontWeight:800,color:'#16a34a'}}>💰 Ersparnis: {ersparnis.toFixed(2)} €/Monat</div>}
+                          {ersparnis !== null && ersparnis <= 0 && <div style={{marginTop:'3px',fontSize:'11px',fontWeight:700,color:'#d97706'}}>⚠ Bereits gut aufgestellt</div>}
+                        </div>
+                        <button onClick={() => { if(onUebernehmen) onUebernehmen(recTotal.toFixed(2)); }}
+                          style={{padding:'12px 22px',borderRadius:'12px',background:pd.color,color:'white',fontWeight:900,fontSize:'14px',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',boxShadow:'0 4px 14px '+pd.color+'44',flexShrink:0,outline:'none'}}>
+                          <Icon d={ICONS.CheckCircle} size={16}/> {recTotal.toFixed(2)} € übernehmen
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* FOOTER */}
+                    <div style={{padding:'12px 24px',borderTop:'1px solid #f1f5f9',background:'#fafcff',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+                      <span style={{fontSize:'10px',color:'#94a3b8',fontWeight:500}}>Preise ohne Gewähr · Stand März 2026</span>
+                      <button onClick={onClose} style={{padding:'7px 18px',borderRadius:'10px',border:'1.5px solid #e2e8f0',background:'white',color:'#64748b',fontWeight:700,fontSize:'13px',cursor:'pointer',outline:'none'}}>Schließen</button>
+                    </div>
+                  </div>
                 </div>
             );
         };
-
 
 const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, targetKey = 'offer1' }) => {
     const iframeRef = useRef(null);
