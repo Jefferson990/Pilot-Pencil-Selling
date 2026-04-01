@@ -2207,6 +2207,26 @@ body.pdf-share-mode .sit-card-grid {
 </style>
 
 <style>
+/* ===== SPARRECHNER: Einblend-Animation ===== */
+@keyframes savings-pop {
+    0%   { opacity: 0; transform: scale(0.88) translateY(10px); }
+    60%  { transform: scale(1.03) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes savings-shine {
+    0%   { left: -120%; }
+    100% { left: 120%; }
+}
+.savings-badge-shine::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 60px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+    animation: savings-shine 2.4s ease-in-out 0.6s infinite;
+    pointer-events: none;
+}
+
 /* Chips im Druck ausblenden */
 @media print {
     .sit-question-chips { display:none !important; }
@@ -4066,7 +4086,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                           {ersparnis !== null && ersparnis > 0 && <div style={{marginTop:'3px',fontSize:'11px',fontWeight:800,color:'#16a34a'}}>💰 Ersparnis: {ersparnis.toFixed(2)} €/Monat</div>}
                           {ersparnis !== null && ersparnis <= 0 && <div style={{marginTop:'3px',fontSize:'11px',fontWeight:700,color:'#d97706'}}>⚠ Bereits gut aufgestellt</div>}
                         </div>
-                        <button onClick={() => { if(onUebernehmen) onUebernehmen(recTotal.toFixed(2)); }}
+                        <button onClick={() => { if(onUebernehmen) onUebernehmen({ price: recTotal.toFixed(2), provider, providerLabel: pd.label, packageLabel: recCol ? recCol.label : '', packageSub: recCol ? recCol.sub : '', color: pd.color }); }}
                           style={{padding:'12px 22px',borderRadius:'12px',background:pd.color,color:'white',fontWeight:900,fontSize:'14px',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',boxShadow:'0 4px 14px '+pd.color+'44',flexShrink:0,outline:'none'}}>
                           <Icon d={ICONS.CheckCircle} size={16}/> {recTotal.toFixed(2)} € übernehmen
                         </button>
@@ -6147,6 +6167,7 @@ const handleOpenStats = () => {
             const [techUebernommen, setTechUebernommen] = useState([]);
             const [wlanSnapshot, setWlanSnapshot] = useState(null); // { floors, router, needs:[...], availableFloors:[...], floorKeys:[...], rec }
             const [netBundleMatched, setNetBundleMatched] = useState(null);
+            const [tvSnapshot, setTvSnapshot] = useState(null); // { price, provider, providerLabel, packageLabel, packageSub, color }
 
             // ── Firebase Config (gleich wie Aktionsmappe) ──
             const AM_FB_CONFIG = {
@@ -6398,11 +6419,11 @@ const fileInputRef = useRef(null);
             }, [canvasHtml.offer1, canvasHtml.offer2, canvasHtml.offer3]);
 
             // Seite-3-Daten für beforeprint bereitstellen — per Ref immer aktuell
-            const printSnap3Ref = React.useRef({ wlanSnapshot, techUebernommen, netBundleMatched });
+            const printSnap3Ref = React.useRef({ wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot });
             React.useEffect(() => {
-                printSnap3Ref.current = { wlanSnapshot, techUebernommen, netBundleMatched };
+                printSnap3Ref.current = { wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot };
                 window.__printSnap3 = printSnap3Ref.current;
-            }, [wlanSnapshot, techUebernommen, netBundleMatched]);
+            }, [wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot]);
             // PRINT-FIX: setView global verfügbar machen, damit afterprint React-Reset triggern kann
             React.useEffect(() => {
                 window.__printResetView = () => {
@@ -6437,6 +6458,7 @@ const fileInputRef = useRef(null);
                         wlanSnapshot,        // WLAN-Planer Ergebnis (Haus + Empfehlung)
                         techUebernommen,     // Übernommene Technologien
                         netBundleMatched,    // Gefundenes Netzwerk-Bundle
+                        tvSnapshot,          // TV-Paket Auswahl
                         canvasImages,        // Bilder in Canvases
                         imageTransform,      // Bild-Positionen
                     };
@@ -6444,7 +6466,7 @@ const fileInputRef = useRef(null);
                 } catch(e) {}
             }, [textData, drawnStrokes, customerType, segment, providerSelect, costState,
                 offerData, canvasStatus, wlanRecommendation, speedRecommendation, emailText, skipReason,
-                canvasHtml, wlanSnapshot, techUebernommen, netBundleMatched, canvasImages, imageTransform]);
+                canvasHtml, wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot, canvasImages, imageTransform]);
 
             const clearAutosave = () => { try { localStorage.removeItem(AUTOSAVE_KEY); } catch(e){} };
 
@@ -6495,6 +6517,7 @@ const fileInputRef = useRef(null);
                     if (snap.wlanSnapshot) setWlanSnapshot(snap.wlanSnapshot);
                     if (snap.techUebernommen) setTechUebernommen(snap.techUebernommen);
                     if (snap.netBundleMatched) setNetBundleMatched(snap.netBundleMatched);
+                    if (snap.tvSnapshot) setTvSnapshot(snap.tvSnapshot);
                     if (snap.canvasImages) setCanvasImages(snap.canvasImages);
                     if (snap.imageTransform) setImageTransform(snap.imageTransform);
                     setRedrawCounter(r => r+1);
@@ -8977,7 +9000,8 @@ const handlePDFShare = async () => {
                 const ws = wlanSnapshot;
                 const techs = techUebernommen || [];
                 const nb = netBundleMatched;
-                if (!ws && techs.length === 0 && !nb) return '';
+                const tv = tvSnapshot;
+                if (!ws && techs.length === 0 && !nb && !tv) return '';
 
                 // WLAN-Haus SVG aufbauen
                 let wlanCardHtml = '';
@@ -9096,11 +9120,41 @@ const handlePDFShare = async () => {
                       </div>`;
                 }
 
-                const cards = [wlanCardHtml, techCardHtml, nbCardHtml].filter(Boolean);
-                const gridCols = cards.length === 3 ? '1fr 1fr 1fr' : cards.length === 2 ? '1fr 1fr' : '1fr';
-                // Scale: passt den Inhalt automatisch auf 1 Seite an — egal wie viele Karten
-                // transform:scale statt zoom → funktioniert in Chrome UND Firefox
-                const z = cards.length === 3 ? 0.78 : cards.length === 2 ? 0.88 : 1.0;
+                // TV-Karte
+                let tvCardHtml = '';
+                if (tv) {
+                    const tvColor = tv.color || '#7c3aed';
+                    const tvColorLight = tv.provider === 'o2' ? '#EEF3FF' : tv.provider === 'telekom' ? '#FFF0F8' : tv.provider === 'vodafone' ? '#FFF0F0' : '#f5f3ff';
+                    tvCardHtml = `
+                      <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(145deg,${tvColorLight},#ffffff 80%);border-radius:20px;padding:28px 24px;border:1.5px solid ${tvColor}44;position:relative;overflow:hidden">
+                        <div style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,${tvColor}22,transparent 70%);pointer-events:none"></div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+                          <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:30px;height:30px;border-radius:8px;background:${tvColor};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                          </div>
+                          <div>
+                            <div style="font-size:13px;font-weight:900;color:#1e293b;letter-spacing:-0.01em">TV-Paket</div>
+                            <div style="font-size:10px;font-weight:600;" style="color:${tvColor}">Gewählter Anbieter & Tarif</div>
+                          </div>
+                        </div>
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:${tvColor};border-radius:14px;padding:14px 18px;text-align:center;margin-bottom:14px">
+                          <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:6px">${tv.providerLabel}</div>
+                          <div style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.02em;line-height:1.15">${tv.packageLabel}</div>
+                          ${tv.packageSub ? `<div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:4px;font-weight:600">${tv.packageSub}</div>` : ''}
+                        </div>
+                        <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:${tvColor}18;border-radius:12px;padding:12px 16px;text-align:center;border:1px solid ${tvColor}33">
+                          <div style="font-size:10px;font-weight:700;color:${tvColor};margin-bottom:3px;text-transform:uppercase;letter-spacing:0.08em">Monatlicher Preis</div>
+                          <div style="display:flex;align-items:baseline;justify-content:center;gap:4px">
+                            <span style="font-size:36px;font-weight:900;color:${tvColor};letter-spacing:-0.04em;line-height:1">${tv.price}</span>
+                            <span style="font-size:13px;font-weight:700;color:${tvColor}">€/Monat</span>
+                          </div>
+                        </div>
+                      </div>`;
+                }
+
+                const cards = [wlanCardHtml, techCardHtml, nbCardHtml, tvCardHtml].filter(Boolean);
+                const gridCols = cards.length === 4 ? '1fr 1fr 1fr 1fr' : cards.length === 3 ? '1fr 1fr 1fr' : cards.length === 2 ? '1fr 1fr' : '1fr';
+                const z = cards.length >= 4 ? 0.68 : cards.length === 3 ? 0.78 : cards.length === 2 ? 0.88 : 1.0;
                 const invW = Math.round(10000/z)/100;
 
                 return `
@@ -9167,7 +9221,7 @@ const handlePDFShare = async () => {
                     <SpeedModal isOpen={showSpeedModal} onClose={() => setShowSpeedModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setSpeedRecommendation(rec)} />
                     <TechModal isOpen={showTechModal} onClose={() => toggleTech(false)} checkedTechs={checkedTechs} setCheckedTechs={setCheckedTechs} onUebernehmen={(list) => { setTechUebernommen(list); triggerToast('✅ Technologien übernommen!'); }} />
                     <RoamingModal isOpen={showRoamingModal} onClose={() => setShowRoamingModal(false)} />
-                    <TvPriceModal isOpen={showTvModal} onClose={() => setShowTvModal(false)} onUebernehmen={(val) => { setCostState(prev => ({ ...prev, tv: val })); triggerToast('TV-Preis übernommen!'); setShowTvModal(false); }} />
+                    <TvPriceModal isOpen={showTvModal} onClose={() => setShowTvModal(false)} onUebernehmen={(snap) => { const val = typeof snap === 'object' ? snap.price : snap; setCostState(prev => ({ ...prev, tv: val })); if (typeof snap === 'object') setTvSnapshot(snap); triggerToast('📺 TV-Paket übernommen!'); setShowTvModal(false); setView('offer'); setViewOfferCounter(c => c + 1); }} />
                     <QuestionModal isOpen={!!activeCategory && !showAdmin} onClose={() => setActiveCategory(null)} category={activeCategory} question={getCurrentQuestion()} onNextQuestion={handleNextQuestion} />
                     <ReferralModal isOpen={showReferralModal} onClose={(mode) => {
                         setShowReferralModal(false);
@@ -9635,6 +9689,20 @@ const handlePDFShare = async () => {
                                         <span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8'}}>⚡ Auto · Gesamt</span>
                                         <span style={{fontSize:'13px',fontWeight:900,color:'#0f172a'}}>{totalCost.toFixed(2).replace('.',',')} <span style={{fontSize:'10px',color:'#64748b'}}>€</span></span>
                                     </div>
+                                    {/* Mini Savings-Hinweis in Sidebar (sichtbar sobald Angebotspreis eingegeben) */}
+                                    {(()=>{
+                                        const m1 = offerData.monatlich1 || 0;
+                                        const saving = totalCost - m1;
+                                        if(totalCost<=0||m1<=0||saving<=0.005) return null;
+                                        return(
+                                            <div style={{marginTop:'4px',padding:'5px 8px',background:'linear-gradient(135deg,#dcfce7,#bbf7d0)',borderRadius:'8px',border:'1px solid #86efac',display:'flex',alignItems:'center',gap:'5px'}}>
+                                                <span style={{fontSize:'12px'}}>💚</span>
+                                                <span style={{fontSize:'9px',fontWeight:900,color:'#14532d'}}>
+                                                    Ersparnis: <span style={{fontSize:'11px'}}>{saving.toFixed(2).replace('.',',')} €/Monat</span>
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                                 ):(
                                 <div style={{padding:'6px 10px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -9676,7 +9744,7 @@ const handlePDFShare = async () => {
                             </div>
 
                             {/* ── Elegante Fusion: WLAN + Technologien ── */}
-                            {(techUebernommen.length > 0 || wlanSnapshot) && (
+                            {(techUebernommen.length > 0 || wlanSnapshot || tvSnapshot) && (
                                 <div className="print-hide-fusion" style={{display:'flex',justifyContent:'flex-end'}}>
                                 <div style={{
                                     position:'relative',
@@ -9696,7 +9764,7 @@ const handlePDFShare = async () => {
                                         borderRadius:'22px'}}/>
 
                                     {/* ── Schließen ── */}
-                                    <button onClick={() => { setTechUebernommen([]); setWlanSnapshot(null); }}
+                                    <button onClick={() => { setTechUebernommen([]); setWlanSnapshot(null); setTvSnapshot(null); }}
                                         style={{position:'absolute',top:'10px',right:'12px',width:'22px',height:'22px',
                                         borderRadius:'50%',background:'rgba(148,163,184,0.15)',border:'1px solid rgba(148,163,184,0.25)',
                                         display:'flex',alignItems:'center',justifyContent:'center',
@@ -9880,12 +9948,82 @@ const handlePDFShare = async () => {
                                         </button>
                                     </div>
                                     )}
+                                    {/* ── TV-Paket-Chip ── */}
+                                    {tvSnapshot && (
+                                        <>
+                                        <div style={{width:'1px',alignSelf:'stretch',background:'rgba(147,197,253,0.35)',flexShrink:0,margin:'0 2px'}}/>
+                                        <div style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:'8px',justifyContent:'center',minWidth:'150px',position:'relative'}}>
+                                            <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={tvSnapshot.color||'#7c3aed'} strokeWidth="2.5" strokeLinecap="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                                                <span style={{fontSize:'9px',fontWeight:800,color:tvSnapshot.color||'#7c3aed',textTransform:'uppercase',letterSpacing:'0.10em'}}>TV-Paket</span>
+                                            </div>
+                                            <div style={{fontSize:'12px',fontWeight:800,color:'#1e293b',lineHeight:1.2}}>{tvSnapshot.providerLabel}</div>
+                                            <div style={{fontSize:'10px',fontWeight:600,color:'#64748b',lineHeight:1.3}}>{tvSnapshot.packageLabel}{tvSnapshot.packageSub ? ` · ${tvSnapshot.packageSub}` : ''}</div>
+                                            <div style={{display:'inline-flex',alignItems:'baseline',gap:'3px'}}>
+                                                <span style={{fontSize:'18px',fontWeight:900,color:tvSnapshot.color||'#7c3aed',letterSpacing:'-0.03em'}}>{tvSnapshot.price}</span>
+                                                <span style={{fontSize:'9px',fontWeight:700,color:tvSnapshot.color||'#7c3aed'}}>€/mtl.</span>
+                                            </div>
+                                            <button onClick={() => setTvSnapshot(null)}
+                                                style={{position:'absolute',top:'8px',right:'8px',width:'16px',height:'16px',borderRadius:'50%',background:'rgba(148,163,184,0.15)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#94a3b8',fontSize:'10px',fontWeight:700,lineHeight:1}}
+                                                title="TV entfernen">✕</button>
+                                        </div>
+                                        </>
+                                    )}
+
                                 </div>
                                 </div>
                             )}
 
+
+
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shrink-0 cost-overview-print"
-                                style={offerLayoutMode==='step' && currentOfferStep!==3 ? {display:'none'} : {}}>
+                                style={offerLayoutMode==='step' && currentOfferStep!==3 ? {display:'none'} : {position:'relative'}}>
+                                {/* ── Störer-Badge oben rechts ── */}
+                                {(() => {
+                                    const monthly = offerData.monatlich1 || 0;
+                                    const current = totalCost;
+                                    if (current <= 0 || monthly <= 0) return null;
+                                    const saving = current - monthly;
+                                    if (saving <= 0.005) return null;
+                                    const savingYear = saving * 12;
+                                    const hidden = offerLayoutMode === 'step' && currentOfferStep !== 3;
+                                    return (
+                                        <div className="print-hide-kosten" style={{display: hidden ? 'none' : 'flex', alignItems:'center', gap:'10px', position:'absolute', top:'-10px', right:'16px', zIndex:20, animation:'savings-pop 0.55s cubic-bezier(0.34,1.56,0.64,1)'}}>
+                                            {/* Bisher → Neu Pill */}
+                                            <div style={{display:'flex',alignItems:'center',borderRadius:'999px',overflow:'hidden',border:'1.5px solid #e2e8f0',boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}}>
+                                                <div style={{background:'#fee2e2',padding:'6px 12px',display:'flex',flexDirection:'column',alignItems:'center'}}>
+                                                    <span style={{fontSize:'7px',fontWeight:800,color:'#b91c1c',textTransform:'uppercase',letterSpacing:'0.08em',lineHeight:1}}>Bisher</span>
+                                                    <span style={{fontSize:'13px',fontWeight:900,color:'#dc2626',letterSpacing:'-0.02em',lineHeight:1.2}}>{current.toFixed(2).replace('.',',')} €</span>
+                                                </div>
+                                                <div style={{background:'#f1f5f9',padding:'6px 8px',display:'flex',alignItems:'center'}}>
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                                </div>
+                                                <div style={{background:'#dcfce7',padding:'6px 12px',display:'flex',flexDirection:'column',alignItems:'center'}}>
+                                                    <span style={{fontSize:'7px',fontWeight:800,color:'#15803d',textTransform:'uppercase',letterSpacing:'0.08em',lineHeight:1}}>Neu</span>
+                                                    <span style={{fontSize:'13px',fontWeight:900,color:'#16a34a',letterSpacing:'-0.02em',lineHeight:1.2}}>{monthly.toFixed(2).replace('.',',')} €</span>
+                                                </div>
+                                            </div>
+                                            {/* Zackenstern */}
+                                            <div style={{position:'relative',flexShrink:0,width:'80px',height:'80px'}}>
+                                                <svg viewBox="0 0 88 88" width="80" height="80" style={{position:'absolute',inset:0}}>
+                                                    <defs>
+                                                        <radialGradient id="sg2" cx="40%" cy="30%">
+                                                            <stop offset="0%" stopColor="#22c55e"/>
+                                                            <stop offset="100%" stopColor="#15803d"/>
+                                                        </radialGradient>
+                                                    </defs>
+                                                    <path d="M44 2 L49 30 L74 14 L60 38 L88 38 L67 52 L80 76 L55 63 L52 88 L44 64 L36 88 L33 63 L8 76 L21 52 L0 38 L28 38 L14 14 L39 30 Z" fill="url(#sg2)" stroke="rgba(255,255,255,0.35)" strokeWidth="1"/>
+                                                </svg>
+                                                <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'10px 6px',gap:'1px'}}>
+                                                    <span style={{fontSize:'7px',fontWeight:800,color:'rgba(187,247,208,0.9)',textTransform:'uppercase',letterSpacing:'0.05em',lineHeight:1}}>Sie sparen</span>
+                                                    <span style={{fontSize:'15px',fontWeight:900,color:'#ffffff',letterSpacing:'-0.03em',lineHeight:1.1,textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>{saving.toFixed(2).replace('.',',')}€</span>
+                                                    <span style={{fontSize:'6.5px',fontWeight:700,color:'rgba(187,247,208,0.85)',lineHeight:1}}>/&nbsp;Monat</span>
+                                                    <span style={{fontSize:'6px',fontWeight:800,color:'rgba(187,247,208,0.8)',lineHeight:1,marginTop:'1px'}}>= {savingYear.toFixed(0)} € / Jahr</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                                 <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Icon d={ICONS.Calculator} size={20} className="text-blue-600"/> {getStaticLabel('CostHeader')}</h3>
                                 <div className="grid grid-cols-3 gap-4 mt-4 cost-grid-years">
                                     {/* 1) Einmalig */}
@@ -9942,7 +10080,7 @@ const handlePDFShare = async () => {
                     </div>
 
                     {/* ── SEITE 3: Portal nach document.body — entkommt overflow:hidden des App-Wrappers ── */}
-                    {(wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched)
+                    {(wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot)
                         ? ReactDOM.createPortal(
                             <div className="print-netzwerk-anlage" dangerouslySetInnerHTML={{__html: buildPage3Html()}} />,
                             document.body
@@ -9950,7 +10088,7 @@ const handlePDFShare = async () => {
                         : null
                     }
                     {/* Anlage-HTML direkt cachen — zuverlässiger als Closure-Bridge */}
-                    {(window.__anlageHtml = (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched) ? buildPage3Html() : '', null)}
+                    {(window.__anlageHtml = (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot) ? buildPage3Html() : '', null)}
 
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
                         {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
