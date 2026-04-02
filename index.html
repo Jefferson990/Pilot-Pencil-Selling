@@ -5857,6 +5857,7 @@ function App() {
             }, [darkMode]);
             
             const [showSecondYear, setShowSecondYear] = useState(false);
+            const [beratungsId, setBeratungsId] = useState('');
 
 
             // === Mitarbeiter-Link-System (Variante A) ===
@@ -9732,6 +9733,7 @@ const handlePDFShare = async () => {
                             )}
 
                             <div className="flex flex-col gap-6 w-full md:grid md:grid-cols-3 offer-print-grid"> 
+
                                 {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }, idx) => {
                                     const orderClass = key === 'offer1' ? 'order-1' : key === 'offer2' ? 'order-2' : 'order-3';
                                     const hidden = offerLayoutMode === 'step' && currentOfferStep !== idx;
@@ -9743,9 +9745,61 @@ const handlePDFShare = async () => {
                                 })}
                             </div>
 
-                            {/* ── Elegante Fusion: WLAN + Technologien ── */}
-                            {(techUebernommen.length > 0 || wlanSnapshot || tvSnapshot) && (
-                                <div className="print-hide-fusion" style={{display:'flex',justifyContent:'flex-end'}}>
+                            {/* ── Zeile: Ersparnis links · Fusion-Box rechts ── */}
+                            {(() => {
+                                const monthly = offerData.monatlich1 || 0;
+                                const current = totalCost;
+                                const saving = (current > 0 && monthly > 0) ? current - monthly : 0;
+                                const savingYear = saving * 12;
+                                const hasSaving = saving > 0.005 && offerLayoutMode !== 'step';
+                                const hasFusion = techUebernommen.length > 0 || wlanSnapshot || tvSnapshot;
+                                if (!hasSaving && !hasFusion) return null;
+                                return (
+                                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px', minHeight: hasSaving ? '160px' : 'auto'}}>
+
+                                        {/* ── LINKS: Ersparnis ── */}
+                                        {hasSaving ? (
+                                            <div className="print-hide-kosten" style={{display:'flex', flexDirection:'row', alignItems:'center', gap:'14px', animation:'savings-pop 0.55s cubic-bezier(0.34,1.56,0.64,1)', flexShrink:0}}>
+
+                                                {/* Bisher → Neu vertikal */}
+                                                <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'8px'}}>
+                                                    <div style={{background:'#fff1f2', border:'1.5px solid #fecdd3', borderRadius:'16px', padding:'14px 20px', textAlign:'center', minWidth:'110px'}}>
+                                                        <div style={{fontSize:'8px', fontWeight:800, color:'#be123c', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'4px'}}>Bisher</div>
+                                                        <div style={{fontSize:'24px', fontWeight:900, color:'#dc2626', letterSpacing:'-0.03em', lineHeight:1}}>{current.toFixed(2).replace('.',',')} €</div>
+                                                        <div style={{fontSize:'9px', color:'#f87171', fontWeight:600, marginTop:'3px'}}>/&nbsp;Monat</div>
+                                                    </div>
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                                                    <div style={{background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:'16px', padding:'14px 20px', textAlign:'center', minWidth:'110px'}}>
+                                                        <div style={{fontSize:'8px', fontWeight:800, color:'#15803d', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'4px'}}>Neu</div>
+                                                        <div style={{fontSize:'24px', fontWeight:900, color:'#16a34a', letterSpacing:'-0.03em', lineHeight:1}}>{monthly.toFixed(2).replace('.',',')} €</div>
+                                                        <div style={{fontSize:'9px', color:'#4ade80', fontWeight:600, marginTop:'3px'}}>/&nbsp;Monat</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Zackenstern */}
+                                                <div style={{position:'relative', flexShrink:0, width:'120px', height:'120px'}}>
+                                                    <svg viewBox="0 0 120 120" width="120" height="120" style={{position:'absolute',inset:0}}>
+                                                        <defs>
+                                                            <radialGradient id="sg4" cx="40%" cy="30%">
+                                                                <stop offset="0%" stopColor="#22c55e"/>
+                                                                <stop offset="100%" stopColor="#14532d"/>
+                                                            </radialGradient>
+                                                        </defs>
+                                                        <path d="M60 4 L66 36 L95 18 L80 48 L114 48 L90 64 L105 94 L74 80 L72 116 L60 86 L48 116 L46 80 L15 94 L30 64 L6 48 L40 48 L25 18 L54 36 Z" fill="url(#sg4)" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2"/>
+                                                    </svg>
+                                                    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'18px 10px',gap:'2px'}}>
+                                                        <span style={{fontSize:'8px',fontWeight:800,color:'rgba(187,247,208,0.9)',textTransform:'uppercase',letterSpacing:'0.05em',lineHeight:1}}>Sie sparen</span>
+                                                        <span style={{fontSize:'22px',fontWeight:900,color:'#ffffff',letterSpacing:'-0.04em',lineHeight:1.1,textShadow:'0 1px 6px rgba(0,0,0,0.25)'}}>{saving.toFixed(2).replace('.',',')}€</span>
+                                                        <span style={{fontSize:'8px',fontWeight:700,color:'rgba(187,247,208,0.85)',lineHeight:1}}>/&nbsp;Monat</span>
+                                                        <span style={{fontSize:'7px',fontWeight:800,color:'rgba(187,247,208,0.8)',lineHeight:1,marginTop:'2px'}}>= {savingYear.toFixed(0)} € / Jahr</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : <div/>}
+
+                                        {/* ── RECHTS: Fusion-Box ── */}
+                                        {hasFusion && (
+                                            <div className="print-hide-fusion" style={{display:'flex', justifyContent:'flex-end', flexShrink:0}}>
                                 <div style={{
                                     position:'relative',
                                     display:'inline-flex',
@@ -9972,58 +10026,15 @@ const handlePDFShare = async () => {
 
                                 </div>
                                 </div>
-                            )}
+                                )}
 
+                                    </div>
+                                );
+                            })()}
 
 
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shrink-0 cost-overview-print"
-                                style={offerLayoutMode==='step' && currentOfferStep!==3 ? {display:'none'} : {position:'relative'}}>
-                                {/* ── Störer-Badge oben rechts ── */}
-                                {(() => {
-                                    const monthly = offerData.monatlich1 || 0;
-                                    const current = totalCost;
-                                    if (current <= 0 || monthly <= 0) return null;
-                                    const saving = current - monthly;
-                                    if (saving <= 0.005) return null;
-                                    const savingYear = saving * 12;
-                                    const hidden = offerLayoutMode === 'step' && currentOfferStep !== 3;
-                                    return (
-                                        <div className="print-hide-kosten" style={{display: hidden ? 'none' : 'flex', alignItems:'center', gap:'10px', position:'absolute', top:'-10px', right:'16px', zIndex:20, animation:'savings-pop 0.55s cubic-bezier(0.34,1.56,0.64,1)'}}>
-                                            {/* Bisher → Neu Pill */}
-                                            <div style={{display:'flex',alignItems:'center',borderRadius:'999px',overflow:'hidden',border:'1.5px solid #e2e8f0',boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}}>
-                                                <div style={{background:'#fee2e2',padding:'6px 12px',display:'flex',flexDirection:'column',alignItems:'center'}}>
-                                                    <span style={{fontSize:'7px',fontWeight:800,color:'#b91c1c',textTransform:'uppercase',letterSpacing:'0.08em',lineHeight:1}}>Bisher</span>
-                                                    <span style={{fontSize:'13px',fontWeight:900,color:'#dc2626',letterSpacing:'-0.02em',lineHeight:1.2}}>{current.toFixed(2).replace('.',',')} €</span>
-                                                </div>
-                                                <div style={{background:'#f1f5f9',padding:'6px 8px',display:'flex',alignItems:'center'}}>
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-                                                </div>
-                                                <div style={{background:'#dcfce7',padding:'6px 12px',display:'flex',flexDirection:'column',alignItems:'center'}}>
-                                                    <span style={{fontSize:'7px',fontWeight:800,color:'#15803d',textTransform:'uppercase',letterSpacing:'0.08em',lineHeight:1}}>Neu</span>
-                                                    <span style={{fontSize:'13px',fontWeight:900,color:'#16a34a',letterSpacing:'-0.02em',lineHeight:1.2}}>{monthly.toFixed(2).replace('.',',')} €</span>
-                                                </div>
-                                            </div>
-                                            {/* Zackenstern */}
-                                            <div style={{position:'relative',flexShrink:0,width:'80px',height:'80px'}}>
-                                                <svg viewBox="0 0 88 88" width="80" height="80" style={{position:'absolute',inset:0}}>
-                                                    <defs>
-                                                        <radialGradient id="sg2" cx="40%" cy="30%">
-                                                            <stop offset="0%" stopColor="#22c55e"/>
-                                                            <stop offset="100%" stopColor="#15803d"/>
-                                                        </radialGradient>
-                                                    </defs>
-                                                    <path d="M44 2 L49 30 L74 14 L60 38 L88 38 L67 52 L80 76 L55 63 L52 88 L44 64 L36 88 L33 63 L8 76 L21 52 L0 38 L28 38 L14 14 L39 30 Z" fill="url(#sg2)" stroke="rgba(255,255,255,0.35)" strokeWidth="1"/>
-                                                </svg>
-                                                <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'10px 6px',gap:'1px'}}>
-                                                    <span style={{fontSize:'7px',fontWeight:800,color:'rgba(187,247,208,0.9)',textTransform:'uppercase',letterSpacing:'0.05em',lineHeight:1}}>Sie sparen</span>
-                                                    <span style={{fontSize:'15px',fontWeight:900,color:'#ffffff',letterSpacing:'-0.03em',lineHeight:1.1,textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>{saving.toFixed(2).replace('.',',')}€</span>
-                                                    <span style={{fontSize:'6.5px',fontWeight:700,color:'rgba(187,247,208,0.85)',lineHeight:1}}>/&nbsp;Monat</span>
-                                                    <span style={{fontSize:'6px',fontWeight:800,color:'rgba(187,247,208,0.8)',lineHeight:1,marginTop:'1px'}}>= {savingYear.toFixed(0)} € / Jahr</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
+                                style={offerLayoutMode==='step' && currentOfferStep!==3 ? {display:'none'} : {}}>
                                 <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Icon d={ICONS.Calculator} size={20} className="text-blue-600"/> {getStaticLabel('CostHeader')}</h3>
                                 <div className="grid grid-cols-3 gap-4 mt-4 cost-grid-years">
                                     {/* 1) Einmalig */}
@@ -10091,6 +10102,21 @@ const handlePDFShare = async () => {
                     {(window.__anlageHtml = (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot) ? buildPage3Html() : '', null)}
 
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
+                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 z-50 pointer-events-auto">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap hidden sm:block">Beratungs-ID</span>
+                            <div className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={15}
+                                    value={beratungsId}
+                                    onChange={e => setBeratungsId(e.target.value.replace(/\D/g, '').slice(0, 15))}
+                                    placeholder="000000000000000"
+                                    className="px-3 h-8 w-36 text-xs font-mono font-bold tracking-widest rounded-lg border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 text-slate-700 placeholder-slate-300 transition-all"
+                                    title="o2 Beratungs-ID (15 Stellen)"
+                                />
+                            </div>
+                        </div>
                         {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => setShowSkipReasonModal(true)} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
                             <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
