@@ -7645,7 +7645,7 @@ const renderPenToolButtons = () => (
                 const rawKey = `${key}Raw`;
                 setOfferData(prev => ({ ...prev, [rawKey]: value, [key]: isNaN(val) || value.trim() === '' ? 0 : val }));
             };
-            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
+            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = (isCostField && inputMode === 'pen') ? 'h-20' : 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg transition-all`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
             
             const translateBatch = null; // No API needed — all translations are local
 
@@ -9818,7 +9818,11 @@ const handlePDFShare = async () => {
                             {/* ── Zeile: Ersparnis links · Fusion-Box rechts ── */}
                             {(() => {
                                 const monthly = offerData.monatlich1 || 0;
-                                const current = totalCost;
+                                // Primär: Gesamtkosten aus Seite 1 (digital oder Handschrift-Erkennung)
+                                const gesamtkostenRaw = textData.Gesamtkosten || '';
+                                const gesamtkostenVal = parseCost(gesamtkostenRaw.replace(/[^0-9.,]/g, ''));
+                                // Fallback: Kosten-ist-Block (mobile + landline + tv)
+                                const current = (gesamtkostenVal > 0) ? gesamtkostenVal : totalCost;
                                 const saving = (current > 0 && monthly > 0) ? current - monthly : 0;
                                 const savingYear = saving * 12;
                                 const hasSaving = saving > 0.005 && offerLayoutMode !== 'step';
@@ -9847,21 +9851,14 @@ const handlePDFShare = async () => {
                                                 </div>
 
                                                 {/* Zackenstern */}
-                                                <div style={{position:'relative', flexShrink:0, width:'120px', height:'120px'}}>
-                                                    <svg viewBox="0 0 120 120" width="120" height="120" style={{position:'absolute',inset:0}}>
-                                                        <defs>
-                                                            <radialGradient id="sg4" cx="40%" cy="30%">
-                                                                <stop offset="0%" stopColor="#22c55e"/>
-                                                                <stop offset="100%" stopColor="#14532d"/>
-                                                            </radialGradient>
-                                                        </defs>
-                                                        <path d="M60 4 L66 36 L95 18 L80 48 L114 48 L90 64 L105 94 L74 80 L72 116 L60 86 L48 116 L46 80 L15 94 L30 64 L6 48 L40 48 L25 18 L54 36 Z" fill="url(#sg4)" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2"/>
-                                                    </svg>
-                                                    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'18px 10px',gap:'2px'}}>
-                                                        <span style={{fontSize:'8px',fontWeight:800,color:'rgba(187,247,208,0.9)',textTransform:'uppercase',letterSpacing:'0.05em',lineHeight:1}}>Sie sparen</span>
-                                                        <span style={{fontSize:'22px',fontWeight:900,color:'#ffffff',letterSpacing:'-0.04em',lineHeight:1.1,textShadow:'0 1px 6px rgba(0,0,0,0.25)'}}>{saving.toFixed(2).replace('.',',')}€</span>
-                                                        <span style={{fontSize:'8px',fontWeight:700,color:'rgba(187,247,208,0.85)',lineHeight:1}}>/&nbsp;Monat</span>
-                                                        <span style={{fontSize:'7px',fontWeight:800,color:'rgba(187,247,208,0.8)',lineHeight:1,marginTop:'2px'}}>= {savingYear.toFixed(0)} € / Jahr</span>
+                                                <div style={{position:'relative', flexShrink:0, width:'180px', height:'180px'}}>
+                                                    <div style={{position:'absolute',inset:0,borderRadius:'50%',background:'radial-gradient(circle at 35% 30%, #16a34a, #14532d)',boxShadow:'0 4px 24px rgba(20,83,45,0.45), inset 0 2px 8px rgba(255,255,255,0.15)'}}/>
+                                                    <div style={{position:'absolute',inset:'6px',borderRadius:'50%',border:'2.5px solid rgba(255,255,255,0.35)'}}/>
+                                                    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'20px',gap:'4px'}}>
+                                                        <span style={{fontSize:'10px',fontWeight:900,color:'#ffffff',textTransform:'uppercase',letterSpacing:'0.1em',lineHeight:1,opacity:0.9}}>Sie sparen</span>
+                                                        <span style={{fontSize:'34px',fontWeight:900,color:'#ffffff',letterSpacing:'-0.03em',lineHeight:1.05,textShadow:'0 2px 8px rgba(0,0,0,0.3)'}}>{saving.toFixed(2).replace('.',',')}€</span>
+                                                        <span style={{fontSize:'12px',fontWeight:700,color:'#ffffff',lineHeight:1,opacity:0.95}}>/ Monat</span>
+                                                        <span style={{fontSize:'11px',fontWeight:800,color:'#ffffff',lineHeight:1,marginTop:'3px',opacity:0.9}}>= {savingYear.toFixed(0)} € / Jahr</span>
                                                     </div>
                                                 </div>
                                             </div>
