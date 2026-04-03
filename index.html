@@ -951,7 +951,7 @@ html, body {
     /* ---- PRINT: Seite 2 Layout-Optimierung (Angebote größer, Kostenblock minimal) ---- */
     /* 3 Angebots-Canvas deutlich höher (ca. doppelt) */
     .print-offer-view .offer-canvas-container{
-        min-height: 640px !important; /* +90px gegenüber Original */
+        min-height: 600px !important; /* -20px: passt auf A4 Querformat */
         margin-bottom: 10px !important;
     }
 
@@ -2668,6 +2668,65 @@ body.pdf-share-mode .print-situation-view {
             localStorage.removeItem(ANALYTICS_STORAGE_KEY);
         };
 
+        // ─── Activity thresholds (anti-manipulation) ─────────────────────────
+        const ACT_SIT_MIN_CHARS   = 3;    // Seite 1 Kachel: mind. 3 Zeichen → "Angefragt"
+        const ACT_SIT_MIN_STROKES = 2;    // Seite 1 Kachel Pen: mind. 2 Strokes
+        const ACT_SIT_MIN_INKPX   = 40;   // Seite 1 Kachel Pen: mind. 40px Tintenlänge
+        const ACT_OFFER_MIN_CHARS = 12;   // Seite 2 Bereiche: mind. 12 Zeichen → "Angeboten"
+        const ACT_OFFER_MIN_STROKES = 2;  // Seite 2 Bereiche Pen: mind. 2 Strokes
+        const ACT_OFFER_MIN_INKPX = 300;  // Seite 2 Bereiche Pen: mind. 300px Tintenlänge
+
+        // Helper: total ink length in CSS-px for an array of stroke objects
+        const calcInkLengthPx = (strokesArr) => {
+            if (!Array.isArray(strokesArr)) return 0;
+            let len = 0;
+            for (const s of strokesArr) {
+                const pts = (s && Array.isArray(s.points)) ? s.points : [];
+                for (let i = 1; i < pts.length; i++) {
+                    const dx = (pts[i].x ?? 0) - (pts[i-1].x ?? 0);
+                    const dy = (pts[i].y ?? 0) - (pts[i-1].y ?? 0);
+                    if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
+                    len += Math.hypot(dx, dy);
+                }
+            }
+            return len;
+        };
+
+        // Helper: does a single offer area (key) have enough real content?
+        const offerAreaHasContent = (key, drawnStrokes, textData) => {
+            const textVal = String((textData && textData[key]) || '').trim();
+            if (textVal.length >= ACT_OFFER_MIN_CHARS) return true;
+            const strokes = (drawnStrokes && drawnStrokes[key]) || [];
+            if (strokes.length >= ACT_OFFER_MIN_STROKES && calcInkLengthPx(strokes) >= ACT_OFFER_MIN_INKPX) return true;
+            return false;
+        };
+
+        // Helper: does page-1 have enough situation content?
+        const situationHasContent = (drawnStrokes, textData) => {
+            const sitTextKeys = ['Kundenname','Rufnummer','Anbieter','Hardware','Nutzung','Haushalt','Weitere Produkte','WeitereProdukte','Fernsehen','WiFi','Gesamtkosten'];
+            for (const k of sitTextKeys) {
+                if (String((textData && textData[k]) || '').trim().length >= ACT_SIT_MIN_CHARS) return true;
+            }
+            const sitStrokeKeys = ['sit_Kundenname','sit_Rufnummer','sit_Anbieter','sit_Hardware','sit_Nutzung','sit_Haushalt','sit_WeitereProdukte','sit_Fernsehen','sit_WiFi','sit_Gesamtkosten'];
+            for (const k of sitStrokeKeys) {
+                const strokes = (drawnStrokes && drawnStrokes[k]) || [];
+                if (strokes.length >= ACT_SIT_MIN_STROKES && calcInkLengthPx(strokes) >= ACT_SIT_MIN_INKPX) return true;
+            }
+            return false;
+        };
+
+        // Compute the correct activity result based on actual content — manipulation-proof
+        const computeResultFromActivity = (drawnStrokes, textData, hasRealDigitalSignature) => {
+            const o1 = offerAreaHasContent('offer1', drawnStrokes, textData);
+            const o2 = offerAreaHasContent('offer2', drawnStrokes, textData);
+            const o3 = offerAreaHasContent('offer3', drawnStrokes, textData);
+            const anyOffer = o1 || o2 || o3;
+            if (anyOffer && hasRealDigitalSignature) return 'Abschluss';
+            if (anyOffer) return 'Angebot';
+            if (situationHasContent(drawnStrokes, textData)) return 'Anfrage';
+            return 'offen';
+        };
+
         const buildCanvasStatsFromDrawnStrokes = (drawnStrokes, textData = {}, extra = {}) => {
             const stats = {};
             const ensure = (key) => {
@@ -2676,28 +2735,9 @@ body.pdf-share-mode .print-situation-view {
             };
             // 1) Ink / strokes
             if (drawnStrokes) {
-// Helper: sum of distances between consecutive points (canvas CSS px)
-const calcInkLengthPx = (strokesArr) => {
-    if (!Array.isArray(strokesArr)) return 0;
-    let len = 0;
-    for (const s of strokesArr) {
-        const pts = (s && Array.isArray(s.points)) ? s.points : [];
-        for (let i = 1; i < pts.length; i++) {
-            const p0 = pts[i-1] || {};
-            const p1 = pts[i] || {};
-            const dx = (p1.x ?? 0) - (p0.x ?? 0);
-            const dy = (p1.y ?? 0) - (p0.y ?? 0);
-            // Ignore NaN
-            if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
-            len += Math.hypot(dx, dy);
-        }
-    }
-    return len;
-};
 
 for (const [key, strokes] of Object.entries(drawnStrokes)) {
     const count = Array.isArray(strokes) ? strokes.length : 0;
-    // nur relevante Felder loggen (Situation/Offer/Cost/Signature/Skip)
     const allowed = (
         key.startsWith('sit_') ||
         key.startsWith('offer') ||
@@ -2706,61 +2746,60 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         key.startsWith('date_') ||
         key.startsWith('signature') ||
         key.startsWith('skip_') ||
-        key.startsWith('skip') || // safety
-        key === 'skip_reason'       // small input canvas
+        key === 'skip_reason'
     );
     if (!allowed) continue;
 
     ensure(key).strokes = count;
 
-    // ✅ Anti-Cheat (Pen): counts as "used" only if strokes ≥ 2 AND ink length ≥ 80px.
-    // Signature stays relaxed (any stroke counts), otherwise customers get stuck.
     const inkLen = calcInkLengthPx(strokes);
     if (key.startsWith('signature')) {
         if (count > 0) ensure(key).used = true;
+    } else if (key.startsWith('sit_')) {
+        // Seite 1 Kachel: relaxed threshold
+        if (count >= ACT_SIT_MIN_STROKES && inkLen >= ACT_SIT_MIN_INKPX) ensure(key).used = true;
+    } else if (key.startsWith('offer')) {
+        // Seite 2 Bereiche: stricter threshold – anti-manipulation
+        if (count >= ACT_OFFER_MIN_STROKES && inkLen >= ACT_OFFER_MIN_INKPX) ensure(key).used = true;
     } else {
+        // cost/agent/date/skip: original threshold
         if (count >= 2 && inkLen >= 80) ensure(key).used = true;
     }
 }
 
             }
 
-            // 2) Digital text -> counts as "used" when >= 5 Zeichen
-            const minChars = 5;
+            // 2) Digital text -> tiered thresholds
             const getTextLen = (v) => {
                 if (v == null) return 0;
-                const s = String(v).trim();
-                return s.length;
+                return String(v).trim().length;
             };
 
             const map = {
-                sit_Kundenname: () => textData.Kundenname,
-                sit_Rufnummer: () => textData.Rufnummer,
-                sit_Anbieter: () => textData.Anbieter,
-                sit_Hardware: () => textData.Hardware,
-                sit_Nutzung: () => textData.Nutzung,
-                sit_Haushalt: () => textData.Haushalt,
-                sit_WeitereProdukte: () => (textData['Weitere Produkte'] ?? textData.WeitereProdukte),
-                sit_Fernsehen: () => textData.Fernsehen,
-                sit_WiFi: () => textData.WiFi,
-                sit_Gesamtkosten: () => textData.Gesamtkosten,
-                offer1: () => textData.offer1,
-                offer2: () => textData.offer2,
-                offer3: () => textData.offer3,
-                cost_einmalig: () => textData.cost_einmalig,
-                cost_monatlich1: () => textData.cost_monatlich1,
-                cost_monatlich2: () => textData.cost_monatlich2,
-                agent_name: () => textData.AgentName,
-                date_field: () => textData.DateValue,
-                skip_reason: () => (extra.skipReason ?? textData.skip_reason)
+                sit_Kundenname:       { getter: () => textData.Kundenname,                            min: ACT_SIT_MIN_CHARS },
+                sit_Rufnummer:        { getter: () => textData.Rufnummer,                             min: ACT_SIT_MIN_CHARS },
+                sit_Anbieter:         { getter: () => textData.Anbieter,                              min: ACT_SIT_MIN_CHARS },
+                sit_Hardware:         { getter: () => textData.Hardware,                              min: ACT_SIT_MIN_CHARS },
+                sit_Nutzung:          { getter: () => textData.Nutzung,                               min: ACT_SIT_MIN_CHARS },
+                sit_Haushalt:         { getter: () => textData.Haushalt,                              min: ACT_SIT_MIN_CHARS },
+                sit_WeitereProdukte:  { getter: () => (textData['Weitere Produkte'] ?? textData.WeitereProdukte), min: ACT_SIT_MIN_CHARS },
+                sit_Fernsehen:        { getter: () => textData.Fernsehen,                             min: ACT_SIT_MIN_CHARS },
+                sit_WiFi:             { getter: () => textData.WiFi,                                  min: ACT_SIT_MIN_CHARS },
+                sit_Gesamtkosten:     { getter: () => textData.Gesamtkosten,                          min: ACT_SIT_MIN_CHARS },
+                offer1:               { getter: () => textData.offer1,                                min: ACT_OFFER_MIN_CHARS },
+                offer2:               { getter: () => textData.offer2,                                min: ACT_OFFER_MIN_CHARS },
+                offer3:               { getter: () => textData.offer3,                                min: ACT_OFFER_MIN_CHARS },
+                cost_einmalig:        { getter: () => textData.cost_einmalig,                         min: 1 },
+                cost_monatlich1:      { getter: () => textData.cost_monatlich1,                       min: 1 },
+                cost_monatlich2:      { getter: () => textData.cost_monatlich2,                       min: 1 },
+                agent_name:           { getter: () => textData.AgentName,                             min: 3 },
+                date_field:           { getter: () => textData.DateValue,                             min: 3 },
+                skip_reason:          { getter: () => (extra.skipReason ?? textData.skip_reason),     min: 5 },
             };
 
-            for (const [key, getter] of Object.entries(map)) {
-                const len = getTextLen(getter());
-                // ensure key exists (so it appears as column even if empty)
+            for (const [key, cfg] of Object.entries(map)) {
                 ensure(key);
-                // only upgrade used flag; do not downgrade pen usage
-                if (len >= minChars) stats[key].used = true;
+                if (getTextLen(cfg.getter()) >= cfg.min) stats[key].used = true;
             }
 
             return stats;
@@ -2897,42 +2936,112 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         const MOCK_TRANSLATIONS = {
             en: {
                 Offer1Title: '1. Hardware, Provider & Usage',
-                Offer2Title: '2. Household and other products',
+                Offer2Title: '2. Household & Other Products',
                 Offer3Title: '3. TV & Wi-Fi',
                 CostHeader: 'Cost Overview & Conclusion',
-                CostEinmalig: 'ONE-TIME (€)',
-                CostMonatlich1: 'MONTHLY IN 1ST YEAR (€)', CostMonatlich: 'MONTHLY (€)', CostMonatlich2: 'MONTHLY IN 2ND YEAR (€)',
-                AgentLabel: 'PERSONAL AGENT',
-                DateLabel: 'DATE',
-                Kundenname_Label: 'Customer Name',
-                Rufnummer_Label: 'Phone Number',
-                Anbieter_Label: 'Provider',
-                Hardware_Label: 'Hardware',
-                Nutzung_Label: 'Usage',
-                Haushalt_Label: 'Household',
-                'Weitere Produkte_Label': 'Other Products',
-                Fernsehen_Label: 'Television',
-                WiFi_Label: 'WiFi',
-                Gesamtkosten_Label: 'Total Cost',
-                StatusOpen: 'Open',
-                StatusClosed: 'Closed',
-                StatusNeutral: 'Neutral',
-                AgentName: 'Max Sampleman',
-                DateValue: new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-                offer1: 'Example text for Offer 1: Mobile plan with unlimited data and new smartphone included.',
-                offer2: 'Example text for Offer 2: Internet 1000 MBit/s fiber connection and additional devices.',
-                offer3: 'Example text for Offer 3: TV streaming package and Mesh Wi-Fi solution for the entire house.',
+                CostEinmalig: 'ONE-TIME (€)', CostMonatlich1: 'MONTHLY 1ST YEAR (€)', CostMonatlich: 'MONTHLY (€)', CostMonatlich2: 'MONTHLY 2ND YEAR (€)',
+                AgentLabel: 'PERSONAL AGENT', DateLabel: 'DATE', ValidUntilLabel: 'OFFER VALID UNTIL',
+                Kundenname_Label: 'Customer Name', Rufnummer_Label: 'Phone Number', Anbieter_Label: 'Provider',
+                Hardware_Label: 'Hardware', Nutzung_Label: 'Usage', Haushalt_Label: 'Household',
+                'Weitere Produkte_Label': 'Other Products', Fernsehen_Label: 'Television', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Total Cost', StatusOpen: 'Open', StatusClosed: 'Closed', StatusNeutral: 'Neutral',
+            },
+            ar: {
+                Offer1Title: '1. الأجهزة، المزوّد والاستخدام',
+                Offer2Title: '2. المنزل والمنتجات الأخرى',
+                Offer3Title: '3. التلفزيون والواي فاي',
+                CostHeader: 'نظرة عامة على التكاليف والإغلاق',
+                CostEinmalig: 'مرة واحدة (€)', CostMonatlich1: 'شهريًا السنة الأولى (€)', CostMonatlich: 'شهريًا (€)', CostMonatlich2: 'شهريًا السنة الثانية (€)',
+                AgentLabel: 'الوكيل الشخصي', DateLabel: 'التاريخ', ValidUntilLabel: 'العرض ساري حتى',
+                Kundenname_Label: 'اسم العميل', Rufnummer_Label: 'رقم الهاتف', Anbieter_Label: 'المزوّد',
+                Hardware_Label: 'الأجهزة', Nutzung_Label: 'الاستخدام', Haushalt_Label: 'المنزل',
+                'Weitere Produkte_Label': 'منتجات أخرى', Fernsehen_Label: 'التلفزيون', WiFi_Label: 'واي فاي',
+                Gesamtkosten_Label: 'التكاليف الإجمالية', StatusOpen: 'مفتوح', StatusClosed: 'مغلق', StatusNeutral: 'محايد',
+            },
+            el: {
+                Offer1Title: '1. Υλικό, Πάροχος & Χρήση',
+                Offer2Title: '2. Νοικοκυριό & Άλλα Προϊόντα',
+                Offer3Title: '3. Τηλεόραση & Wi-Fi',
+                CostHeader: 'Επισκόπηση Κόστους & Σύναψη',
+                CostEinmalig: 'ΕΦΑΠΑΞ (€)', CostMonatlich1: 'ΜΗΝΙΑΙΑ 1ο ΕΤΟΣ (€)', CostMonatlich: 'ΜΗΝΙΑΙΑ (€)', CostMonatlich2: 'ΜΗΝΙΑΙΑ 2ο ΕΤΟΣ (€)',
+                AgentLabel: 'ΠΡΟΣΩΠΙΚΟΣ ΑΝΤΙΠΡΟΣΩΠΟΣ', DateLabel: 'ΗΜΕΡΟΜΗΝΙΑ', ValidUntilLabel: 'ΠΡΟΣΦΟΡΑ ΙΣΧΥΕΙ ΩΣ',
+                Kundenname_Label: 'Όνομα Πελάτη', Rufnummer_Label: 'Αριθμός Τηλεφώνου', Anbieter_Label: 'Πάροχος',
+                Hardware_Label: 'Υλικό', Nutzung_Label: 'Χρήση', Haushalt_Label: 'Νοικοκυριό',
+                'Weitere Produkte_Label': 'Άλλα Προϊόντα', Fernsehen_Label: 'Τηλεόραση', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Συνολικό Κόστος', StatusOpen: 'Ανοιχτό', StatusClosed: 'Κλειστό', StatusNeutral: 'Ουδέτερο',
+            },
+            it: {
+                Offer1Title: '1. Hardware, Fornitore & Utilizzo',
+                Offer2Title: '2. Casa e altri prodotti',
+                Offer3Title: '3. Televisione & Wi-Fi',
+                CostHeader: 'Riepilogo costi & Conclusione',
+                CostEinmalig: 'UNA TANTUM (€)', CostMonatlich1: 'MENSILE 1° ANNO (€)', CostMonatlich: 'MENSILE (€)', CostMonatlich2: 'MENSILE 2° ANNO (€)',
+                AgentLabel: 'AGENTE PERSONALE', DateLabel: 'DATA', ValidUntilLabel: 'OFFERTA VALIDA FINO AL',
+                Kundenname_Label: 'Nome Cliente', Rufnummer_Label: 'Numero di Telefono', Anbieter_Label: 'Fornitore',
+                Hardware_Label: 'Hardware', Nutzung_Label: 'Utilizzo', Haushalt_Label: 'Casa',
+                'Weitere Produkte_Label': 'Altri Prodotti', Fernsehen_Label: 'Televisione', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Costi Totali', StatusOpen: 'Aperto', StatusClosed: 'Chiuso', StatusNeutral: 'Neutro',
+            },
+            pl: {
+                Offer1Title: '1. Sprzęt, Dostawca & Użytkowanie',
+                Offer2Title: '2. Gospodarstwo domowe i inne produkty',
+                Offer3Title: '3. Telewizja & Wi-Fi',
+                CostHeader: 'Przegląd kosztów & Zakończenie',
+                CostEinmalig: 'JEDNORAZOWO (€)', CostMonatlich1: 'MIESIĘCZNIE 1. ROK (€)', CostMonatlich: 'MIESIĘCZNIE (€)', CostMonatlich2: 'MIESIĘCZNIE 2. ROK (€)',
+                AgentLabel: 'OSOBISTY AGENT', DateLabel: 'DATA', ValidUntilLabel: 'OFERTA WAŻNA DO',
+                Kundenname_Label: 'Imię Klienta', Rufnummer_Label: 'Numer Telefonu', Anbieter_Label: 'Dostawca',
+                Hardware_Label: 'Sprzęt', Nutzung_Label: 'Użytkowanie', Haushalt_Label: 'Gospodarstwo domowe',
+                'Weitere Produkte_Label': 'Inne Produkty', Fernsehen_Label: 'Telewizja', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Całkowite Koszty', StatusOpen: 'Otwarte', StatusClosed: 'Zamknięte', StatusNeutral: 'Neutralne',
+            },
+            pt: {
+                Offer1Title: '1. Hardware, Fornecedor & Utilização',
+                Offer2Title: '2. Domicílio e outros produtos',
+                Offer3Title: '3. Televisão & Wi-Fi',
+                CostHeader: 'Visão geral de custos & Conclusão',
+                CostEinmalig: 'UMA VEZ (€)', CostMonatlich1: 'MENSAL 1.º ANO (€)', CostMonatlich: 'MENSAL (€)', CostMonatlich2: 'MENSAL 2.º ANO (€)',
+                AgentLabel: 'AGENTE PESSOAL', DateLabel: 'DATA', ValidUntilLabel: 'OFERTA VÁLIDA ATÉ',
+                Kundenname_Label: 'Nome do Cliente', Rufnummer_Label: 'Número de Telefone', Anbieter_Label: 'Fornecedor',
+                Hardware_Label: 'Hardware', Nutzung_Label: 'Utilização', Haushalt_Label: 'Domicílio',
+                'Weitere Produkte_Label': 'Outros Produtos', Fernsehen_Label: 'Televisão', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Custos Totais', StatusOpen: 'Aberto', StatusClosed: 'Fechado', StatusNeutral: 'Neutro',
+            },
+            ro: {
+                Offer1Title: '1. Hardware, Furnizor & Utilizare',
+                Offer2Title: '2. Gospodărie și alte produse',
+                Offer3Title: '3. Televizor & Wi-Fi',
+                CostHeader: 'Prezentare costuri & Finalizare',
+                CostEinmalig: 'O SINGURĂ DATĂ (€)', CostMonatlich1: 'LUNAR PRIMUL AN (€)', CostMonatlich: 'LUNAR (€)', CostMonatlich2: 'LUNAR AL DOILEA AN (€)',
+                AgentLabel: 'AGENT PERSONAL', DateLabel: 'DATA', ValidUntilLabel: 'OFERTĂ VALABILĂ PÂNĂ LA',
+                Kundenname_Label: 'Numele Clientului', Rufnummer_Label: 'Număr de Telefon', Anbieter_Label: 'Furnizor',
+                Hardware_Label: 'Hardware', Nutzung_Label: 'Utilizare', Haushalt_Label: 'Gospodărie',
+                'Weitere Produkte_Label': 'Alte Produse', Fernsehen_Label: 'Televizor', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Costuri Totale', StatusOpen: 'Deschis', StatusClosed: 'Închis', StatusNeutral: 'Neutru',
             },
             es: {
-                Offer1Title: '1. Hardware, Proveedor y Uso',
+                Offer1Title: '1. Hardware, Proveedor & Uso',
                 Offer2Title: '2. Hogar y otros productos',
-                CostHeader: 'Resumen de Costos y Cierre',
-                CostEinmalig: 'PAGO ÚNICO (€)',
-                AgentLabel: 'AGENTE PERSONAL',
-                Kundenname_Label: 'Nombre del Cliente',
-                AgentName: 'Max Muestras',
-                offer1: 'Texto de ejemplo para Oferta 1 en español.',
-            }
+                Offer3Title: '3. Televisión & Wi-Fi',
+                CostHeader: 'Resumen de costes & Conclusión',
+                CostEinmalig: 'ÚNICO (€)', CostMonatlich1: 'MENSUAL 1.er AÑO (€)', CostMonatlich: 'MENSUAL (€)', CostMonatlich2: 'MENSUAL 2.º AÑO (€)',
+                AgentLabel: 'AGENTE PERSONAL', DateLabel: 'FECHA', ValidUntilLabel: 'OFERTA VÁLIDA HASTA',
+                Kundenname_Label: 'Nombre del Cliente', Rufnummer_Label: 'Número de Teléfono', Anbieter_Label: 'Proveedor',
+                Hardware_Label: 'Hardware', Nutzung_Label: 'Uso', Haushalt_Label: 'Hogar',
+                'Weitere Produkte_Label': 'Otros Productos', Fernsehen_Label: 'Televisión', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Costes Totales', StatusOpen: 'Abierto', StatusClosed: 'Cerrado', StatusNeutral: 'Neutro',
+            },
+            tr: {
+                Offer1Title: '1. Donanım, Sağlayıcı & Kullanım',
+                Offer2Title: '2. Ev ve diğer ürünler',
+                Offer3Title: '3. Televizyon & Wi-Fi',
+                CostHeader: 'Maliyet Özeti & Sonuç',
+                CostEinmalig: 'BİR KERE (€)', CostMonatlich1: '1. YIL AYLIK (€)', CostMonatlich: 'AYLIK (€)', CostMonatlich2: '2. YIL AYLIK (€)',
+                AgentLabel: 'KİŞİSEL AJAN', DateLabel: 'TARİH', ValidUntilLabel: 'TEKLİF GEÇERLİLİK TARİHİ',
+                Kundenname_Label: 'Müşteri Adı', Rufnummer_Label: 'Telefon Numarası', Anbieter_Label: 'Sağlayıcı',
+                Hardware_Label: 'Donanım', Nutzung_Label: 'Kullanım', Haushalt_Label: 'Ev',
+                'Weitere Produkte_Label': 'Diğer Ürünler', Fernsehen_Label: 'Televizyon', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Toplam Maliyetler', StatusOpen: 'Açık', StatusClosed: 'Kapalı', StatusNeutral: 'Tarafsız',
+            },
         };
 
         const SectionCard = ({ title, children, className = "" }) => (<div className={`bg-white p-3 rounded-xl border border-slate-200 shadow-sm ${className}`}><h3 className="font-bold text-slate-800 mb-2 text-[10px] uppercase tracking-wide text-slate-500 flex items-center gap-2 shrink-0">{title}</h3><div className="flex-1 min-h-0 flex flex-col justify-center">{children}</div></div>);
@@ -3072,68 +3181,17 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             );
         };
 
-        const FollowUpModal = ({ isOpen, onCancel, onSave, followUpDraft, setFollowUpDraft, currentLabel, stepInfo }) => {
-            if (!isOpen) return null;
-
-            const reasonOk = (followUpDraft.reason || "").trim().length >= 3;
-            const canSave = !!followUpDraft.date && !!followUpDraft.time && reasonOk;
-
-            return (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b">
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-900">Folgetermin erfassen</h3>
-                                    <p className="text-sm text-slate-600 mt-1">
-                                        {currentLabel ? <>Offener Punkt: <span className="font-bold text-red-700">{currentLabel}</span></> : "Offener Punkt"}
-                                        {stepInfo ? <span className="ml-2 text-slate-400">({stepInfo})</span> : null}
-                                    </p>
-                                </div>
-                                <button onClick={onCancel} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Abbrechen</button>
-                            </div>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-600">Datum *</label>
-                                    <input type="date" value={followUpDraft.date} onChange={(e) => setFollowUpDraft(prev => ({ ...prev, date: e.target.value }))} className="w-full h-11 mt-1 px-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-600">Uhrzeit *</label>
-                                    <input type="time" value={followUpDraft.time} onChange={(e) => setFollowUpDraft(prev => ({ ...prev, time: e.target.value }))} className="w-full h-11 mt-1 px-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-slate-600">Grund *</label>
-                                <textarea value={followUpDraft.reason} onChange={(e) => setFollowUpDraft(prev => ({ ...prev, reason: e.target.value }))} rows="3" placeholder="z.B. Tarifvergleich, Rückruf, Unterlagen fehlen..." className="w-full mt-1 p-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
-                                {!reasonOk && followUpDraft.reason.length > 0 ? <div className="text-xs text-red-600 mt-1 font-bold">Bitte einen kurzen Grund angeben.</div> : null}
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t flex items-center justify-end gap-3">
-                            <button onClick={onCancel} className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Abbrechen</button>
-                            <button onClick={onSave} disabled={!canSave} className={`px-5 py-2.5 rounded-xl font-bold text-white ${canSave ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-300 cursor-not-allowed"}`}>Speichern</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
         
-        const ReferralModal = ({ isOpen, onClose, onPrint, onShare }) => {
+        const ReferralModal = ({ isOpen, onClose, onPrint, onShare, onFinish }) => {
             if (!isOpen) return null;
 
             const handlePrintAction = () => {
-                // Wichtig: ohne Timeout, damit Drucken auf Mobile nicht durch fehlende User-Activation blockiert wird
-                onClose('print');
+                // Modal bleibt offen — nach dem Drucken kommt der User zurück
                 onPrint();
             };
 
             return (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in zoom-in">
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in zoom-in no-print" style={{}}>
                     <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
                         <div className="p-8 text-center">
                             <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -3151,13 +3209,20 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                                     </button>
                                 </div>
 
-                                {/* Bereich: Drucken (kleiner) */}
+                                {/* Bereich: Drucken */}
                                 <div className="flex flex-col items-center gap-3 pt-2">
                                     <button onClick={handlePrintAction} className="px-8 py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-black transition-all">
                                         Weiter zum Druck
                                     </button>
+                                </div>
+
+                                {/* Abschluss-Linie */}
+                                <div className="border-t border-slate-100 pt-4 flex flex-col items-center gap-2">
+                                    <button onClick={onFinish} className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all text-sm">
+                                        ✅ Fertig &amp; Neu starten
+                                    </button>
                                     <button onClick={() => onClose('cancel')} className="text-slate-400 text-xs font-bold hover:text-red-500">
-                                        Vorgang ohne Druck beenden
+                                        Vorgang ohne Reset beenden
                                     </button>
                                 </div>
                             </div>
@@ -4208,7 +4273,12 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
     /* Abstand zwischen den Angebots-Canvas (1, 2, 3) reduzieren */
     .print-offer-view .offer-canvas-container {
         margin-bottom: 8px !important;
-        min-height: 630px !important;
+        min-height: 600px !important;
+    }
+
+    /* Unterschrift-Kunde-Label verstecken im Druck (verhindert 4. Seite nach Signatur) */
+    .print-hide-sig-label {
+        display: none !important;
     }
 
     /* Disclaimer Text ganz unten noch etwas kleiner */
@@ -5075,10 +5145,10 @@ const highResHTML = buildHighResBundleHTML(d);
         const StatsModal = ({ isOpen, onClose }) => {
 const resolveUserName = (raw) => {
                 const s = (raw == null) ? '' : String(raw).trim();
-                if (!s) return 'Elif Icik';
+                if (!s) return 'D. Da Silva';
                 const low = s.toLowerCase();
-                if (s === 'E.I' || low === 'e.i') return 'Elif Icik';
-                if (s === 'Max Mustermann' || low === 'unknown') return 'Elif Icik';
+                
+                if (s === 'Max Mustermann' || low === 'unknown') return 'D. Da Silva';
                 return s;
             };
 
@@ -5098,15 +5168,15 @@ const resolveUserName = (raw) => {
             }, [rows, range]);
 
             const summary = useMemo(() => {
-                const agg = {}; // user -> { total, angebot, abschluss, strokes, canv: {key:{usedCount, strokes}} }
+                const agg = {};
                 filtered.forEach(r => {
                     const u = resolveUserName(r.user);
-                    if (!agg[u]) agg[u] = { total: 0, angebot: 0, abschluss: 0, strokes: 0, explainSum: 0, scoreSum: 0, canv: {} };
+                    if (!agg[u]) agg[u] = { total: 0, anfrage: 0, angebot: 0, abschluss: 0, strokes: 0, explainSum: 0, scoreSum: 0, canv: {} };
                     agg[u].total += 1;
-                    if (r.result === 'Angebot') agg[u].angebot += 1;
-                    if (r.result === 'Abschluss') agg[u].abschluss += 1;
+                    if (r.result === 'Anfrage')    agg[u].anfrage   += 1;
+                    if (r.result === 'Angebot')    agg[u].angebot   += 1;
+                    if (r.result === 'Abschluss')  agg[u].abschluss += 1;
                     const cs = r.canvasStats || {};
-                    // Fair KPI: Erklärung (Text >=5 ODER Stift >=1) ist bereits in canvasStats.used abgebildet
                     const csEntries = Object.entries(cs).filter(([k]) => k !== 'skip_reason');
                     let rowUsed = 0;
                     let rowStrokes = 0;
@@ -5114,12 +5184,11 @@ const resolveUserName = (raw) => {
                         if (v && v.used) rowUsed += 1;
                         if (v && Number.isFinite(v.strokes)) rowStrokes += v.strokes;
                     });
-                    const rowExplain = csEntries.length ? (rowUsed / csEntries.length) : 0; // 0..1
-                    const visualFactor = Math.min(1, rowStrokes / 8); // cap: 8 strokes => 100% Visual
-                    const rowScore = (rowExplain * 100 * 0.7) + (visualFactor * 100 * 0.3); // 0..100
+                    const rowExplain = csEntries.length ? (rowUsed / csEntries.length) : 0;
+                    const visualFactor = Math.min(1, rowStrokes / 8);
+                    const rowScore = (rowExplain * 100 * 0.7) + (visualFactor * 100 * 0.3);
                     agg[u].explainSum += rowExplain;
                     agg[u].scoreSum += rowScore;
-
                     for (const [k, v] of Object.entries(cs)) {
                         if (!agg[u].canv[k]) agg[u].canv[k] = { usedCount: 0, strokes: 0 };
                         if (v.used) agg[u].canv[k].usedCount += 1;
@@ -5130,41 +5199,6 @@ const resolveUserName = (raw) => {
                 return agg;
             }, [filtered]);
 
-            const allCanvasKeys = useMemo(() => {
-                const s = new Set();
-                filtered.forEach(r => Object.keys(r.canvasStats || {}).forEach(k => s.add(k)));
-                // Für Übersicht: Situation-Keys zuerst
-                const arr = Array.from(s);
-                arr.sort((a,b) => {
-                    const aSit = a.startsWith('sit_') ? 0 : 1;
-                    const bSit = b.startsWith('sit_') ? 0 : 1;
-                    if (aSit !== bSit) return aSit - bSit;
-                    return a.localeCompare(b);
-                });
-                return arr;
-            }, [filtered]);
-
-            // Labels für Statistik (UI)
-            const prettyUser = (u) => {
-                const s = String(u || '').trim();
-                if (s === 'E.I' || s === 'EI' || s.toLowerCase() === 'e.i') return 'Elif Icik';
-                return s || '—';
-            };
-
-            const prettyField = (k) => {
-                if (!k) return '';
-                if (k === 'offer1') return '1. Hardware, Anbieter & Nutzung';
-                if (k === 'offer2') return '2. Haushalt und weitere Produkte';
-                if (k === 'offer3') return '3. Fernsehen & Wi‑Fi';
-                if (k === 'skip_reason') return 'Überspringen';
-                if (k.startsWith('sit_')) return k.replace('sit_','S:');
-                if (k.startsWith('offer')) return k.replace('offer','O:');
-                if (k.startsWith('cost_')) return k.replace('cost_','K:');
-                if (k === 'agent_name') return 'Agent';
-                if (k === 'date_field') return 'Datum';
-                return k;
-            };
-
             const trend6m = useMemo(() => {
                 const now = new Date();
                 const months = [];
@@ -5172,10 +5206,9 @@ const resolveUserName = (raw) => {
                     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
                     const label = d.toLocaleString('de-DE', { month: 'short', year: '2-digit' });
-                    months.push({ key, label, total: 0, strokesSum: 0 });
+                    months.push({ key, label, total: 0, abschluss: 0, strokesSum: 0 });
                 }
                 const byKey = Object.fromEntries(months.map(m => [m.key, m]));
-
                 (filtered || []).forEach(r => {
                     const t = Date.parse(r.ts);
                     if (!Number.isFinite(t)) return;
@@ -5183,23 +5216,21 @@ const resolveUserName = (raw) => {
                     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
                     const bucket = byKey[key];
                     if (!bucket) return;
-
                     const cs = r.canvasStats || {};
                     let strokes = 0;
-                    Object.values(cs).forEach(v => {
-                        if (v && Number.isFinite(v.strokes)) strokes += v.strokes;
-                    });
-
+                    Object.values(cs).forEach(v => { if (v && Number.isFinite(v.strokes)) strokes += v.strokes; });
                     bucket.total += 1;
                     bucket.strokesSum += strokes;
+                    if (r.result === 'Abschluss') bucket.abschluss += 1;
                 });
-
                 return months.map(m => ({
                     ...m,
-                    strokesAvg: m.total ? (m.strokesSum / m.total).toFixed(1) : '0.0',
+                    strokesAvg: m.total ? (m.strokesSum / m.total).toFixed(1) : '–',
+                    convRate: m.total ? Math.round((m.abschluss / m.total) * 100) : 0,
                 }));
             }, [filtered]);
 
+            if (!isOpen) return null;
 
             const handleClear = () => {
                 if (!confirm('Analytics wirklich löschen?')) return;
@@ -5208,143 +5239,172 @@ const resolveUserName = (raw) => {
                 alert('Analytics gelöscht.');
             };
 
-            if (!isOpen) return null;
+            const totalVorgaenge    = filtered.length;
+            const totalAnfragen     = filtered.filter(r => r.result === 'Anfrage').length;
+            const totalAngebote     = filtered.filter(r => r.result === 'Angebot').length;
+            const totalAbschluesse  = filtered.filter(r => r.result === 'Abschluss').length;
+            const convRate = totalVorgaenge ? Math.round((totalAbschluesse / totalVorgaenge) * 100) : 0;
+            const offerRate = (totalAnfragen + totalAngebote + totalAbschluesse) > 0
+                ? Math.round(((totalAngebote + totalAbschluesse) / (totalAnfragen + totalAngebote + totalAbschluesse)) * 100)
+                : 0;
+
+            const trendMax = Math.max(1, ...trend6m.map(m => m.total));
+
+            const summaryEntries = Object.entries(summary).sort((a, b) => b[1].abschluss - a[1].abschluss);
+
             return (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in">
-                    <div className="bg-white w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl border border-slate-200 flex flex-col">
-                        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
-                                    <Icon d={ICONS.Lock} size={18}/>
-                                </div>
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3" onClick={onClose}>
+                    <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col overflow-hidden" style={{maxHeight:'92vh'}} onClick={e=>e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div style={{background:'linear-gradient(135deg,#1e3a8a,#3b82f6)',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px'}}>📊</div>
                                 <div>
-                                    <div className="text-xl font-black text-slate-800 leading-tight">📊 Statistik</div>
-                                    <div className="text-xs text-slate-500">DSGVO-safe: nur Nutzung (kein Inhalt)</div>
+                                    <div style={{color:'#fff',fontWeight:900,fontSize:'16px',letterSpacing:'-0.02em'}}>Statistik & Auswertung</div>
+                                    <div style={{color:'rgba(255,255,255,0.65)',fontSize:'11px',fontWeight:500}}>{totalVorgaenge} Vorgänge · DSGVO-safe</div>
                                 </div>
                             </div>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500" title="Schließen">
-                                <Icon d={ICONS.X} size={20}/>
-                            </button>
+                            <button onClick={onClose} style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(255,255,255,0.15)',border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',fontWeight:700}}>✕</button>
                         </div>
 
-                        <div className="p-4 border-b border-slate-200 flex flex-wrap items-center gap-2">
-                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mr-2">Zeitraum</div>
-                            {[
-                                { id:'1', label:'Heute (24h)' },
-                                { id:'7', label:'7 Tage' },
-                                { id:'31', label:'31 Tage' },
-                                { id:'all', label:'Alles' },
-                            ].map(r => (
-                                <button key={r.id} onClick={() => setRange(r.id)}
-                                    className={`px-3 py-1.5 rounded-full text-sm font-bold border transition-colors ${range===r.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                                    {r.label}
-                                </button>
+                        {/* Zeitraum-Filter */}
+                        <div style={{padding:'12px 20px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',background:'#fafafa'}}>
+                            <span style={{fontSize:'10px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',marginRight:'4px'}}>Zeitraum</span>
+                            {[{id:'1',label:'Heute'},{id:'7',label:'7 Tage'},{id:'31',label:'31 Tage'},{id:'all',label:'Gesamt'}].map(r=>(
+                                <button key={r.id} onClick={()=>setRange(r.id)} style={{padding:'5px 12px',borderRadius:'999px',fontSize:'12px',fontWeight:700,border:`1.5px solid ${range===r.id?'#3b82f6':'#e2e8f0'}`,background:range===r.id?'#3b82f6':'#fff',color:range===r.id?'#fff':'#64748b',cursor:'pointer',transition:'all 0.15s'}}>{r.label}</button>
                             ))}
-                            <div className="ml-auto flex flex-wrap gap-2">
-                                <button onClick={exportAnalyticsCSV} className="px-3 py-1.5 rounded-lg text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2">
-                                    <Icon d={ICONS.Download} size={16}/> CSV
-                                </button>
-                                <button onClick={exportAnalyticsJSON} className="px-3 py-1.5 rounded-lg text-sm font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                    <Icon d={ICONS.Download} size={16}/> JSON
-                                </button>
-                                <button onClick={handleClear} className="px-3 py-1.5 rounded-lg text-sm font-bold bg-white border border-red-200 text-red-600 hover:bg-red-50 flex items-center gap-2">
-                                    <Icon d={ICONS.Trash} size={16}/> Löschen
-                                </button>
+                            <div style={{marginLeft:'auto',display:'flex',gap:'6px'}}>
+                                <button onClick={exportAnalyticsCSV} style={{padding:'5px 12px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#0f172a',color:'#fff',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px'}}>⬇ CSV</button>
+                                <button onClick={exportAnalyticsJSON} style={{padding:'5px 12px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#fff',color:'#475569',border:'1.5px solid #e2e8f0',cursor:'pointer'}}>⬇ JSON</button>
+                                <button onClick={handleClear} style={{padding:'5px 12px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#fff',color:'#ef4444',border:'1.5px solid #fecaca',cursor:'pointer'}}>🗑 Löschen</button>
                             </div>
                         </div>
 
-                        <div className="p-4 overflow-y-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Vorgänge</div>
-                                    <div className="text-3xl font-black text-slate-900">{filtered.length}</div>
+                        {/* Scrollable body */}
+                        <div className="custom-scrollbar" style={{overflowY:'auto',flex:1,padding:'16px 20px',display:'flex',flexDirection:'column',gap:'16px'}}>
+
+                            {/* KPI Kacheln */}
+                            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'8px'}}>
+                                {[
+                                    {label:'Vorgänge',   value:totalVorgaenge,   color:'#3b82f6', bg:'#eff6ff', icon:'📋'},
+                                    {label:'Anfragen',   value:totalAnfragen,    color:'#64748b', bg:'#f1f5f9', icon:'🔍'},
+                                    {label:'Angebote',   value:totalAngebote,    color:'#8b5cf6', bg:'#f5f3ff', icon:'📄'},
+                                    {label:'Abschlüsse', value:totalAbschluesse, color:'#10b981', bg:'#ecfdf5', icon:'✅'},
+                                    {label:'Abschluss-Quote', value:`${convRate}%`, color:convRate>=30?'#10b981':convRate>=15?'#f59e0b':'#ef4444', bg:convRate>=30?'#ecfdf5':convRate>=15?'#fffbeb':'#fef2f2', icon:'🎯'},
+                                ].map(k=>(
+                                    <div key={k.label} style={{background:k.bg,borderRadius:'12px',padding:'10px 12px',border:`1px solid ${k.color}22`}}>
+                                        <div style={{fontSize:'14px',marginBottom:'3px'}}>{k.icon}</div>
+                                        <div style={{fontSize:'20px',fontWeight:900,color:k.color,lineHeight:1}}>{k.value}</div>
+                                        <div style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',marginTop:'3px'}}>{k.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Trend Balkendiagramm */}
+                            <div style={{background:'#f8fafc',borderRadius:'14px',padding:'14px 16px',border:'1px solid #e2e8f0'}}>
+                                <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'12px'}}>Trend · letzte 6 Monate</div>
+                                <div style={{display:'flex',alignItems:'flex-end',gap:'8px',height:'64px'}}>
+                                    {trend6m.map(m=>{
+                                        const barH = trendMax ? Math.max(4, Math.round((m.total/trendMax)*60)) : 4;
+                                        return (
+                                            <div key={m.key} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'4px'}}>
+                                                <div style={{fontSize:'9px',fontWeight:700,color:'#64748b'}}>{m.total||''}</div>
+                                                <div style={{width:'100%',borderRadius:'4px 4px 0 0',background:m.total>0?'#3b82f6':'#e2e8f0',height:`${barH}px`,transition:'height 0.3s ease',position:'relative'}}>
+                                                    {m.abschluss>0&&<div style={{position:'absolute',bottom:0,left:0,right:0,borderRadius:'4px 4px 0 0',background:'#10b981',height:`${Math.round((m.abschluss/Math.max(1,m.total))*barH)}px`}}/>}
+                                                </div>
+                                                <div style={{fontSize:'9px',fontWeight:600,color:'#94a3b8',whiteSpace:'nowrap'}}>{m.label}</div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Angebote</div>
-                                    <div className="text-3xl font-black text-slate-900">{filtered.filter(r => r.result==='Angebot').length}</div>
-                                </div>
-                                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Abschlüsse</div>
-                                    <div className="text-3xl font-black text-slate-900">{filtered.filter(r => r.result==='Abschluss').length}</div>
+                                <div style={{display:'flex',gap:'12px',marginTop:'8px'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:'4px'}}><div style={{width:'8px',height:'8px',borderRadius:'2px',background:'#3b82f6'}}/><span style={{fontSize:'10px',color:'#64748b',fontWeight:600}}>Vorgänge</span></div>
+                                    <div style={{display:'flex',alignItems:'center',gap:'4px'}}><div style={{width:'8px',height:'8px',borderRadius:'2px',background:'#10b981'}}/><span style={{fontSize:'10px',color:'#64748b',fontWeight:600}}>Abschlüsse</span></div>
                                 </div>
                             </div>
 
-                            
-
-                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Trend (letzte 6 Monate)</div>
-                            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                                <table className="min-w-max w-max text-sm">
-                                    <thead className="bg-slate-50">
-                                        <tr className="text-left">
-                                            <th className="p-3 font-black text-slate-700">Monat</th>
-                                            <th className="p-3 font-black text-slate-700">Vorgänge</th>
-
-                                            <th className="p-3 font-black text-slate-700"><span title="Ø Stift-Eingaben (Strokes) pro Vorgang. Tastatur zählt nicht.">Ø Stift-Eingaben</span></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {trend6m.map(m => (
-                                            <tr key={m.key} className="border-t border-slate-200">
-                                                <td className="p-3 font-bold text-slate-800">{m.label}</td>
-                                                <td className="p-3 text-slate-700">{m.total}</td>
-
-                                                <td className="p-3 text-slate-700">{m.strokesAvg}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-<div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Pro Mitarbeiter</div>
-                            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                                <table className="min-w-max w-max text-sm">
-                                    <thead className="bg-slate-50">
-                                        <tr className="text-left">
-                                            <th className="p-3 font-black text-slate-700">Mitarbeiter</th>
-                                            <th className="p-3 font-black text-slate-700">Vorgänge</th>
-                                            <th className="p-3 font-black text-slate-700">Angebot</th>
-                                            <th className="p-3 font-black text-slate-700">Abschluss</th>
-                                            <th className="p-3 font-black text-slate-700"><span title="Ø Stift-Eingaben (Strokes) pro Vorgang. Tastatur zählt nicht.">Ø Stift-Eingaben</span></th>
-                                            {allCanvasKeys.map(k => (
-                                                <th key={k} className="p-3 font-black text-slate-700">{prettyField(k)}</th>
-                                            ))}
-                                            
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {Object.entries(summary).length === 0 ? (
-                                            <tr><td className="p-4 text-slate-500" colSpan={10}>Noch keine Daten. Tipp: Ein Vorgang wird automatisch geloggt, sobald du „Angebot drucken“ oder „Abschluss“ auswählst.</td></tr>
-                                        ) : Object.entries(summary).map(([user, s]) => {
+                            {/* Pro Mitarbeiter */}
+                            <div>
+                                <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'8px'}}>Pro Mitarbeiter</div>
+                                {summaryEntries.length === 0 ? (
+                                    <div style={{padding:'20px',background:'#f8fafc',borderRadius:'12px',border:'1px solid #e2e8f0',textAlign:'center',color:'#94a3b8',fontSize:'13px'}}>
+                                        Noch keine Daten — Vorgänge werden automatisch beim Abschluss/Druck geloggt.
+                                    </div>
+                                ) : (
+                                    <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                                        {summaryEntries.map(([user, s]) => {
+                                            const conv = s.total ? Math.round((s.abschluss/s.total)*100) : 0;
                                             const avgStrokes = (s.strokes / Math.max(1, s.total)).toFixed(1);
-                                            const explainPct = Math.round((s.explainSum / Math.max(1, s.total)) * 100);
-                                            const scoreAvg = Math.round((s.scoreSum / Math.max(1, s.total)));
+                                            const initials = user.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
                                             return (
-                                                <tr key={user} className="border-t border-slate-200">
-                                                    <td className="p-3 font-bold text-slate-800">{prettyUser(user)}</td>
-                                                    <td className="p-3 text-slate-700">{s.total}</td>
-                                                    <td className="p-3 text-slate-700">{s.angebot}</td>
-                                                    <td className="p-3 text-slate-700">{s.abschluss}</td>
-                                                    <td className="p-3 text-slate-700">{avgStrokes}</td>
-                                                    {allCanvasKeys.map(k => {
-                                                        const c = s.canv[k] || { usedCount: 0, strokes: 0 };
-                                                        const pct = Math.round((c.usedCount / Math.max(1, s.total)) * 100);
-                                                        return (
-                                                            <td key={k} className="p-3 text-slate-700">
-                                                                <div className="text-xs text-slate-500">{pct}%</div>
-                                                                <div className="font-bold">{c.usedCount}</div>
-                                                            </td>
-                                                        );
-                                                    })}
-                                                    
-                                                </tr>
+                                                <div key={user} style={{background:'#fff',borderRadius:'12px',border:'1px solid #e2e8f0',padding:'12px 14px',display:'flex',alignItems:'center',gap:'12px'}}>
+                                                    <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'linear-gradient(135deg,#3b82f6,#6366f1)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:'13px',flexShrink:0}}>{initials||'?'}</div>
+                                                    <div style={{flex:1,minWidth:0}}>
+                                                        <div style={{fontWeight:800,color:'#1e293b',fontSize:'13px',marginBottom:'4px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{user}</div>
+                                                        <div style={{display:'flex',gap:'5px',flexWrap:'wrap'}}>
+                                                            {[
+                                                                {label:'Vorgänge',   val:s.total,     color:'#3b82f6'},
+                                                                {label:'Anfragen',   val:s.anfrage,   color:'#64748b'},
+                                                                {label:'Angebote',   val:s.angebot,   color:'#8b5cf6'},
+                                                                {label:'Abschlüsse', val:s.abschluss, color:'#10b981'},
+                                                            ].map(chip=>(
+                                                                <span key={chip.label} style={{fontSize:'10px',fontWeight:700,padding:'2px 7px',borderRadius:'999px',background:`${chip.color}12`,color:chip.color,border:`1px solid ${chip.color}30`}}>{chip.label}: {chip.val}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'4px',flexShrink:0}}>
+                                                        <div style={{fontSize:'20px',fontWeight:900,color:conv>=30?'#10b981':conv>=15?'#f59e0b':'#ef4444',lineHeight:1}}>{conv}%</div>
+                                                        <div style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase'}}>Quote</div>
+                                                        <div style={{fontSize:'10px',color:'#64748b',fontWeight:600}}>✏ Ø {avgStrokes}</div>
+                                                    </div>
+                                                </div>
                                             );
                                         })}
-                                    </tbody>
-                                </table>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="mt-4 text-xs text-slate-500">
-                                Export-Tipp: CSV erzeugt jetzt 2 Dateien: *_summary (kompakt) und *_fields (Pivot: field, used, strokes).
-                            </div>
+                            {/* Letzte Vorgänge */}
+                            {filtered.length > 0 && (
+                                <div>
+                                    <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'8px'}}>Letzte Vorgänge</div>
+                                    <div style={{borderRadius:'12px',border:'1px solid #e2e8f0',overflow:'hidden'}}>
+                                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:'12px'}}>
+                                            <thead style={{background:'#f8fafc'}}>
+                                                <tr>
+                                                    {['Datum','Mitarbeiter','Beratungs-ID','Ergebnis'].map(h=>(
+                                                        <th key={h} style={{padding:'8px 12px',textAlign:'left',fontWeight:700,color:'#64748b',fontSize:'10px',textTransform:'uppercase',letterSpacing:'0.05em'}}>{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filtered.slice(0,10).map((r,i)=>{
+                                                    const ts = new Date(r.ts);
+                                                    const dateStr = ts.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'});
+                                                    const timeStr = ts.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+                                                    const isAbschluss = r.result === 'Abschluss';
+                                                    return (
+                                                        <tr key={r.id||i} style={{borderTop:'1px solid #f1f5f9',background:i%2===0?'#fff':'#fafafa'}}>
+                                                            <td style={{padding:'8px 12px',color:'#475569',whiteSpace:'nowrap'}}>{dateStr}<span style={{color:'#cbd5e1',marginLeft:'4px'}}>{timeStr}</span></td>
+                                                            <td style={{padding:'8px 12px',fontWeight:700,color:'#1e293b'}}>{resolveUserName(r.user)}</td>
+                                                            <td style={{padding:'8px 12px',fontFamily:'monospace',fontSize:'11px',color:r.beratungsId?'#1e293b':'#cbd5e1',letterSpacing:'0.05em'}}>{r.beratungsId||'–'}</td>
+                                                            <td style={{padding:'8px 12px'}}>
+                                                                <span style={{padding:'2px 8px',borderRadius:'999px',fontSize:'10px',fontWeight:700,
+                                                                    background:isAbschluss?'#ecfdf5':r.result==='Angebot'?'#f5f3ff':r.result==='Anfrage'?'#f1f5f9':'#f8fafc',
+                                                                    color:isAbschluss?'#10b981':r.result==='Angebot'?'#8b5cf6':r.result==='Anfrage'?'#64748b':'#94a3b8',
+                                                                    border:`1px solid ${isAbschluss?'#6ee7b7':r.result==='Angebot'?'#c4b5fd':r.result==='Anfrage'?'#cbd5e1':'#e2e8f0'}`
+                                                                }}>{r.result||'offen'}</span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                        {filtered.length > 10 && <div style={{padding:'8px 12px',textAlign:'center',fontSize:'11px',color:'#94a3b8',background:'#f8fafc',borderTop:'1px solid #f1f5f9'}}>+{filtered.length-10} weitere · Export via CSV</div>}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -5429,7 +5489,7 @@ const resolveUserName = (raw) => {
             scaleRef, triggerRedraw,
             image, onClearImage, onClearOverlay,
             imageTransform, onUpdateImageTransform,
-            followUpInfo, onOpenBundleModal,
+            onOpenBundleModal,
             triggerToast,
             htmlOverlayProp,
             bundleInsertCount,
@@ -5705,7 +5765,7 @@ const resolveUserName = (raw) => {
             try { hardEndInteraction(); } catch(_) {}
         };
         const handleImageReset = () => { onUpdateImageTransform(statusKey, { x: 0, y: 0, scale: 0.8, rotation: 0 }); }; 
-        return (<div className={containerClasses} style={{transition: 'all 0.25s ease'}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-10 shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2 offer-toolbar-icons">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{hasOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImageReset(); }} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}
+        return (<div className={containerClasses} style={{transition: 'all 0.25s ease'}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-[60] shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2 offer-toolbar-icons">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{hasOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImageReset(); }} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}
         {hasOverlay && (statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (
             <>
                 <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); toggleOverlayEdit(); }} className={`p-1.5 rounded-full transition-colors ${overlayEditEnabled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`} title={overlayEditEnabled ? 'Bearbeiten aktiv: Angebot kann bewegt/skaliert werden (Zeichnen ist dann gesperrt). Klick zum Sperren.' : 'Bearbeiten aus: Zeichnen ist frei. Klick um Angebot zu bewegen/skaliert zu bearbeiten.'}><Icon d={ICONS.Lock} size={16}/></button>
@@ -5716,27 +5776,6 @@ const resolveUserName = (raw) => {
             </>
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
-                    {followUpInfo && (followUpInfo.date || followUpInfo.time || followUpInfo.reason) ? (
-                        <div className={`mt-3 mb-2 p-3 rounded-xl text-sm relative z-20 ${
-                            status === 'open'
-                                ? 'bg-red-50 border border-red-200'
-                                : status === 'closed'
-                                    ? 'bg-green-50 border border-green-200'
-                                    : 'bg-slate-50 border border-slate-200'
-                        }`}>
-                            <div className={`font-black ${
-                                status === 'open' ? 'text-red-700' : status === 'closed' ? 'text-green-700' : 'text-slate-700'
-                            }`}>Folgetermin</div>
-                            <div className={`${status === 'open' ? 'text-red-900' : status === 'closed' ? 'text-green-900' : 'text-slate-800'} mt-1`}>
-                                <span className="font-bold">{followUpInfo.date || ""}</span>{followUpInfo.time ? <> • <span className="font-bold">{followUpInfo.time}</span></> : null}
-                            </div>
-                            {followUpInfo.reason ? (
-                                <div className={`${status === 'open' ? 'text-red-900' : status === 'closed' ? 'text-green-900' : 'text-slate-800'} mt-1`}>
-                                    <span className="font-bold">Grund:</span> {followUpInfo.reason}
-                                </div>
-                            ) : null}
-                        </div>
-                    ) : null}
 
 </div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}>{htmlOverlay ? (<div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
             </div></div>); });
@@ -5861,7 +5900,7 @@ function App() {
 
 
             // === Mitarbeiter-Link-System (Variante A) ===
-            // Nutzung: .../Pilot-Pencil-Selling...?m=jefferson   oder ...?m=Elif%20Icik
+            // Nutzung: .../Pilot-Pencil-Selling...?m=jefferson   oder ...?m=D.%20Da%20Silva
             // -> setzt AgentName automatisch (kann bei Bedarf trotzdem überschrieben werden)
             const __urlParams = new URLSearchParams(window.location.search || '');
             const __mRaw = __urlParams.get('m') || '';
@@ -5869,7 +5908,7 @@ function App() {
                 try { return decodeURIComponent(String(__mRaw).replace(/\+/g, ' ')).trim(); } catch(e) { return String(__mRaw).trim(); }
             })();
             // Sanitizer (nur "harmlos" erlauben)
-            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim();
+            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || 'D. Da Silva';
             // Optional: global sichtbar (für Debug/Exports)
             try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
             // PATCH (Stylus Year-2 Costs): When the 2nd-year cost field becomes visible, force a DPR-correct resize
@@ -5923,7 +5962,7 @@ function App() {
                 main: [],
 
                 // Kleine Input-Canvas
-                email: [], provider: [], notes: [], skip_reason: [],
+                email: [], provider: [], notes: [], skip_reason: [], beratungs_id: [],
 
                 // Situation: EIN Canvas pro Zeile (stabil im Druck)
                 sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [],
@@ -6137,8 +6176,8 @@ const handleOpenStats = () => {
             const [textSize, setTextSize] = useState('medium'); 
             const [textStyle, setTextStyle] = useState({ bold: false, italic: false });
             const [textData, setTextData] = useState({ 
-                AgentName: (LINK_EMPLOYEE || ''), 
-                DateValue: '',
+                AgentName: (LINK_EMPLOYEE || 'D. Da Silva'), 
+                DateValue: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
                 OfferValidUntil: '', 
                 offer1: '', 
                 offer2: '', 
@@ -6146,6 +6185,7 @@ const handleOpenStats = () => {
             }); 
             const [emailText, setEmailText] = useState('');
             const [emailMode, setEmailMode] = useState('keyboard'); 
+            const [beratungsIdMode, setBeratungsIdMode] = useState('keyboard');
             const [notesMode, setNotesMode] = useState('keyboard');
 
             const [showWlanModal, setShowWlanModal] = useState(false);
@@ -6306,55 +6346,8 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             const [offerData, setOfferData] = useState(initialOfferData);
             const [canvasStatus, setCanvasStatus] = useState({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' });
 
-            // === FOLLOW-UP (Folgetermin) Pflicht bei Status "Offen" ===
-            const [followUpsByKey, setFollowUpsByKey] = useState({}); // { [statusKey]: {date,time,reason} }
-            const [showFollowUpModal, setShowFollowUpModal] = useState(false);
-            const [followUpKeys, setFollowUpKeys] = useState([]);
-            const [followUpIndex, setFollowUpIndex] = useState(0);
-            const [followUpDraft, setFollowUpDraft] = useState({ date: "", time: "", reason: "" });
-            const [finishAfterFollowUp, setFinishAfterFollowUp] = useState(false);
-
-            const startFollowUpFlow = (keys) => {
-                setFollowUpKeys(keys);
-                setFollowUpIndex(0);
-                setFollowUpDraft({ date: "", time: "", reason: "" });
-                setFinishAfterFollowUp(true);
-                setShowFollowUpModal(true);
-            };
-
-            const saveCurrentFollowUp = () => {
-                const reasonOk = (followUpDraft.reason || "").trim().length >= 3;
-                if (!followUpDraft.date || !followUpDraft.time || !reasonOk) return;
-
-                const key = followUpKeys[followUpIndex];
-                if (!key) return;
-
-                setFollowUpsByKey(prev => ({ ...prev, [key]: { ...followUpDraft } }));
-
-                const nextIndex = followUpIndex + 1;
-                if (nextIndex >= followUpKeys.length) {
-                    setShowFollowUpModal(false);
-                    setFollowUpKeys([]);
-                    setFollowUpIndex(0);
-
-                    // Continue finish flow
-                    if (finishAfterFollowUp) {
-                        setFinishAfterFollowUp(false);
-                        backgroundAutoUpload({ type: 'abschluss', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
-                        handlePrint();
-                    }
-                } else {
-                    setFollowUpIndex(nextIndex);
-                    setFollowUpDraft({ date: "", time: "", reason: "" });
-                }
-            };
-
-            const cancelFollowUp = () => {
-                setShowFollowUpModal(false);
-                setFollowUpKeys([]);
-                setFollowUpIndex(0);
-                setFinishAfterFollowUp(false);
-            };
+            // === FOLLOW-UP state (minimal, für followUpsByKey Referenzen in OfferCanvas) ===
+            const [followUpsByKey, setFollowUpsByKey] = useState({});
             // isReadyToFinish wird weiter unten nach Inhalterkennung berechnet
 
             
@@ -6372,6 +6365,7 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             
             const canvasRef = useRef(null); 
             const emailCanvasRef = useRef(null);
+            const beratungsIdCanvasRef = useRef(null);
             const providerCanvasRef = useRef(null); 
             const notesCanvasRef = useRef(null);
             const sitCanvasRef_Kundenname = useRef(null);
@@ -6454,7 +6448,8 @@ const fileInputRef = useRef(null);
                 try {
                     const snap = { ts: Date.now(), textData, drawnStrokes, customerType, segment,
                         providerSelect, costState, offerData, canvasStatus,
-                        wlanRecommendation, speedRecommendation, emailText, skipReason,
+                        wlanRecommendation, speedRecommendation, emailText, beratungsId, skipReason,
+                        customerSignature,   // Kundenunterschrift
                         canvasHtml,          // Produktempfehlungen HTML
                         wlanSnapshot,        // WLAN-Planer Ergebnis (Haus + Empfehlung)
                         techUebernommen,     // Übernommene Technologien
@@ -6466,8 +6461,8 @@ const fileInputRef = useRef(null);
                     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(snap));
                 } catch(e) {}
             }, [textData, drawnStrokes, customerType, segment, providerSelect, costState,
-                offerData, canvasStatus, wlanRecommendation, speedRecommendation, emailText, skipReason,
-                canvasHtml, wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot, canvasImages, imageTransform]);
+                offerData, canvasStatus, wlanRecommendation, speedRecommendation, emailText, beratungsId, skipReason,
+                customerSignature, canvasHtml, wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot, canvasImages, imageTransform]);
 
             const clearAutosave = () => { try { localStorage.removeItem(AUTOSAVE_KEY); } catch(e){} };
 
@@ -6505,7 +6500,9 @@ const fileInputRef = useRef(null);
                     if (snap.wlanRecommendation !== undefined) setWlanRecommendation(snap.wlanRecommendation);
                     if (snap.speedRecommendation !== undefined) setSpeedRecommendation(snap.speedRecommendation);
                     if (snap.emailText !== undefined) setEmailText(snap.emailText);
+                    if (snap.beratungsId !== undefined) setBeratungsId(snap.beratungsId);
                     if (snap.skipReason !== undefined) setSkipReason(snap.skipReason);
+                    if (snap.customerSignature !== undefined) setCustomerSignature(snap.customerSignature);
                     if (snap.canvasHtml) {
                         setCanvasHtml(snap.canvasHtml);
                         // Trigger Re-Render der HTML-Overlays
@@ -6521,7 +6518,11 @@ const fileInputRef = useRef(null);
                     if (snap.tvSnapshot) setTvSnapshot(snap.tvSnapshot);
                     if (snap.canvasImages) setCanvasImages(snap.canvasImages);
                     if (snap.imageTransform) setImageTransform(snap.imageTransform);
+                    // Gestaffelte Redraws: Layout braucht Zeit um Canvas-Größen zu berechnen.
+                    // Erster Redraw sofort, weitere nach 200/600ms für Sicherheit.
                     setRedrawCounter(r => r+1);
+                    setTimeout(() => setRedrawCounter(r => r+1), 200);
+                    setTimeout(() => setRedrawCounter(r => r+1), 600);
                     setShowRestoreToast(false);
                     triggerToast('✅ Sitzung wiederhergestellt!');
                 } catch(e) { triggerToast('Wiederherstellung fehlgeschlagen.'); }
@@ -6819,11 +6820,17 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                     return;
                 }
 
-                // Wichtig: Layer injizieren, damit blaue/graue Hintergründe sicher gedruckt werden
-                // (auch wenn im Druckdialog "Hintergrundgrafiken" deaktiviert ist).
+                // Race Condition Fix: Nach Sitzungs-Restore müssen alle Canvas-Strokes
+                // erst neu gezeichnet werden. Wir warten 2 Paint-Cycles + 400ms Puffer.
                 injectPrintBgLayers();
-
-                (typeof doPrint === 'function' ? doPrint : (() => window.print()))();
+                setRedrawCounter(r => r + 1);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            (typeof doPrint === 'function' ? doPrint : (() => window.print()))();
+                        }, 400);
+                    });
+                });
             }, [drawnStrokes, getDisplayText, canvasStatus, triggerToast, injectPrintBgLayers]);
 
             const downloadPdfBlob = (blob, filename) => {
@@ -6865,9 +6872,9 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             
             const getAgentDisplayNameForUpload = () => {
                 const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                if (!raw) return 'Elif Icik';
-                if (raw === 'E.I' || raw.toLowerCase() === 'e.i') return 'Elif Icik';
-                if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Elif Icik';
+                if (!raw) return 'D. Da Silva';
+                
+                if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
                 return raw;
             };
             const getDslFlagForUpload = () => {
@@ -6905,12 +6912,8 @@ const handleFinishOfferClick = () => {
 
                 const openKeys = nonEmptyKeys.filter(k => canvasStatus[k] === 'open');
 
-                // Wenn Kunde unterschrieben hat: erst Folgetermine abfragen (falls etwas offen), dann drucken/hochladen
+                // Wenn Kunde unterschrieben hat: direkt drucken/hochladen
                 if (customerSignature) {
-                    if (openKeys.length > 0) {
-                        startFollowUpFlow(openKeys);
-                        return;
-                    }
                     backgroundAutoUpload({ type: 'abschluss', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
                     handlePrint();
                     return;
@@ -6922,52 +6925,94 @@ const handleFinishOfferClick = () => {
 
             const handleFinishTypeSelection = (type) => {
                 setShowFinishTypeModal(false);
-                // --- Analytics log (DSGVO-safe: only usage, no content) ---
+
+                if (type === 'deal') {
+                    // Abschluss-Pfad: Analytics nach Unterschrift (→ handleSignatureSave)
+                    setShowSignatureModal(true);
+                    return;
+                }
+
+                // ── Angebot-Pfad: sofort loggen & drucken ──
+                const computedResult = computeResultFromActivity(drawnStrokes, textData, false);
                 try {
                     appendAnalyticsRow({
                         ts: new Date().toISOString(),
                         user: (() => {
                             const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                            if (!raw) return 'Elif Icik';
-                            if (raw === 'E.I' || raw.toLowerCase() === 'e.i') return 'Elif Icik';
-                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Elif Icik';
+                            if (!raw) return 'D. Da Silva';
+                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
                             return raw;
                         })(),
                         shop: 'HeTec',
-                        result: (type === 'deal') ? 'Abschluss' : 'Angebot',
+                        beratungsId: beratungsId || '',
+                        result: computedResult,
                         canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
                     });
                 } catch (e) { /* ignore */ }
 
-                // ── Admin-Archiv: Vorgang speichern ──
                 try {
                     const _slug = (new URLSearchParams(window.location.search||'')).get('m')||'';
                     const _nr = 'PS-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
                     const _arc = (()=>{try{return JSON.parse(localStorage.getItem('ps_admin_archive')||'[]');}catch(e){return[];}})();
-                    _arc.push({id:'ps_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),ts:Date.now(),offerNr:_nr,user:_slug||(textData&&textData.AgentName)||LINK_EMPLOYEE||'–',result:type==='deal'?'abgeschlossen':'offen',customerName:(textData&&textData.Kundenname)||'',fields:{Agent:(textData&&textData.AgentName)||LINK_EMPLOYEE||'',Datum:(textData&&textData.DateValue)||'',Kundenname:(textData&&textData.Kundenname)||''}});
+                    _arc.push({id:'ps_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),ts:Date.now(),offerNr:_nr,user:_slug||(textData&&textData.AgentName)||LINK_EMPLOYEE||'–',result:computedResult,beratungsId:beratungsId||'',customerName:(textData&&textData.Kundenname)||'',fields:{Agent:(textData&&textData.AgentName)||LINK_EMPLOYEE||'',Datum:(textData&&textData.DateValue)||'',Kundenname:(textData&&textData.Kundenname)||''}});
                     localStorage.setItem('ps_admin_archive',JSON.stringify(_arc));
                     triggerToast('✅ Vorgang '+_nr+' gespeichert');
                 } catch(e) {}
 
-                if (type === 'deal') {
-                    // Path 1: Deal -> Signature -> Referral -> Print
-                    setShowSignatureModal(true);
-                } else {
-                    // Path 2: Quote -> Skip Signature -> Skip Referral -> Print directly
-                    // Clear signature just in case
-                    setCustomerSignature(null);
-                    triggerToast("Angebot wird gedruckt (Status: Offen)");
-                    // Angebot: im Hintergrund als PDF (Print-Look) nach OneDrive (Power Automate) hochladen
-                    backgroundAutoUpload({ type: 'angebot', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
-                    handlePrint();
-                }
+                setCustomerSignature(null);
+                backgroundAutoUpload({ type: 'angebot', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
+                // ReferralModal zeigen — Druck/PDF passiert darin via "Weiter zum Druck"
+                setTimeout(() => setShowReferralModal(true), 300);
             };
             
-            const handleSignatureSave = (dataUrl) => { if (dataUrl === 'PAPER_SIGNATURE') { setCustomerSignature(null); triggerToast("Papier-Unterschrift bestätigt."); } else { setCustomerSignature(dataUrl); triggerToast("Unterschrift erfasst."); } setShowSignatureModal(false); setTimeout(() => setShowReferralModal(true), 300); };
+            const handleSignatureSave = (dataUrl) => {
+                const isRealDigitalSig = (dataUrl && dataUrl !== 'PAPER_SIGNATURE');
+                if (isRealDigitalSig) {
+                    setCustomerSignature(dataUrl);
+                    triggerToast('Unterschrift erfasst.');
+                } else {
+                    setCustomerSignature(null);
+                    triggerToast('Papier-Unterschrift bestätigt.');
+                }
+                setShowSignatureModal(false);
+
+                // KERN-FIX: Nach Restore wurden Strokes in 0px-Canvas gezeichnet (unsichtbar).
+                // Jetzt sind Canvas-Elemente sicher sichtbar — gestaffelte Redraws erzwingen.
+                setRedrawCounter(r => r + 1);
+                setTimeout(() => setRedrawCounter(r => r + 1), 150);
+                setTimeout(() => setRedrawCounter(r => r + 1), 500);
+
+                // ── Analytics loggen ──
+                const computedResult = computeResultFromActivity(drawnStrokes, textData, isRealDigitalSig);
+                try {
+                    appendAnalyticsRow({
+                        ts: new Date().toISOString(),
+                        user: (() => {
+                            const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
+                            if (!raw) return 'D. Da Silva';
+                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
+                            return raw;
+                        })(),
+                        shop: 'HeTec',
+                        beratungsId: beratungsId || '',
+                        result: computedResult,
+                        canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
+                    });
+                } catch(e) {}
+                try {
+                    const _slug = (new URLSearchParams(window.location.search||'')).get('m')||'';
+                    const _nr = 'PS-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
+                    const _arc = (()=>{try{return JSON.parse(localStorage.getItem('ps_admin_archive')||'[]');}catch(e){return[];}})();
+                    _arc.push({id:'ps_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),ts:Date.now(),offerNr:_nr,user:_slug||(textData&&textData.AgentName)||LINK_EMPLOYEE||'–',result:computedResult,beratungsId:beratungsId||'',customerName:(textData&&textData.Kundenname)||'',fields:{Agent:(textData&&textData.AgentName)||LINK_EMPLOYEE||'',Datum:(textData&&textData.DateValue)||'',Kundenname:(textData&&textData.Kundenname)||''}});
+                    localStorage.setItem('ps_admin_archive',JSON.stringify(_arc));
+                } catch(e) {}
+
+                setTimeout(() => setShowReferralModal(true), 300);
+            };
             
             const handleSkipToOffer = (reasonData) => { setSkipReason(reasonData); setShowSkipReasonModal(false); setView('offer'); setViewOfferCounter(c => c + 1); triggerToast(`Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`); };
 
-            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
+            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
 
             const Toast = ({ message }) => { if (!message) return null; return (<div className="print-hide-toast fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg border border-slate-700 animate-in fade-in duration-300"><div className="flex items-center gap-2"><Icon d={ICONS.Clipboard} size={16} className="text-green-400"/><span className="text-sm font-medium">{message}</span></div></div>); };
 
@@ -7081,6 +7126,7 @@ const handleFinishOfferClick = () => {
 
                     // Kleine Input-Canvas
                     { ref: emailCanvasRef, key: 'email', mode: emailMode }, 
+                    { ref: beratungsIdCanvasRef, key: 'beratungs_id', mode: beratungsIdMode },
                     { ref: providerCanvasRef, key: 'provider', mode: providerMode, condition: isCustomProvider }, 
                     { ref: notesCanvasRef, key: 'notes', mode: notesMode }, 
                     { ref: skipReasonCanvasRef, key: 'skip_reason', mode: skipReasonMode, condition: true } 
@@ -7136,14 +7182,19 @@ const handleFinishOfferClick = () => {
                     const emailTimer = setTimeout(() => {
                         resizeCanvas(emailCanvasRef, 'email');
                         setRedrawCounter(r => r + 1);
-                    }, 220); // 20ms Puffer nach der 200ms CSS-Transition
-                    // resizeAll() läuft danach sowieso noch — Timer ist nur für den ersten Render
+                    }, 220);
+                }
+                if (beratungsIdMode === 'pen') {
+                    const bidTimer = setTimeout(() => {
+                        resizeCanvas(beratungsIdCanvasRef, 'beratungs_id');
+                        setRedrawCounter(r => r + 1);
+                    }, 220);
                 }
 
                 resizeAll(); 
                 window.addEventListener('resize', resizeAll); 
                 return () => window.removeEventListener('resize', resizeAll); 
-            }, [emailMode, providerMode, isCustomProvider, notesMode, skipReasonMode, view, inputMode, sitLayoutMode, currentSitStep]); 
+            }, [emailMode, beratungsIdMode, providerMode, isCustomProvider, notesMode, skipReasonMode, view, inputMode, sitLayoutMode, currentSitStep]); 
             useEffect(() => { 
                 if (view !== 'situation') return; 
                 const list = [
@@ -7596,8 +7647,28 @@ const renderPenToolButtons = () => (
             };
             const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
             
-            const handleLocalTranslation = useCallback((targetCode) => { if (targetCode === 'de') return; const mockData = MOCK_TRANSLATIONS[targetCode]; if (mockData) { const newTranslatedText = {}; const newStaticTranslations = {}; Object.keys(STATIC_LABELS).forEach(key => { if (mockData[key]) { newStaticTranslations[key] = mockData[key]; } }); Object.keys(textData).forEach(key => { if (mockData[key]) { newTranslatedText[key] = mockData[key]; } }); setTranslatedText(prev => ({ ...prev, [targetCode]: { ...(prev[targetCode] || {}), ...newTranslatedText } })); setStaticTranslations(prev => ({ ...prev, [targetCode]: { ...(prev[targetCode] || {}), ...newStaticTranslations } })); if (mockData.AgentName) handleTextChange('AgentName', mockData.AgentName); if (mockData.DateValue) handleTextChange('DateValue', mockData.DateValue); triggerToast(`Lokale (Mock) Übersetzung geladen: ${targetCode.toUpperCase()}.`); } else { triggerToast(`Für ${targetCode.toUpperCase()} ist keine lokale Mock-Übersetzung verfügbar. Standard-Deutsch wird verwendet.`); } }, [triggerToast, textData, handleTextChange]); 
-            useEffect(() => { if (displayLanguage !== 'de') { if (!staticTranslations[displayLanguage] || !translatedText[displayLanguage]) { handleLocalTranslation(displayLanguage); } } }, [displayLanguage, handleLocalTranslation, translatedText, staticTranslations]);
+            const translateBatch = null; // No API needed — all translations are local
+
+            const handleLocalTranslation = useCallback((targetCode) => {
+                if (targetCode === 'de') return;
+                const langName = ALL_LANGUAGES.find(l => l.code === targetCode)?.name || targetCode.toUpperCase();
+                const dict = MOCK_TRANSLATIONS[targetCode];
+                if (!dict) {
+                    triggerToast(`⚠️ Keine Übersetzung für ${langName} verfügbar`);
+                    return;
+                }
+                // Static labels
+                const newStatic = {};
+                Object.keys(STATIC_LABELS).forEach(k => { if (dict[k]) newStatic[k] = dict[k]; });
+                setStaticTranslations(prev => ({ ...prev, [targetCode]: newStatic }));
+                // Clear user text translations (they stay in German — no API)
+                setTranslatedText(prev => ({ ...prev, [targetCode]: {} }));
+                triggerToast(`✅ ${langName} — Beschriftungen übersetzt`);
+            }, [triggerToast]);
+
+            useEffect(() => {
+                if (displayLanguage !== 'de') handleLocalTranslation(displayLanguage);
+            }, [displayLanguage, handleLocalTranslation]);
 
 
 // --- OneDrive Auto-Upload Helpers ---
@@ -9222,19 +9293,18 @@ const handlePDFShare = async () => {
                     <SpeedModal isOpen={showSpeedModal} onClose={() => setShowSpeedModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setSpeedRecommendation(rec)} />
                     <TechModal isOpen={showTechModal} onClose={() => toggleTech(false)} checkedTechs={checkedTechs} setCheckedTechs={setCheckedTechs} onUebernehmen={(list) => { setTechUebernommen(list); triggerToast('✅ Technologien übernommen!'); }} />
                     <RoamingModal isOpen={showRoamingModal} onClose={() => setShowRoamingModal(false)} />
-                    <TvPriceModal isOpen={showTvModal} onClose={() => setShowTvModal(false)} onUebernehmen={(snap) => { const val = typeof snap === 'object' ? snap.price : snap; setCostState(prev => ({ ...prev, tv: val })); if (typeof snap === 'object') setTvSnapshot(snap); triggerToast('📺 TV-Paket übernommen!'); setShowTvModal(false); setView('offer'); setViewOfferCounter(c => c + 1); }} />
+                    <TvPriceModal isOpen={showTvModal} onClose={() => setShowTvModal(false)} onUebernehmen={(snap) => { const val = typeof snap === 'object' ? snap.price : snap; setCostState(prev => ({ ...prev, tv: val })); if (typeof snap === 'object') setTvSnapshot(snap); triggerToast('📺 TV-Paket übernommen!'); setShowTvModal(false); }} />
                     <QuestionModal isOpen={!!activeCategory && !showAdmin} onClose={() => setActiveCategory(null)} category={activeCategory} question={getCurrentQuestion()} onNextQuestion={handleNextQuestion} />
                     <ReferralModal isOpen={showReferralModal} onClose={(mode) => {
                         setShowReferralModal(false);
                         if (mode === 'cancel') {
                             try { setCustomerSignature(null); } catch(e) {}
-                            // Angebotsgültigkeit zurücksetzen (Text + Stift), damit beim nächsten Druck sauber neu gesetzt werden kann
                             try { setTextData(prev => ({ ...prev, OfferValidUntil: '' })); } catch(e) {}
                             try { setDrawnStrokes(prev => ({ ...prev, offer_valid_until: [] })); } catch(e) {}
                         }
-                    }} onPrint={handlePrint} onShare={handlePDFShare} />
+                    }} onPrint={handlePrint} onShare={handlePDFShare} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
                     <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} />
-                    <FollowUpModal isOpen={showFollowUpModal} onCancel={cancelFollowUp} onSave={saveCurrentFollowUp} followUpDraft={followUpDraft} setFollowUpDraft={setFollowUpDraft} currentLabel={getStaticLabel(followUpKeys[followUpIndex] || '')} stepInfo={followUpKeys.length ? `${followUpIndex+1}/${followUpKeys.length}` : ''} />
+
 
                     <OfferValidityModal
                         isOpen={showValidityModal}
@@ -9739,7 +9809,7 @@ const handlePDFShare = async () => {
                                     const hidden = offerLayoutMode === 'step' && currentOfferStep !== idx;
                                     return (
                                         <div className={orderClass} style={hidden ? {display:'none'} : offerLayoutMode==='step' ? {gridColumn:'1/-1'} : {}}>
-                                            <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} followUpInfo={followUpsByKey[key]} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} htmlOverlayProp={canvasHtml[key] || null} bundleInsertCount={bundleInsertCounter[key] || 0} viewOfferCount={viewOfferCounter} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />
+                                            <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} htmlOverlayProp={canvasHtml[key] || null} bundleInsertCount={bundleInsertCounter[key] || 0} viewOfferCount={viewOfferCounter} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />
                                         </div>
                                     );
                                 })}
@@ -9755,20 +9825,20 @@ const handlePDFShare = async () => {
                                 const hasFusion = techUebernommen.length > 0 || wlanSnapshot || tvSnapshot;
                                 if (!hasSaving && !hasFusion) return null;
                                 return (
-                                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px', minHeight: hasSaving ? '160px' : 'auto'}}>
+                                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px'}}>
 
                                         {/* ── LINKS: Ersparnis ── */}
                                         {hasSaving ? (
                                             <div className="print-hide-kosten" style={{display:'flex', flexDirection:'row', alignItems:'center', gap:'14px', animation:'savings-pop 0.55s cubic-bezier(0.34,1.56,0.64,1)', flexShrink:0}}>
 
-                                                {/* Bisher → Neu vertikal */}
-                                                <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'8px'}}>
+                                                {/* Bisher → Neu horizontal */}
+                                                <div style={{display:'flex', flexDirection:'row', alignItems:'center', gap:'8px'}}>
                                                     <div style={{background:'#fff1f2', border:'1.5px solid #fecdd3', borderRadius:'16px', padding:'14px 20px', textAlign:'center', minWidth:'110px'}}>
                                                         <div style={{fontSize:'8px', fontWeight:800, color:'#be123c', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'4px'}}>Bisher</div>
                                                         <div style={{fontSize:'24px', fontWeight:900, color:'#dc2626', letterSpacing:'-0.03em', lineHeight:1}}>{current.toFixed(2).replace('.',',')} €</div>
                                                         <div style={{fontSize:'9px', color:'#f87171', fontWeight:600, marginTop:'3px'}}>/&nbsp;Monat</div>
                                                     </div>
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                                                     <div style={{background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:'16px', padding:'14px 20px', textAlign:'center', minWidth:'110px'}}>
                                                         <div style={{fontSize:'8px', fontWeight:800, color:'#15803d', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'4px'}}>Neu</div>
                                                         <div style={{fontSize:'24px', fontWeight:900, color:'#16a34a', letterSpacing:'-0.03em', lineHeight:1}}>{monthly.toFixed(2).replace('.',',')} €</div>
@@ -10084,7 +10154,7 @@ const handlePDFShare = async () => {
     </div>
   </div>
 </div></div>
-                                {customerSignature && (<div className="w-full flex justify-end mt-1 pr-[1.25rem]"><span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unterschrift Kunde</span></div>)}
+                                {customerSignature && (<div className="w-full flex justify-end mt-1 pr-[1.25rem] print-hide-sig-label"><span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unterschrift Kunde</span></div>)}
                                 <div className="mt-4 pt-4 border-t border-slate-100"><p className="text-[10px] text-slate-400 leading-tight">**Datenschutzerklärung (Platzhalter):** Mit Ihrer Unterschrift bestätigen Sie die Richtigkeit der angegebenen Kosten und nehmen die Vertragsdetails sowie die beigefügte Datenschutzerklärung zur Kenntnis. Sie stimmen der elektronischen Speicherung Ihrer Daten zum Zwecke der Vertragsabwicklung zu. Widerrufsbelehrung liegt bei.</p></div>
                             </div>
                         </div>
@@ -10104,17 +10174,19 @@ const handlePDFShare = async () => {
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
                         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 z-50 pointer-events-auto">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap hidden sm:block">Beratungs-ID</span>
-                            <div className="relative flex items-center">
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={15}
-                                    value={beratungsId}
-                                    onChange={e => setBeratungsId(e.target.value.replace(/\D/g, '').slice(0, 15))}
-                                    placeholder="000000000000000"
-                                    className="px-3 h-8 w-36 text-xs font-mono font-bold tracking-widest rounded-lg border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 text-slate-700 placeholder-slate-300 transition-all"
-                                    title="o2 Beratungs-ID (15 Stellen)"
-                                />
+                            <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
+                                <div style={{position:'relative',height:'32px',width:beratungsIdMode==='pen'?'280px':'160px',border:`1.5px solid ${beratungsIdMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'width 0.2s ease'}}>
+                                    {beratungsIdMode==='keyboard'
+                                        ?<input type="text" inputMode="numeric" maxLength={15} value={beratungsId} onChange={e=>setBeratungsId(e.target.value.replace(/\D/g,'').slice(0,15))} placeholder="000000000000000" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 10px',fontSize:'11px',fontWeight:700,fontFamily:'monospace',letterSpacing:'0.08em',color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>
+                                        :<canvas ref={beratungsIdCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={e=>startDrawing(e,beratungsIdCanvasRef,'beratungs_id')} onPointerMove={e=>draw(e,beratungsIdCanvasRef,'beratungs_id')} onPointerUp={e=>stopDrawing(e,beratungsIdCanvasRef)} onPointerLeave={e=>stopDrawing(e,beratungsIdCanvasRef)}/>
+                                    }
+                                </div>
+                                <div style={{display:'flex',gap:'2px',flexShrink:0,alignSelf:'flex-start'}}>
+                                    {[['keyboard','⌨'],['pen','✏']].map(([m,ic])=>(
+                                        <button key={m} onClick={()=>setBeratungsIdMode(m)} style={{width:'26px',height:'32px',borderRadius:'7px',fontSize:'12px',border:`1.5px solid ${beratungsIdMode===m?'#3b82f6':'#e2e8f0'}`,background:beratungsIdMode===m?'#eff6ff':'#f8fafc',color:beratungsIdMode===m?'#2563eb':'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{ic}</button>
+                                    ))}
+                                    {beratungsIdMode==='pen'&&<button onClick={()=>{const c=beratungsIdCanvasRef.current;if(c){const ctx=c.getContext('2d');ctx&&ctx.clearRect(0,0,c.width,c.height);}setDrawnStrokes(p=>({...p,beratungs_id:[]}));}} style={{width:'26px',height:'32px',borderRadius:'7px',fontSize:'11px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
+                                </div>
                             </div>
                         </div>
                         {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
