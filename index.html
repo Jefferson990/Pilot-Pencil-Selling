@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vertriebs-Dashboard V10 Clean - Print & PDF Fix</title>
+    <title>Vertriebs-Dashboard – Telekom Edition</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -161,16 +161,16 @@
 
         /* === SCREEN: Kacheln nutzen die volle Höhe === */
         .sit-card-grid {
-            align-content: stretch !important;
-            grid-template-rows: repeat(5, 1fr) !important;
+            align-content: start !important;
+            grid-template-rows: repeat(5, minmax(200px, 1fr)) !important;
         }
         .sit-card-grid > div {
-            min-height: 0 !important;
-            height: 100% !important;
+            min-height: 160px !important;
+            height: auto !important;
         }
         .sit-card-canvas {
             flex: 1 1 auto !important;
-            min-height: 0 !important;
+            min-height: 100px !important;
         }
 
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -224,6 +224,7 @@
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
         /* Animation definitions */
         @keyframes flow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
@@ -866,6 +867,25 @@ html, body {
     .offer-canvas-container {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
+        overflow: hidden !important;
+        position: relative !important;
+    }
+
+    /* Bundle-Overlay: Transforms 1:1 wie Bildschirm behalten, nur sauber einschließen */
+    .offer-canvas-container > div {
+        overflow: hidden !important;
+    }
+    .offer-html-overlay-wrap {
+        overflow: hidden !important;
+        opacity: 1 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    /* Textarea unter Bundle-Overlay: sichtbar + lesbar */
+    .offer-canvas-container textarea {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        opacity: 1 !important;
     }
 
     .canvas-lines {
@@ -1552,34 +1572,34 @@ body.pdf-share-mode .share-page:last-child{
 .share-cover, .share-outro{
   width:100%;
   box-sizing:border-box;
-  min-height:520px;
+  min-height:200px;
   border-radius:22px;
   padding:28px;
-  background: linear-gradient(135deg,#001942 0%,#0050ff 100%);
+  background: linear-gradient(135deg,#0b1e42 0%,#1e3a5f 60%,#0369a1 100%);
   color:#fff;
   overflow:hidden;
 }
 .share-cover-inner{max-width:980px;margin:0 auto;text-align:center;}
 .share-cover-badge{font-weight:900;font-size:11px;letter-spacing:0.45em;color:rgba(255,255,255,0.70);margin-top:10px;}
 .share-cover-title{font-weight:1000;font-size:78px;line-height:0.92;letter-spacing:-0.04em;margin-top:18px;}
-.share-cover-title-accent{color:#7dd3fc;}
+.share-cover-title-accent{color:#E20074;}
 .share-cover-date{margin-top:14px;font-weight:900;letter-spacing:0.25em;font-size:13px;color:rgba(255,255,255,0.80);}
 .share-cover-card{margin:34px auto 0 auto;max-width:760px;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:28px;padding:26px;position:relative;}
-.share-cover-chip{position:absolute;left:50%;top:-14px;transform:translateX(-50%);background:#2563eb;color:#fff;padding:6px 16px;border-radius:999px;font-weight:900;font-size:10px;letter-spacing:0.18em;}
+.share-cover-chip{position:absolute;left:50%;top:-14px;transform:translateX(-50%);background:#E20074;color:#fff;padding:6px 16px;border-radius:999px;font-weight:900;font-size:10px;letter-spacing:0.18em;}
 .share-cover-shop-name{font-size:26px;font-weight:1000;letter-spacing:-0.02em;}
 .share-cover-shop-addr{margin-top:6px;color:rgba(255,255,255,0.82);font-weight:600;font-size:13px;}
 
-.share-outro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1060px;margin:0 auto;}
-.share-outro-card{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:28px;padding:22px;text-align:center;}
-.share-outro-card-focus{border-color:rgba(59,130,246,0.55);background:rgba(255,255,255,0.12);transform:scale(1.02);}
+.share-outro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1060px;margin:0 auto;}
+.share-outro-card{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:14px;text-align:center;}
+.share-outro-card-focus{border-color:rgba(226,0,116,0.55);background:rgba(255,255,255,0.12);transform:scale(1.02);}
 .share-outro-icon{width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 14px auto;font-weight:1000;}
 .share-outro-h{font-size:18px;font-weight:1000;letter-spacing:-0.02em;}
 .share-outro-p{margin-top:8px;font-size:11px;color:rgba(255,255,255,0.80);line-height:1.35;}
 .share-outro-small{font-size:10px;color:rgba(255,255,255,0.70);font-weight:700;}
-.share-outro-qr{margin:14px auto 10px auto;width:140px;height:140px;background:#fff;border-radius:18px;padding:10px;box-shadow:0 12px 30px rgba(0,0,0,0.25);}
+.share-outro-qr{margin:8px auto 6px auto;width:110px;height:110px;background:#fff;border-radius:14px;padding:8px;box-shadow:0 8px 20px rgba(0,0,0,0.25);}
 .share-outro-qr img{width:100%;height:100%;object-fit:contain;display:block;}
 .share-outro-link{font-size:9px;word-break:break-all;color:rgba(255,255,255,0.65);margin-top:6px;font-weight:800;}
-.share-outro-amount{margin-top:6px;font-size:44px;font-weight:1000;color:#93c5fd;}
+.share-outro-amount{margin-top:6px;font-size:44px;font-weight:1000;color:#E20074;}
 .share-outro-voucher{margin-top:10px;padding:12px 10px;border:2px dashed rgba(255,255,255,0.35);border-radius:18px;font-family:monospace;font-size:16px;font-weight:1000;background:rgba(0,0,0,0.18);letter-spacing:0.12em;}
 /* ===== MANUELLER SHARE OFFSET (FINAL) ===== */
 :root{
@@ -1796,6 +1816,48 @@ body.pdf-share-mode .share-page:last-child{
   .print-offer-view .grid{
     margin-left: -12px !important;
   }
+
+  /* ── Toolbar im Hochformat: kompakter ── */
+  .footer-bar {
+    height: 48px !important;
+    min-height: 48px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    gap: 3px !important;
+    overflow: visible !important;
+    flex-wrap: nowrap !important;
+  }
+  /* Pen-Tool-Gruppe: scrollbar + Breite begrenzen damit rechts Platz für Buttons bleibt */
+  .footer-bar > div:first-child {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 42vw !important;
+    flex-shrink: 1 !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .footer-bar > div:first-child::-webkit-scrollbar { display: none !important; }
+  /* Buttons kleiner */
+  .footer-bar button { padding: 4px 5px !important; min-width: 26px !important; }
+  .footer-bar a { padding: 4px 5px !important; }
+  /* Beratungs-ID Breite reduzieren */
+  .footer-bar input[type="text"] { font-size: 10px !important; }
+  /* Rechte Seite (Zurück/Fertigstellen) — nie abschneiden! */
+  .footer-bar > div:last-child {
+    gap: 3px !important;
+    flex-shrink: 0 !important;
+    min-width: 0 !important;
+  }
+  .footer-bar > div:last-child button {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+  /* Opacity-Slider ausblenden im Hochformat (spart Platz) */
+  .footer-bar input[type="range"] { display: none !important; }
+  /* Farbkreis kleiner */
+  .footer-bar .w-8.h-8.rounded-full { width: 26px !important; height: 26px !important; }
 }
 
 
@@ -2125,31 +2187,42 @@ body.pdf-share-mode .situation-view-wrapper { height:100%!important; max-height:
 @page { size:A4 landscape!important; margin:0!important; }
 
 /* ── Situation Layout ── */
-.sit-card-grid { overflow:hidden!important; grid-template-columns:1fr 1fr!important; grid-auto-rows:1fr!important; align-content:stretch!important; }
-@media (orientation:portrait) { .sit-card-grid { grid-template-rows:repeat(5,1fr)!important; height:100%!important; } .situation-view-wrapper .flex-1.overflow-y-auto { overflow-y:auto!important; } }
-@media (orientation:landscape) { .sit-card-grid { grid-template-rows:repeat(5,1fr)!important; height:100%!important; } }
-/* ── Situation Kacheln im PDF kompakter (weniger Canvas-Höhe) ── */
+.sit-card-grid { overflow-y:auto!important; overflow-x:hidden!important; grid-template-columns:1fr 1fr!important; grid-auto-rows:minmax(200px,1fr)!important; align-content:start!important; }
+@media (orientation:portrait) { .sit-card-grid { grid-template-rows:repeat(5,minmax(200px,1fr))!important; height:auto!important; min-height:100%!important; } .situation-view-wrapper .flex-1.overflow-y-auto { overflow-y:auto!important; } }
+@media (orientation:landscape) { .sit-card-grid { grid-template-rows:repeat(5,minmax(200px,1fr))!important; height:auto!important; min-height:100%!important; } }
+/* ── Situation Kacheln im PDF kompakter (alle 10 auf eine Seite) ── */
+body.pdf-share-mode .sit-card-grid {
+    gap: 4px !important;
+    grid-template-rows: repeat(5, 1fr) !important;
+    grid-auto-rows: unset !important;
+    align-content: stretch !important;
+    overflow: hidden !important;
+    height: 100% !important;
+}
+/* Fortschrittsbalken im PDF ausblenden → mehr Platz für Kacheln */
+body.pdf-share-mode .sit-progress-bar {
+    display: none !important;
+}
 body.pdf-share-mode .sit-card-grid > div {
-    min-height: 90px !important;
+    min-height: 0 !important;
+    height: 100% !important;
 }
 body.pdf-share-mode .sit-card-grid > div > div:last-child {
-    min-height: 40px !important;
-    max-height: 56px !important;
+    min-height: 30px !important;
+    max-height: none !important;
+    flex: 1 1 auto !important;
 }
 /* Kachel-Header etwas kompakter */
 body.pdf-share-mode .sit-card-grid > div > button {
-    padding: 6px 10px 5px 10px !important;
+    padding: 5px 8px 4px 8px !important;
+    flex-shrink: 0 !important;
 }
 body.pdf-share-mode .sit-card-grid > div > button > div:first-child {
-    width: 28px !important;
-    height: 28px !important;
-}
-/* Kachelabstand reduzieren */
-body.pdf-share-mode .sit-card-grid {
-    gap: 5px !important;
+    width: 26px !important;
+    height: 26px !important;
 }
 
-.sit-card-grid>div { min-height:0!important; overflow:hidden!important; }
+.sit-card-grid>div { min-height:200px!important; overflow:hidden!important; }
 </style>
 
 <style id="print-page-fix">
@@ -2275,11 +2348,33 @@ body.pdf-share-mode .sit-card-grid {
     .sit-card-grid > div > button {
         padding: 5px 8px 4px 8px !important;
         flex-shrink: 0 !important;
+        background: #f0f6ff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    /* Nur der Label-Text bekommt dezenten Grau-Hintergrund */
+    .sit-card-grid > div > button > div:last-child > div:first-child {
+        background: unset !important;
+        border-radius: unset !important;
+        padding: unset !important;
+        display: unset !important;
     }
     /* Titel-Text etwas kleiner */
     .sit-card-grid > div > button div[style*="font-size:13px"] {
         font-size: 11px !important;
         margin-bottom: 0 !important;
+    }
+    /* Schreibfläche (Canvas-Bereich): weiß + volle Höhe zum Beschriften */
+    .sit-card-grid > div > .sit-card-canvas {
+        background: #ffffff !important;
+        flex: 1 1 auto !important;
+        min-height: 40px !important;
+    }
+    /* Input in der Kachel lesbar */
+    .sit-card-grid > div input,
+    .sit-card-grid > div textarea {
+        background: transparent !important;
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
 }
 /* Share-PDF: gleiche Regeln */
@@ -2583,6 +2678,11 @@ body.pdf-share-mode .print-situation-view {
     <div id="root"></div>
 
     <script type="text/babel">
+        // === LOGO: global setzen VOR React ===
+        (function(){
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190"><rect width="100%" height="100%" fill="transparent"/><text x="360" y="55" text-anchor="middle" font-size="36" letter-spacing="6" fill="#9ca3af" font-family="Arial, Helvetica, sans-serif">— SHOP —</text><text x="360" y="120" text-anchor="middle" font-size="96" font-weight="600" fill="#9ca3af" font-family="Arial, Helvetica, sans-serif">HeTec</text><text x="360" y="170" text-anchor="middle" font-size="34" letter-spacing="8" fill="#2dd4bf" font-family="Arial, Helvetica, sans-serif">WIR GESTALTEN ZUKUNFT</text></svg>`;
+            window.__HIDA_LOGO_DATA_URI = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        })();
         const { useState, useRef, useEffect, useMemo, useCallback } = React;
 
         // --- 0. ICONS ---
@@ -2656,7 +2756,7 @@ body.pdf-share-mode .print-situation-view {
 
         // ===== Pencil Analytics (local, DSGVO-safe: no content stored) =====
         const ANALYTICS_STORAGE_KEY = 'pencil_analytics_v1';
-        const STATS_PASSWORD = (()=>{try{return localStorage.getItem('ps_stats_pw')||'hetec2026';}catch(e){return'hetec2026';}})();
+        const STATS_PASSWORD = (()=>{try{return localStorage.getItem('ps_stats_pw')||'telekom2026';}catch(e){return'telekom2026';}})();
 
         const loadAnalyticsRows = () => {
             try { return JSON.parse(localStorage.getItem(ANALYTICS_STORAGE_KEY) || '[]'); } catch(e){ return []; }
@@ -2910,6 +3010,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         fill="#2dd4bf" font-family="Arial, Helvetica, sans-serif">WIR GESTALTEN ZUKUNFT</text>
 </svg>`;
         const HIDA_LOGO_DATA_URI = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HIDA_LOGO_SVG);
+        window.__HIDA_LOGO_DATA_URI = HIDA_LOGO_DATA_URI; // global für Print-Header
 
 
         // --- 1. DATA CONFIG ---
@@ -3141,40 +3242,57 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         const FinishTypeModal = ({ isOpen, onClose, onSelect, onShare }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in">
-                    <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8 relative border border-slate-200">
-                        <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full text-slate-400"><Icon d={ICONS.X} size={20}/></button>
-                        <h3 className="text-2xl font-black text-slate-800 mb-2 text-center">Wie möchten Sie fortfahren?</h3>
-                        <p className="text-slate-500 text-center mb-8">Wählen Sie bitte eine Option für das Angebot.</p>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/75 backdrop-blur-md p-4 animate-in fade-in">
+                    <div style={{background:'#fff',width:'100%',maxWidth:'520px',borderRadius:'24px',boxShadow:'0 32px 80px rgba(0,0,0,0.28)',overflow:'hidden',position:'relative'}}>
+                        {/* Header */}
+                        <div style={{background:'linear-gradient(135deg,#0b1e42 0%,#1e3a6e 100%)',padding:'28px 28px 24px',textAlign:'center',position:'relative'}}>
+                            <button onClick={onClose} style={{position:'absolute',top:'14px',right:'14px',width:'32px',height:'32px',borderRadius:'50%',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.25)',color:'rgba(255,255,255,0.8)',cursor:'pointer',fontSize:'16px',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+                            <div style={{fontSize:'32px',marginBottom:'8px'}}>📋</div>
+                            <h3 style={{fontSize:'22px',fontWeight:900,color:'#fff',margin:0,letterSpacing:'-0.02em'}}>Wie möchten Sie fortfahren?</h3>
+                            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.65)',marginTop:'6px',marginBottom:0}}>Wählen Sie eine Option für das Angebot</p>
+                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Abschluss-Option */}
-                            <button onClick={() => onSelect('deal')} className="group flex flex-col items-center justify-center p-8 bg-green-50 border-2 border-green-200 rounded-2xl hover:bg-green-100 hover:border-green-400 transition-all">
-                                <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center text-green-700 mb-4 group-hover:scale-110 transition-transform">
-                                    <Icon d={ICONS.CheckCircle} size={32} />
+                        {/* Cards */}
+                        <div style={{padding:'24px',display:'flex',flexDirection:'column',gap:'12px'}}>
+
+                            {/* Abschluss */}
+                            <button onClick={() => onSelect('deal')} style={{display:'flex',alignItems:'center',gap:'16px',padding:'16px 20px',borderRadius:'16px',border:'2px solid #d1fae5',background:'linear-gradient(135deg,#f0fdf4,#dcfce7)',cursor:'pointer',textAlign:'left',transition:'all 0.15s',width:'100%'}}
+                                onMouseEnter={e=>{e.currentTarget.style.borderColor='#10b981';e.currentTarget.style.transform='translateY(-1px)';}}
+                                onMouseLeave={e=>{e.currentTarget.style.borderColor='#d1fae5';e.currentTarget.style.transform='none';}}>
+                                <div style={{width:'48px',height:'48px',borderRadius:'14px',background:'linear-gradient(135deg,#10b981,#059669)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'22px'}}>✅</div>
+                                <div>
+                                    <div style={{fontSize:'16px',fontWeight:900,color:'#064e3b'}}>Vertrag / Abschluss</div>
+                                    <div style={{fontSize:'12px',color:'#065f46',marginTop:'2px'}}>Unterschrift erfassen &amp; Prämie sichern</div>
                                 </div>
-                                <h4 className="text-xl font-black text-green-900 mb-2">Vertrag / Abschluss</h4>
-                                <p className="text-xs text-green-700 text-center">Unterschrift erfassen &amp; Prämie sichern.</p>
+                                <div style={{marginLeft:'auto',fontSize:'18px',color:'#10b981'}}>→</div>
                             </button>
 
-                            {/* Nur Angebot - 2 Optionen */}
-                            <div className="flex flex-col gap-3">
-                                <button onClick={() => onSelect('quote')} className="flex items-center gap-3 p-4 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-all text-left">
-                                    <Icon d={ICONS.Print} size={24} className="text-slate-500" />
-                                    <div>
-                                        <div className="font-bold text-slate-800">Papier drucken</div>
-                                        <div className="text-[10px] text-slate-500 uppercase font-black">Klein</div>
-                                    </div>
+                            {/* Trennlinie */}
+                            <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                <div style={{flex:1,height:'1px',background:'#e2e8f0'}}/>
+                                <span style={{fontSize:'11px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em'}}>oder Angebot mitgeben</span>
+                                <div style={{flex:1,height:'1px',background:'#e2e8f0'}}/>
+                            </div>
+
+                            {/* Drucken + Teilen nebeneinander */}
+                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                                <button onClick={() => onSelect('quote')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',padding:'16px',borderRadius:'14px',border:'2px solid #e2e8f0',background:'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
+                                    onMouseEnter={e=>{e.currentTarget.style.borderColor='#64748b';e.currentTarget.style.background='#f1f5f9';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.background='#f8fafc';}}>
+                                    <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'#1e293b',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px'}}>🖨️</div>
+                                    <div style={{fontWeight:800,fontSize:'14px',color:'#1e293b'}}>Papier drucken</div>
+                                    <div style={{fontSize:'10px',color:'#64748b',fontWeight:600}}>Physisch aushändigen</div>
                                 </button>
 
-                                <button onClick={onShare} className="flex items-center gap-3 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl hover:border-blue-500 transition-all text-left">
-                                    <Icon d={ICONS.Share} size={24} className="text-blue-600" />
-                                    <div>
-                                        <div className="font-bold text-blue-900">Angebot Teilen</div>
-                                        <div className="text-[10px] text-blue-500 uppercase font-black">Digital senden</div>
-                                    </div>
+                                <button onClick={onShare} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',padding:'16px',borderRadius:'14px',border:'2px solid #bfdbfe',background:'#eff6ff',cursor:'pointer',transition:'all 0.15s'}}
+                                    onMouseEnter={e=>{e.currentTarget.style.borderColor='#3b82f6';e.currentTarget.style.background='#dbeafe';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.borderColor='#bfdbfe';e.currentTarget.style.background='#eff6ff';}}>
+                                    <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'linear-gradient(135deg,#2563eb,#1d4ed8)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px'}}>📤</div>
+                                    <div style={{fontWeight:800,fontSize:'14px',color:'#1e40af'}}>Angebot teilen</div>
+                                    <div style={{fontSize:'10px',color:'#3b82f6',fontWeight:600}}>Digital senden</div>
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -3705,8 +3823,20 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         const RoamingModal = ({ isOpen, onClose }) => {
   const [zone, setZone] = useState('eu_roam');
   const [tab, setTab] = useState('info');
+  const [fuPreis, setFuPreis] = useState('');       // DE GB
+  const [fuNettoBrutto, setFuNettoBrutto] = useState(''); // brutto price
 
   if (!isOpen) return null;
+
+  const GWSP = 1.10;
+  const fuDeGb = parseFloat((fuPreis||'').replace(',','.')) || 0;
+  const fuBrutto = parseFloat((fuNettoBrutto||'').replace(',','.')) || 0;
+  const fuNetto = fuBrutto > 0 ? fuBrutto / 1.19 : 0;
+  const fuGbRaw = fuNetto > 0 ? Math.round((fuNetto / GWSP) * 2 * 10) / 10 : null;
+  // Echtes Limit: min(Formel-Ergebnis, DE-Volumen) — kann nie mehr sein als zuhause
+  const fuGb = fuGbRaw !== null ? (fuDeGb > 0 ? Math.min(fuGbRaw, fuDeGb) : fuGbRaw) : null;
+  const fuCapped = fuGbRaw !== null && fuDeGb > 0 && fuGbRaw > fuDeGb; // Deckel aktiv?
+  const fuCol = fuGb === null ? '#94a3b8' : fuGb >= 80 ? '#10b981' : fuGb >= 40 ? '#f59e0b' : '#3b82f6';
 
   const ZONES = {
     eu_roam: {
@@ -3719,14 +3849,15 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
       status: 'ok',
       statusText: 'Roam like at Home',
       statusSub: 'Keine Mehrkosten — Tarif gilt wie in Deutschland',
-      countries: ['🇪🇸 Spanien','🇮🇹 Italien','🇫🇷 Frankreich','🇬🇷 Griechenland','🇵🇹 Portugal','🇦🇹 Österreich','🇳🇱 Niederlande','🇧🇪 Belgien','🇵🇱 Polen','🇨🇿 Tschechien','🇭🇷 Kroatien','🇭🇺 Ungarn','🇸🇪 Schweden','🇩🇰 Dänemark','🇫🇮 Finnland','🇮🇪 Irland','🇸🇰 Slowakei','🇸🇮 Slowenien','🇱🇹 Litauen','🇱🇻 Lettland','🇪🇪 Estland','🇲🇹 Malta','🇨🇾 Zypern','🇱🇺 Luxemburg','🇧🇬 Bulgarien','🇷🇴 Rumänien'],
+      countries: ['🇪🇸 Spanien','🇮🇹 Italien','🇫🇷 Frankreich','🇬🇷 Griechenland','🇵🇹 Portugal','🇦🇹 Österreich','🇳🇱 Niederlande','🇧🇪 Belgien','🇵🇱 Polen','🇨🇿 Tschechien','🇭🇷 Kroatien','🇭🇺 Ungarn','🇸🇪 Schweden','🇩🇰 Dänemark','🇫🇮 Finnland','🇮🇪 Irland','🇸🇰 Slowakei','🇸🇮 Slowenien','🇱🇹 Litauen','🇱🇻 Lettland','🇪🇪 Estland','🇲🇹 Malta','🇨🇾 Zypern','🇱🇺 Luxemburg','🇧🇬 Bulgarien','🇷🇴 Rumänien','🇺🇦 Ukraine','🇲🇩 Moldau (ab 2026)'],
       items: [
         { icon: '📞', label: 'Telefonieren', detail: 'Unbegrenzt wie zuhause', ok: true },
         { icon: '💬', label: 'SMS', detail: 'Im Inklusiv-Paket', ok: true },
-        { icon: '🌐', label: 'Datenvolumen', detail: 'Inklusiv-GB gelten', ok: true },
+        { icon: '🌐', label: 'Datenvolumen', detail: 'Inklusiv-GB gelten*', ok: true },
         { icon: '⚡', label: 'Speed', detail: 'LTE/5G wo verfügbar', ok: true },
+        { icon: '📊', label: 'Fair-Use 2026', detail: '(Preis netto ÷ 1,10€) × 2 = EU-GB', ok: null },
       ],
-      tip: 'Das Fair-Use-Limit greift nur bei sehr langen Aufenthalten. Für normale Urlaubsreisen kein Problem.',
+      tip: '',
     },
     de_eu: {
       label: 'Anruf ins EU-Ausland',
@@ -3783,7 +3914,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         { icon: '🌐', label: 'Daten (UK)', detail: 'Oft inklusive (post-Brexit)', ok: true },
         { icon: '🇨🇭', label: 'Daten (CH)', detail: 'Häufig kostenpflichtig', ok: false },
       ],
-      tip: 'Tarif genau prüfen! Großbritannien gilt bei den meisten o2-Tarifen nach dem Brexit wieder als EU-gleichgestellt. Schweiz ist oft separat.',
+      tip: 'Tarif genau prüfen! Großbritannien gilt bei den meisten Telekom-Tarifen nach dem Brexit wieder als EU-gleichgestellt. Schweiz ist oft separat.',
     },
   };
 
@@ -3844,6 +3975,64 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
               </div>
             </button>
           ))}
+
+          {/* Fair-Use Rechner — dynamisch in Sidebar */}
+          <div style={{marginTop:'8px',borderTop:'1px solid #e2e8f0',paddingTop:'10px'}}>
+            <div style={{fontSize:'9px',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'8px'}}>📊 Fair-Use Rechner 2026</div>
+
+            {/* GB in Deutschland */}
+            <div style={{marginBottom:'6px'}}>
+              <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',marginBottom:'3px'}}>GB in Deutschland</div>
+              <div style={{position:'relative'}}>
+                <input type="number" min="0" step="1" placeholder="z.B. 40"
+                  value={fuPreis} onChange={e=>setFuPreis(e.target.value)}
+                  style={{width:'100%',padding:'7px 32px 7px 10px',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'14px',fontWeight:800,color:'#1e293b',outline:'none',boxSizing:'border-box',background:'#fff'}}
+                  onFocus={e=>e.target.style.borderColor='#3b82f6'}
+                  onBlur={e=>e.target.style.borderColor='#e2e8f0'}
+                />
+                <span style={{position:'absolute',right:'8px',top:'50%',transform:'translateY(-50%)',fontSize:'10px',color:'#94a3b8',fontWeight:700}}>GB</span>
+              </div>
+            </div>
+
+            {/* Monatspreis brutto */}
+            <div style={{marginBottom:'8px'}}>
+              <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',marginBottom:'3px'}}>Monatspreis (brutto €)</div>
+              <div style={{position:'relative'}}>
+                <input type="number" min="0" step="0.01" placeholder="z.B. 39,99"
+                  value={fuNettoBrutto} onChange={e=>setFuNettoBrutto(e.target.value)}
+                  style={{width:'100%',padding:'7px 28px 7px 10px',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'14px',fontWeight:800,color:'#1e293b',outline:'none',boxSizing:'border-box',background:'#fff'}}
+                  onFocus={e=>e.target.style.borderColor='#3b82f6'}
+                  onBlur={e=>e.target.style.borderColor='#e2e8f0'}
+                />
+                <span style={{position:'absolute',right:'8px',top:'50%',transform:'translateY(-50%)',fontSize:'10px',color:'#94a3b8',fontWeight:700}}>€</span>
+              </div>
+            </div>
+
+            {/* Ergebnis */}
+            <div style={{borderRadius:'10px',padding:'10px',textAlign:'center',background: fuGb!==null ? fuCol+'15' : '#f1f5f9',border:`1.5px solid ${fuGb!==null?fuCol+'40':'#e2e8f0'}`,transition:'all 0.2s'}}>
+              <div style={{fontSize:'24px',fontWeight:900,color: fuGb!==null?fuCol:'#cbd5e1',lineHeight:1}}>{fuGb!==null?`~${fuGb}`:'–'}</div>
+              <div style={{fontSize:'10px',fontWeight:700,color:'#64748b',marginTop:'2px'}}>GB im EU-Ausland</div>
+
+              {/* Deckel-Hinweis */}
+              {fuCapped && <div style={{marginTop:'5px',padding:'3px 6px',borderRadius:'5px',background:'#fef3c7',border:'1px solid #fde68a',fontSize:'8px',fontWeight:800,color:'#92400e'}}>📌 Formel: {fuGbRaw} GB → Deckel: {fuDeGb} GB</div>}
+              {fuGb!==null && !fuCapped && fuDeGb>0 && <div style={{marginTop:'5px',padding:'3px 6px',borderRadius:'5px',background:'#dcfce7',border:'1px solid #bbf7d0',fontSize:'8px',fontWeight:700,color:'#166534'}}>✅ Fair-Use unter DE-Volumen</div>}
+
+              {/* Vergleichsbalken DE vs EU */}
+              {fuGb!==null && fuDeGb>0 && (
+                <div style={{marginTop:'8px'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:'8px',color:'#94a3b8',fontWeight:700,marginBottom:'3px'}}>
+                    <span>🇩🇪 {fuDeGb} GB</span><span>🇪🇺 {fuGb} GB</span>
+                  </div>
+                  <div style={{height:'8px',background:'#e2e8f0',borderRadius:'99px',overflow:'hidden',position:'relative'}}>
+                    <div style={{width:'100%',height:'100%',background:'#cbd5e1',borderRadius:'99px'}}/>
+                    <div style={{position:'absolute',top:0,left:0,width:`${Math.min(100,Math.round((fuGb/fuDeGb)*100))}%`,height:'100%',background:fuCol,borderRadius:'99px',transition:'width 0.4s ease'}}/>
+                  </div>
+                  <div style={{fontSize:'9px',color:fuCol,fontWeight:800,marginTop:'3px'}}>{Math.min(100,Math.round((fuGb/fuDeGb)*100))}% des DE-Volumens</div>
+                </div>
+              )}
+              {fuGb!==null&&<div style={{fontSize:'8px',color:'#94a3b8',marginTop:'4px'}}>(÷1,10 € × 2) · 2026</div>}
+            </div>
+          </div>
         </div>
 
         {/* MAIN */}
@@ -3862,7 +4051,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 
           {/* TABS */}
           <div className="flex gap-1 px-5 pb-3 shrink-0" style={{background:'#f8fafc',borderBottom:'1px solid #f1f5f9',padding:'0 20px 12px'}}>
-            {[{id:'info',l:'📋 Details'},{id:'countries',l:'🌍 Länder'},{id:'tip',l:'💡 Verkaufstipp'}].map(t=>(
+            {[{id:'info',l:'📋 Details'},{id:'countries',l:'🌍 Länder'},{id:'fairuse',l:'📊 Fair-Use Rechner'}].map(t=>(
               <button key={t.id} onClick={()=>setTab(t.id)} className={`rm-tab ${tab===t.id?'active':''}`}>{t.l}</button>
             ))}
           </div>
@@ -3901,27 +4090,93 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
               </div>
             )}
 
-            {tab==='tip'&&(
-              <div>
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Verkaufstipp für Berater</div>
-                <div className="p-4 rounded-xl text-sm text-slate-700 leading-relaxed" style={{background:'#eff6ff',border:'1.5px solid #bfdbfe'}}>
-                  <div className="font-black text-blue-800 mb-2">💡 So erklärst du es dem Kunden:</div>
-                  {z.tip}
+            {tab==='fairuse'&&(()=>{
+              const [preis, setPreis] = useState('');
+              const [provider, setProvider] = useState('auto');
+              const GWSP = 1.10; // EU-Großhandelspreis 2026
+              const preisNetto = parseFloat((preis||'').replace(',','.')) || 0;
+              const euGb = preisNetto > 0 ? Math.round((preisNetto / GWSP) * 2 * 10) / 10 : 0;
+
+              const examples = [
+                { label: 'Telekom', ex: [{p:19.99,label:'MagentaMobil S'},{p:29.99,label:'MagentaMobil M'},{p:39.99,label:'MagentaMobil L'},{p:54.99,label:'MagentaMobil XL'}] },
+                { label: 'o2',      ex: [{p:14.99,label:'o2 Mobile S'},{p:24.99,label:'o2 Mobile M'},{p:39.99,label:'o2 Mobile L'},{p:54.99,label:'o2 Mobile XL'}] },
+                { label: 'Vodafone',ex: [{p:19.99,label:'Smart M'},{p:29.99,label:'Smart L'},{p:39.99,label:'GigaMobil M'},{p:54.99,label:'GigaMobil XL'}] },
+              ];
+
+              const barPct = Math.min(100, Math.round((euGb / 200) * 100));
+              const color = euGb >= 100 ? '#10b981' : euGb >= 50 ? '#f59e0b' : euGb > 0 ? '#3b82f6' : '#e2e8f0';
+
+              return (
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-4">EU Fair-Use Kalkulator 2026</div>
+
+                  {/* Formel-Info */}
+                  <div className="p-3 rounded-xl mb-4" style={{background:'#eff6ff',border:'1.5px solid #bfdbfe'}}>
+                    <div className="text-xs font-black text-blue-800 mb-1">📊 Formel (gültig ab 01.01.2026)</div>
+                    <div className="font-mono text-sm text-blue-900 font-bold">(Monatspreis netto ÷ 1,10 €) × 2 = EU-GB</div>
+                    <div className="text-[10px] text-blue-600 mt-1">Großhandelspreis 2026: 1,10 €/GB · 2025: 1,30 €/GB</div>
+                  </div>
+
+                  {/* Eingabe */}
+                  <div className="flex items-end gap-3 mb-4">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Monatspreis (netto in €)</label>
+                      <div className="relative">
+                        <input type="number" min="0" step="0.01" placeholder="z.B. 33.61"
+                          value={preis} onChange={e=>setPreis(e.target.value)}
+                          style={{width:'100%',padding:'10px 36px 10px 14px',border:'2px solid #3b82f6',borderRadius:'10px',fontSize:'18px',fontWeight:800,color:'#1e293b',outline:'none',boxSizing:'border-box'}}
+                        />
+                        <span style={{position:'absolute',right:'12px',top:'50%',transform:'translateY(-50%)',fontSize:'14px',fontWeight:700,color:'#64748b'}}>€</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-1">Brutto ÷ 1,19 = Netto &nbsp;|&nbsp; z.B. 39,99 € brutto → 33,61 € netto</div>
+                    </div>
+                    <div style={{textAlign:'center',minWidth:'120px',padding:'12px 16px',borderRadius:'12px',background: euGb>0?color+'15':'#f8fafc',border:`2px solid ${euGb>0?color:'#e2e8f0'}`}}>
+                      <div style={{fontSize:'28px',fontWeight:900,color: euGb>0?color:'#cbd5e1',lineHeight:1}}>{euGb > 0 ? `~${euGb}` : '–'}</div>
+                      <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',marginTop:'2px'}}>GB im EU-Ausland</div>
+                    </div>
+                  </div>
+
+                  {/* Balken */}
+                  {euGb > 0 && (
+                    <div className="mb-4">
+                      <div style={{height:'10px',background:'#f1f5f9',borderRadius:'99px',overflow:'hidden'}}>
+                        <div style={{width:`${barPct}%`,height:'100%',background:color,borderRadius:'99px',transition:'width 0.4s ease'}}/>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-400 font-semibold mt-1">
+                        <span>0 GB</span><span>100 GB</span><span>200 GB</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Schnelltabelle */}
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Schnellbeispiele</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}}>
+                    {examples.map(prov=>(
+                      <div key={prov.label} style={{background:'#f8fafc',borderRadius:'10px',border:'1px solid #e2e8f0',overflow:'hidden'}}>
+                        <div style={{padding:'6px 10px',background:'#f1f5f9',fontWeight:800,fontSize:'11px',color:'#374151'}}>{prov.label}</div>
+                        {prov.ex.map(e=>{
+                          const gb = Math.round((e.p/1.19/GWSP)*2*10)/10;
+                          return (
+                            <div key={e.p} onClick={()=>setPreis((e.p/1.19).toFixed(2))}
+                              style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'5px 10px',cursor:'pointer',borderBottom:'1px solid #f1f5f9'}}
+                              className="hover:bg-blue-50">
+                              <div>
+                                <div style={{fontSize:'10px',fontWeight:700,color:'#374151'}}>{e.label}</div>
+                                <div style={{fontSize:'9px',color:'#94a3b8'}}>{e.p.toFixed(2)} € brutto</div>
+                              </div>
+                              <div style={{fontSize:'13px',fontWeight:900,color:'#2563eb'}}>~{gb} GB</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-2">* Beispielpreise (Listenpreise). Tatsächliche Fair-Use-GB hängen vom Vertragspreis ab. Auf Tarife klicken zum Übernehmen.</div>
                 </div>
-                {zone==='world'&&(
-                  <div className="mt-3 p-4 rounded-xl" style={{background:'#fef3c7',border:'1.5px solid #fde68a'}}>
-                    <div className="font-black text-amber-800 text-sm mb-2">📦 Empfohlene Lösung:</div>
-                    <div className="text-sm text-amber-900">Roaming-Optionen (z.B. Welt-Option oder Länder-Paket) buchen — das begrenzt die Kosten auf ein faires Tagespaket und schützt den Kunden vor Schockrechnungen.</div>
-                  </div>
-                )}
-                {zone==='de_eu'&&(
-                  <div className="mt-3 p-4 rounded-xl" style={{background:'#f0fdf4',border:'1.5px solid #bbf7d0'}}>
-                    <div className="font-black text-green-800 text-sm mb-2">📱 Kostenlose Alternativen:</div>
-                    <div className="text-sm text-green-900">WhatsApp-Anruf, FaceTime, Signal oder Teams — alles kostenlos über das inkludierte Datenvolumen. Perfekt für Kunden, die oft ins Ausland telefonieren.</div>
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })()}
+
+
 
           </div>
         </div>
@@ -3958,7 +4213,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         };
 
         const TvPriceModal = ({ isOpen, onClose, onUebernehmen }) => {
-            const [provider, setProvider] = useState('o2');
+            const [provider, setProvider] = useState('telekom');
             const [prevTV,     setPrevTV]     = useState('');
             const [prevHD,     setPrevHD]     = useState('');
             const [prevStream, setPrevStream] = useState('');
@@ -4342,7 +4597,7 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
         `);
 
         const titleOrTarif = `${(d.geraet || d.titel || d.bezeichnung || '')} ${(d.tarif || d.tarifName || '')}`.toLowerCase();
-        const isLikelyO2Bundle = /\bo2\b/.test(titleOrTarif) || /o2\s*mobile/.test(titleOrTarif);
+        const isLikelyO2Bundle = /\bo2\b/.test(titleOrTarif) || /o2\s*mobile/.test(titleOrTarif) || /telekom\b/i.test(titleOrTarif) || /magenta\b/i.test(titleOrTarif);
         if (isLikelyO2Bundle && images.length === 2) images.push(SIM_CARD_DATA_URI);
 
         const badgesHTML = badgesArr.map(b => `
@@ -4652,7 +4907,7 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
             let tarifText = '';
             const allTextEls = Array.from(doc.querySelectorAll('div,span,strong,p'));
             const o2Line = allTextEls.map(el => (el.textContent || '').replace(/\s+/g,' ').trim())
-                .find(t => /^o2\s+/i.test(t) && t.length <= 40);
+                .find(t => (/^o2\s+/i.test(t) || /^magenta/i.test(t) || /^telekom/i.test(t)) && t.length <= 40);
             if (o2Line) tarifText = o2Line;
 
             // 5) Images (up to 3 big visible imgs)
@@ -5442,7 +5697,14 @@ const resolveUserName = (raw) => {
                 const scaleW = currentCssWidth / (stroke.baseWidth || currentCssWidth);
                 const scaleH = (stroke.baseHeight ? (currentCssHeight / stroke.baseHeight) : scaleW);
                 // ✅ Uniform scaling: prevents "overstretching" when aspect ratio changes (tablet rotate/fullscreen)
-                const responsiveScaleFactor = Math.min(scaleW, scaleH); 
+                // Orientierungswechsel-Fix: Hochformat→Querformat → 2× größer
+                const wasPortrait = (stroke.baseHeight || 0) > (stroke.baseWidth || 1) * 1.1;
+                const isNowLandscape = currentCssWidth > currentCssHeight * 1.2;
+                const orientationMultiplier = (wasPortrait && isNowLandscape) ? 2.0 : 1.0;
+                // Schritt-Modus-Fix: Striche die auf großem Step-Canvas gemalt wurden, in kleinen Grid-Kacheln 4× größer zeigen
+                const isStepStrokeInGrid = (stroke.baseWidth || 0) > 500 && currentCssWidth < 450;
+                const stepBoost = isStepStrokeInGrid ? 4.0 : 1.0;
+                const responsiveScaleFactor = Math.min(scaleW, scaleH) * orientationMultiplier * stepBoost;
                 const rawStrokeWidth = stroke.width; 
                 let visualBaseWidth; 
                 if (isOfferCanvas) { visualBaseWidth = rawStrokeWidth === 2 ? 2.5 : rawStrokeWidth === 4 ? 5 : 8; } else { visualBaseWidth = rawStrokeWidth === 2 ? 2 : rawStrokeWidth === 4 ? 3 : 5; } 
@@ -5896,6 +6158,8 @@ function App() {
             }, [darkMode]);
             
             const [showSecondYear, setShowSecondYear] = useState(false);
+            const [showGutschriftRechner, setShowGutschriftRechner] = useState(false);
+            const [gutschriftBetrag, setGutschriftBetrag] = useState('240');
             const [beratungsId, setBeratungsId] = useState('');
 
 
@@ -5951,10 +6215,11 @@ function App() {
             // Drawing State
             const [tool, setTool] = useState('pen');
             const [showPenToolPicker, setShowPenToolPicker] = useState(false);
+            const [showStrokePicker, setShowStrokePicker] = useState(false);
             const lastPenTapRef = useRef(0);
             const [color, setColor] = useState('#0044ff'); 
-            const [strokeWidth, setStrokeWidth] = useState(4); 
-            const [opacity, setOpacity] = useState(0.85); 
+            const [strokeWidth, setStrokeWidth] = useState(2); 
+            const [opacity, setOpacity] = useState(1.0); 
             const [gestureMode, setGestureMode] = useState(false); // 🔍 Zoom/Pan-Lock für Touch (2-Finger Gesten im Canvas)
             
             const [drawnStrokes, setDrawnStrokes] = useState({ 
@@ -6352,8 +6617,8 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
 
             
             const [customerSignature, setCustomerSignature] = useState(null);
-            const SHOP_STAMP_TEXT = "o2 Shop Crailsheim";
-            const SHOP_STAMP_QR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAIAAAABc2X6AAAEl0lEQVR4AeybUY7cOBBDvbn/nXef8wJ2bclyOzONILA8INgsiqXpkoT5CJAf/y7282Pbtn++9LMNP24T2xKOo8ARlmHNkROIGDMXHXbYB+ZjHbwGvv602+nkdPVTZsM4iplvO5yAwi6YpQpXr3Dteg1c3RvrZ+Bt+jdsm/zkUU3Wf9ljrDmt/NV24YPXfojD1ueGD4/lRuYHbjjPyTeZw4mv00pN2cYxoOMqbPib/IGBv/kN/nD7Bwbm7IVfXQ1bwugKnAZvMqYlrIMQlt/kDwz8zW/wh9ufgbetPr+qZ1fhewsnlt44TbSW5JtoXWPZ8inHJM5zwxzCnbG9bjgP7K2YHYhvKe2J6bQS0zycJQVLwnLGZq5w3eE1cHVvrPeBOeMvIIeSXg87viUcR5G85cgJ0AtOAkleFGy1D8zHOlhyYJ7NFeQVzMK+q8Qsw/HTHsfM6BtwFW6BVhLWQQhL2FJe8oYdfRHeb5jXAjIwuiJ+RF1Fx1fgCN6S0H/LdsF2wbYghCV8WGLSCwgItGBJ4O8D87EOzgbOqXgclmFN2FOEs6TAEZZhTTgOmxyCDMgS+hxJNpEu/LOBWb4flhzYp5V7t4TjHAoCDbPn0NrT9TZvMu3J64eb30picRBL3jBzr4P9hn0zmdkS5jGA+BGYgECDgZhkDmEMThINEkYLA+rK+uG6hM4+B4Gt/AMA0RWw37BHkmktYU8I0aCf/FvR8pZwGt0fRzTf1ZHHmO3hMYCzD8zHOlhyYN/A7JJdrezrGvNmXIUtYZMIYQmTEegKTdj8yIYJiAQsw8bgBNBL3jBzr4P9hn0DmTkPQH9kA6Ov4yqcDfVTRpCpiB9hYzh+EwnU3dDxa34fuNa31wsPnAcQ4W3zNhoMxDQG6yCEMbiVOA0t4D6wPkJYwoclZtsWR9ASLHzDOYMIjyfH9tY3MMu7CrttZVvikDmEsXAycdwhfkQCOM8Ncwi3xuuGfQ+VZ4P7QrKaljiKmW97ZZPVUTffEnb/MI6I04SrMP5rYIrbgwGfgTmE/4OXIHxmsGVSOELHVdgSdhVH4AhLuJU4Qv8tuz9s0l4YR+jLzw17Dj+5HQ9nJmb+z6Yp2QUngT5HkoqELWc8xqrz3PDs3O7i7zfsQx0nOvddhfNgFNnHEiZTkUDMOOci+SbSxe8CKQ/FPvDhwl3NJQfmGXwB4xPwpWUrS1gneRyhD2dJ4SrMEtCsjAmqc6jZoYHYkjfM3KAdxklJuCJJzZRcgtA/4bQoTpIuzWL6YcONF77hdhJ3LQ9u2Hc48uwIWjKxPC1FYgk0MQZsTCyBJhJQZNWy8cHALXGzcqmB97v75MC+wLyoiP33lP8sYwmbh00iBEsVmiMnkyX3iR+hD+N8cmC2+/vxyYE5QpCZc/BxmiAs9NXX2S44LeiK+PWbfHLg+sv+Wv0MXP665CUo3l5ai+VFKS62u0nlNFYTPfo6LAnLxs8NtwO5Xfm6YR/eFZ4dgr0+p8otbwyObxhHxLd0FW5+KwnrIAQtQl9+DWx9e15yYO/9dzlvoTXGjzDQSk3ZJTVsCaMBogHzClqX5X8AAAD//1oR/6MAAAAGSURBVAMANy00KRKTFV4AAAAASUVORK5CYII=";
+            const SHOP_STAMP_TEXT = "Telekom Shop Crailsheim";
+            const SHOP_STAMP_QR = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('https://telekom-partner-crailsheim.de/')}&color=000000&bgcolor=ffffff&margin=1`;
  
             
             const [imageTransform, setImageTransform] = useState({ 
@@ -6625,29 +6890,17 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             const importBundleToCanvas = React.useCallback((payload) => {
                 if (!payload) return;
                 const key = bundleTargetKey || 'offer1';
-
-                const calcCenteredY = () => {
-                    try {
-                        const containers = document.querySelectorAll('.offer-canvas-container');
-                        const idx = (key === 'offer2') ? 1 : (key === 'offer3') ? 2 : 0;
-                        const el = containers && containers[idx];
-                        const h = el ? (el.clientHeight || 0) : 0;
-                        // Overlay-Card ist ca. 320px hoch; wir starten mit scale 0.8 => ~256px.
-                        const approxOverlayH = 320 * 0.8;
-                        const y = Math.round((h > 0 ? (h - approxOverlayH) / 2 : 140));
-                        // Nie ganz oben, damit Icons frei bleiben
-                        return Math.max(110, y);
-                    } catch (e) {
-                        return 140;
-                    }
-                };
-
                 const applyCenteredY = () => {
-                    const y = calcCenteredY();
-                    setImageTransform(prev => ({
-                        ...prev,
-                        [key]: { x: 0, y: 40, scale: 1.0, rotation: 0 }
-                    }));
+                    try {
+                        const isStepMode = offerLayoutMode === 'step';
+                        const insertScale = isStepMode ? 1.0 : 0.6;
+                        setImageTransform(prev => ({
+                            ...prev,
+                            [key]: { x: 0, y: 60, scale: insertScale, rotation: 0 }
+                        }));
+                    } catch(e) {
+                        setImageTransform(prev => ({ ...prev, [key]: { x: 0, y: 60, scale: 0.6, rotation: 0 } }));
+                    }
                 };
 
                 // 1) HTML-Import (Scharf)
@@ -6943,7 +7196,7 @@ const handleFinishOfferClick = () => {
                             if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
                             return raw;
                         })(),
-                        shop: 'HeTec',
+                        shop: 'Telekom',
                         beratungsId: beratungsId || '',
                         result: computedResult,
                         canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
@@ -6959,10 +7212,11 @@ const handleFinishOfferClick = () => {
                     triggerToast('✅ Vorgang '+_nr+' gespeichert');
                 } catch(e) {}
 
-                setCustomerSignature(null);
-                backgroundAutoUpload({ type: 'angebot', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
-                // ReferralModal zeigen — Druck/PDF passiert darin via "Weiter zum Druck"
-                setTimeout(() => setShowReferralModal(true), 300);
+                if (type === 'quote') {
+                    // Direkt drucken — Headers sicherstellen dann drucken
+                    setTimeout(() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }, 300);
+                    return;
+                }
             };
             
             const handleSignatureSave = (dataUrl) => {
@@ -6993,7 +7247,7 @@ const handleFinishOfferClick = () => {
                             if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
                             return raw;
                         })(),
-                        shop: 'HeTec',
+                        shop: 'Telekom',
                         beratungsId: beratungsId || '',
                         result: computedResult,
                         canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
@@ -7407,7 +7661,7 @@ const handleFinishOfferClick = () => {
                 const isPenInput = pointerType === 'pen';
                 const isMainCanvasPenActive = ref === canvasRef && inputMode === 'pen';
                 const isSituationCanvasActive = key && key.startsWith('sit_') && inputMode === 'pen';
-                const isSmallCanvasPenActive = (ref === emailCanvasRef && emailMode === 'pen') || (ref === providerCanvasRef && providerMode === 'pen') || (ref === notesCanvasRef && notesMode === 'pen') || (ref === skipReasonCanvasRef && skipReasonMode === 'pen');
+                const isSmallCanvasPenActive = (ref === emailCanvasRef && emailMode === 'pen') || (ref === providerCanvasRef && providerMode === 'pen') || (ref === notesCanvasRef && notesMode === 'pen') || (ref === skipReasonCanvasRef && skipReasonMode === 'pen') || (ref === beratungsIdCanvasRef && beratungsIdMode === 'pen');
                 const isOfferCanvasActive = (ref === offerCanvasRef1 || ref === offerCanvasRef2 || ref === offerCanvasRef3) && inputMode === 'pen';
                 const isOfferInputActive = (ref === offerCost1Ref || ref === offerCost2Ref || ref === offerCost3Ref || ref === offerAgentRef || ref === offerDateRef) && inputMode === 'pen';
 
@@ -7453,7 +7707,7 @@ const handleFinishOfferClick = () => {
 
                 currentStrokeRef.current = newStroke;
                 isDrawingRef.current = true;
-            }, [inputMode, emailMode, providerMode, notesMode, skipReasonMode, strokeWidth, color, opacity]);
+            }, [inputMode, emailMode, providerMode, notesMode, skipReasonMode, beratungsIdMode, strokeWidth, color, opacity]);
 
             const draw = useCallback((e, ref, key) => {
                 const canvas = ref.current;
@@ -7534,6 +7788,7 @@ const handleFinishOfferClick = () => {
                     else if (ref === offerDateRef) key = 'date_field';
                     else if (ref === offerValidUntilRef || ref === offerValidUntilModalRef) key = 'offer_valid_until';
                     else if (ref === skipReasonCanvasRef) key = 'skip_reason';
+                    else if (ref === beratungsIdCanvasRef) key = 'beratungs_id';
 
                     if (key) {
                         setDrawnStrokes(prev => ({ ...prev, [key]: [...(prev[key] || []), finishedStroke] }));
@@ -7544,6 +7799,10 @@ const handleFinishOfferClick = () => {
                 const ctx = canvas.getContext('2d');
                 ctx.restore();
             }, [setDrawnStrokes]);
+
+            // ── Mini-Taschenrechner für Kosten IST im Stylus-Modus ──
+            const [calcOpen, setCalcOpen] = React.useState(null); // null | 'mobile'|'landline'|'tv'
+            const [calcInput, setCalcInput] = React.useState('');
 
 const CostBar = ({ val, total, colorClass }) => { const pct = total > 0 ? (val / total) * 100 : 0; return (<div className="h-1.5 w-full bg-slate-100 rounded-full mt-1 overflow-hidden"><div className={`h-full ${colorClass} transition-all duration-500`} style={{ width: `${pct}%` }}></div></div>); };
             const toggleTech = (val) => setShowTechModal(val);
@@ -7594,6 +7853,7 @@ useEffect(() => {
 
 const renderPenToolButtons = () => (
   <>
+    {/* Stift-Typ: ein Button, Popup bei Doppelklick */}
     <div className="relative pen-tool-picker-host">
       <button
         onClick={handlePenButtonClick}
@@ -7602,22 +7862,13 @@ const renderPenToolButtons = () => (
       >
         <Icon d={tool === 'fountain' ? ICONS.Fountain : tool === 'ballpen' ? ICONS.Ballpen : ICONS.Pen} size={16} />
       </button>
-
       {showPenToolPicker && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-3 gap-2 w-[240px] z-[120]">
-          <div className="col-span-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">
-            Stift wählen
-          </div>
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-3 gap-2 w-[220px] z-[120]">
+          <div className="col-span-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Stift wählen</div>
           {penModes.map(pm => (
-            <button
-              key={pm.id}
-              onClick={() => { setTool(pm.id); setShowPenToolPicker(false); }}
-              className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border ${tool === pm.id ? 'border-slate-300 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'}`}
-              title={pm.title}
-            >
-              <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${pm.c}`}>
-                <Icon d={pm.Icon} size={18} />
-              </span>
+            <button key={pm.id} onClick={() => { setTool(pm.id); setShowPenToolPicker(false); }}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg border ${tool === pm.id ? 'border-slate-300 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${pm.c}`}><Icon d={pm.Icon} size={16}/></span>
               <span className="text-[10px] font-extrabold text-slate-700">{pm.title}</span>
             </button>
           ))}
@@ -7625,13 +7876,35 @@ const renderPenToolButtons = () => (
       )}
     </div>
 
-    {otherTools.map(t => (
+    {/* Stiftdicke: ein Button, Popup bei Klick */}
+    <div className="relative">
       <button
-        key={t.id}
-        onClick={() => { setTool(t.id); setShowPenToolPicker(false); }}
-        className={`p-2 rounded-md ${tool === t.id ? t.c : 'text-slate-400 hover:bg-slate-50'}`}
-        title={t.title}
+        onClick={() => setShowStrokePicker(v => !v)}
+        className={`p-2 rounded-md flex flex-col items-center gap-0.5 transition-colors ${showStrokePicker ? 'bg-slate-100' : 'text-slate-400 hover:bg-slate-50'}`}
+        title="Stiftdicke wählen"
       >
+        <div style={{width: strokeWidth === 2 ? 2 : strokeWidth === 4 ? 4 : 7, height: strokeWidth === 2 ? 2 : strokeWidth === 4 ? 4 : 7, background:'currentColor', borderRadius:'50%', margin:'3px auto'}}/>
+        <span style={{fontSize:'8px',fontWeight:800,color:'inherit'}}>{strokeWidth===2?'D':strokeWidth===4?'M':'G'}</span>
+      </button>
+      {showStrokePicker && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 z-[120]" style={{width:'160px'}}>
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2">Stiftdicke</div>
+          <div className="flex flex-col gap-2">
+            {STROKE_SIZES.map(s => (
+              <button key={s.id} onClick={() => { setStrokeWidth(s.width); setShowStrokePicker(false); }}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${strokeWidth===s.width ? 'bg-blue-50 border-blue-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                <div style={{width:'32px', height: s.id*2+'px', background: strokeWidth===s.width?'#2563eb':'#64748b', borderRadius:'2px', flexShrink:0}}/>
+                <span style={{fontSize:'12px',fontWeight:700,color: strokeWidth===s.width?'#1d4ed8':'#64748b'}}>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    {otherTools.map(t => (
+      <button key={t.id} onClick={() => { setTool(t.id); setShowPenToolPicker(false); setShowStrokePicker(false); }}
+        className={`p-2 rounded-md ${tool === t.id ? t.c : 'text-slate-400 hover:bg-slate-50'}`} title={t.title}>
         <Icon d={t.Icon} size={16} />
       </button>
     ))}
@@ -7645,7 +7918,7 @@ const renderPenToolButtons = () => (
                 const rawKey = `${key}Raw`;
                 setOfferData(prev => ({ ...prev, [rawKey]: value, [key]: isNaN(val) || value.trim() === '' ? 0 : val }));
             };
-            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = (isCostField && inputMode === 'pen') ? 'h-20' : 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg transition-all`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
+            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg transition-all`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
             
             const translateBatch = null; // No API needed — all translations are local
 
@@ -8040,8 +8313,9 @@ const makeShareHeader = (titleText) => {
     right.style.alignItems = 'center';
     right.style.flexShrink = '0';
     const img = doc.createElement('img');
-    img.src = HIDA_LOGO_DATA_URI;
-    img.alt = 'HIDA';
+    img.src = window.__HIDA_LOGO_DATA_URI || '';
+    img.className = 'hida-logo-print';
+    img.alt = 'Telekom';
     img.style.height = '34px';
     img.style.width = 'auto';
     img.style.objectFit = 'contain';
@@ -8168,10 +8442,10 @@ const yy = String(now.getFullYear()).slice(-2);
 const mm = pad2(now.getMonth()+1);
 const dd = pad2(now.getDate());
 const shareDateDisplay = now.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
-const voucherCode = `CRA-o2-${yy}/${mm}/${dd}`;
+const voucherCode = `CRA-TK-${yy}/${mm}/${dd}`;
 
 // Simple QR (remote) – falls offline/blocked, bleibt das Feld leer, Textlink bleibt sichtbar
-const qrUrl = (data, color='001942') => `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(data)}&color=${color}&bgcolor=ffffff&margin=1`;
+const qrUrl = (data, color='E20074') => `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(data)}&color=${color}&bgcolor=ffffff&margin=1`;
 
 const makeCoverContent = () => {
     const wrap = doc.createElement('div');
@@ -8188,8 +8462,8 @@ const makeCoverContent = () => {
         <div class="share-cover-card">
           <div class="share-cover-chip">CRAILSHEIM</div>
           <div class="share-cover-shop">
-            <div class="share-cover-shop-name">o2 Shop Crailsheim</div>
-            <div class="share-cover-shop-addr">Karlstraße 37, 74564 Crailsheim</div>
+            <div class="share-cover-shop-name">Telekom Shop Crailsheim</div>
+            <div class="share-cover-shop-addr">Schillerstr. 6, 74564 Crailsheim</div>
           </div>
         </div>
       </div>
@@ -8200,8 +8474,8 @@ const makeCoverContent = () => {
 const makeOutroContent = () => {
     const wrap = doc.createElement('div');
     wrap.className = 'share-outro';
-    const googleReviewUrl = (window.GOOGLE_REVIEW_URL || 'https://share.google/IWbGLWPI83ByOirz1');
-    const instagramUrl = (window.INSTAGRAM_URL || 'https://www.instagram.com/o2shop_crailsheim/');
+    const googleReviewUrl = (window.GOOGLE_REVIEW_URL || 'https://telekom-partner-crailsheim.de/');
+    const instagramUrl = (window.INSTAGRAM_URL || 'https://www.instagram.com/telekom_shop_crailsheim/');
     wrap.innerHTML = `
       <div class="share-outro-grid">
         <div class="share-outro-card">
@@ -8209,7 +8483,7 @@ const makeOutroContent = () => {
           <div class="share-outro-h">Kurzes Feedback?</div>
           <div class="share-outro-p">Zufrieden mit der Beratung?<br/>Wir freuen uns über 5 Sterne!</div>
           <div class="share-outro-qr">
-            <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${qrUrl(googleReviewUrl,'0050ff')}" alt="QR Google" />
+            <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${qrUrl(googleReviewUrl,'E20074')}" alt="QR Google" />
           </div>
           <div class="share-outro-link">${googleReviewUrl}</div>
         </div>
@@ -8226,11 +8500,11 @@ const makeOutroContent = () => {
         <div class="share-outro-card">
           <div class="share-outro-icon">⌁</div>
           <div class="share-outro-h">Folgen & Sparen</div>
-          <div class="share-outro-p">News, Gewinnspiele und Deals<br/>direkt aus Crailsheim.</div>
+          <div class="share-outro-p">News, Aktionen und Deals<br/>direkt aus Crailsheim.</div>
           <div class="share-outro-qr">
             <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${qrUrl(instagramUrl,'bc1888')}" alt="QR Insta" />
           </div>
-          <div class="share-outro-link">@o2shop_crailsheim</div>
+          <div class="share-outro-link">@telekom_shop_crailsheim</div>
           <div class="share-outro-link">${instagramUrl}</div>
         </div>
       </div>
@@ -8256,6 +8530,7 @@ const isOfferEmpty = (sourceOfferEl, offerIndex) => {
     try {
         const grid = sourceOfferEl.querySelector('.offer-print-grid');
         if (!grid) return true;
+        // grid.children entspricht den order-1/2/3 Divs — Index stimmt mit offerIndex überein
         const col = Array.from(grid.children)[offerIndex];
         if (!col) return true;
 
@@ -8263,12 +8538,11 @@ const isOfferEmpty = (sourceOfferEl, offerIndex) => {
         const ta = col.querySelector('textarea');
         const hasText = ta && (ta.value || '').trim().length > 0;
 
-        // 2) Canvas mit gezeichneten Strokes?
-        const canvas = col.querySelector('canvas');
+        // 2) Canvas mit gezeichneten Strokes? (nur prüfen wenn Canvas sichtbar ist)
+        const canvas = col.querySelector('canvas.drawing-canvas');
         let hasCanvas = false;
-        if (canvas) {
+        if (canvas && canvas.width > 0 && canvas.height > 0) {
             try {
-                // Wenn Canvas nicht leer ist hat er non-transparent Pixel
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     const data = ctx.getImageData(0, 0, Math.min(canvas.width, 50), Math.min(canvas.height, 50)).data;
@@ -8282,14 +8556,17 @@ const isOfferEmpty = (sourceOfferEl, offerIndex) => {
         // 3) Bild hochgeladen?
         const hasImage = !!col.querySelector('img.canvas-image, img[class*="canvas"]');
 
-        // 4) HTML-Overlay eingefügt? (Bundle/Aktionsmappe über window.__canvasHtmlOfferX)
+        // 4) HTML-Overlay? (über window globals — zuverlässigste Methode)
         const htmlGlobalKeys = ['__canvasHtmlOffer1', '__canvasHtmlOffer2', '__canvasHtmlOffer3'];
         const hasHtmlGlobal = !!(window[htmlGlobalKeys[offerIndex]]);
 
-        // 5) HTML-Overlay im DOM sichtbar? (Fallback: direkt im geklonten Element prüfen)
+        // 5) HTML-Overlay im DOM?
         const hasHtmlDom = !!col.querySelector('.offer-html-overlay-wrap, .bundle-import-wrap');
 
-        return !hasText && !hasCanvas && !hasImage && !hasHtmlGlobal && !hasHtmlDom;
+        // 6) Status gesetzt (Offen/Abgeschlossen) → zeigt dass Inhalt vorhanden
+        const hasStatus = col.querySelector('[class*="bg-red-500"],[class*="bg-green-500"],[class*="border-red-500"],[class*="border-green-500"]');
+
+        return !hasText && !hasCanvas && !hasImage && !hasHtmlGlobal && !hasHtmlDom && !hasStatus;
     } catch(e) { return false; }
 };
 
@@ -8312,6 +8589,10 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
     const cols = Array.from(grid.children);
     const col = cols[offerIndex];
     if (!col) return doc.createElement('div');
+
+    // Im Schritt-Modus kann die Spalte display:none haben → für Export sichtbar machen
+    col.style.display = 'flex';
+    col.style.gridColumn = 'auto';
 
     // Buttons (Toolbar) ausblenden
     col.querySelectorAll('button:not([data-print-keep="1"])').forEach(b => { b.style.display = 'none'; });
@@ -8413,7 +8694,14 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
         // Overlay-Parent: transform(x,y) aus Screen-Drag ENTFERNEN (sonst verrutscht das Overlay im PDF)
         const overlayParent = htmlOverlayWrap.parentElement;
         if (overlayParent) {
-            overlayParent.style.transform = 'none';   // <-- DER KERN-FIX: Screen-Offset entfernen
+            // Aktuellen Scale auslesen und um 30% verkleinern (nur PDF-Export)
+            const origStyle = overlayParent.getAttribute('style') || '';
+            const scaleMatch = origStyle.match(/scale\(([\d.]+)\)/);
+            const origScale = scaleMatch ? parseFloat(scaleMatch[1]) : 0.6;
+            const pdfScale = origScale * 0.7;
+            const origTranslate = (origStyle.match(/translate\([^)]+\)/) || ['translate(0px, 60px)'])[0];
+            overlayParent.style.transform = `${origTranslate} scale(${pdfScale.toFixed(3)})`;
+            overlayParent.style.transformOrigin = 'top left';
             overlayParent.style.transition = 'none';
             overlayParent.style.position = 'absolute';
             overlayParent.style.inset = '0';
@@ -8430,6 +8718,7 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
         htmlOverlayWrap.style.boxSizing = 'border-box';
         htmlOverlayWrap.style.overflow = 'hidden';
         htmlOverlayWrap.style.margin = '0';
+        htmlOverlayWrap.style.transform = 'none';
     }
 
     // Spalten-Wrapper: volle Höhe
@@ -8490,6 +8779,10 @@ if (costBlock) {
 
 outroContentWrap.appendChild(makeOutroContent());
 
+// Kosten + Dankeschön-Seite — overflow:hidden verhindert Abschneiden
+outroContentWrap.style.overflow = 'hidden';
+outroContentWrap.style.maxHeight = '210mm';
+
 // Kosten + Dankeschön-Seite ZUERST (vor Anlage)
 const outroPage = wrapSharePage('Danke & Bonus', outroContentWrap, { includeHeader: false });
 stage.appendChild(outroPage);
@@ -8538,7 +8831,7 @@ try {
 
 const opt = {
         margin: 0,
-        filename: `Angebot_HIDA_${new Date().toISOString().split('T')[0]}.pdf`,
+        filename: `Angebot_Telekom_${new Date().toISOString().split('T')[0]}.pdf`,
         pagebreak: { mode: ['css', 'legacy'] },
         image: { type: 'jpeg', quality: 0.82 },
         html2canvas: {
@@ -8737,8 +9030,8 @@ const opt = {
                         /* Cover/Outro Gradient als "echte" Fläche erzwingen */
                         body.pdf-share-mode .share-cover,
                         body.pdf-share-mode .share-outro{
-                            background: linear-gradient(135deg,#001942 0%,#0050ff 100%) !important;
-                            background-color:#001942 !important;
+                            background: linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 60%,#3a3a3a 100%) !important;
+                            background-color:#1a1a1a !important;
                         }
                     `;
                     clonedDoc.head.appendChild(style);
@@ -9032,7 +9325,7 @@ const handlePDFShare = async () => {
                 await navigator.share({
                     files: [file],
                     title: filename,
-                    text: 'Ihr persönliches Angebot vom o2 Shop Crailsheim'
+                    text: 'Ihr persönliches Angebot vom Telekom Shop Crailsheim'
                 });
                 // Nutzer hat geteilt – fertig, nichts weiter nötig.
             } catch (shareErr) {
@@ -9302,7 +9595,7 @@ const handlePDFShare = async () => {
                             try { setTextData(prev => ({ ...prev, OfferValidUntil: '' })); } catch(e) {}
                             try { setDrawnStrokes(prev => ({ ...prev, offer_valid_until: [] })); } catch(e) {}
                         }
-                    }} onPrint={handlePrint} onShare={handlePDFShare} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
+                    }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
                     <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} />
 
 
@@ -9329,15 +9622,35 @@ const handlePDFShare = async () => {
 <AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} />
                     <StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} />
                     
+                    
                     <ImagePlacementModal isOpen={isImageSelectModalOpen} onClose={() => setIsImageSelectModalOpen(false)} onPlace={handleImagePlacement} imageName={currentImagePayload?.name || 'Datei'} />
                     <SignatureModal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} onSign={handleSignatureSave} />
 
                     <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik (passwortgeschützt)"><Icon d={ICONS.Lock} size={18}/></button><button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
                         <span>{darkMode ? '🌙' : '☀️'}</span>
                     </button>
                     <h1 className="text-2xl font-black text-[#0b1e42] tracking-tighter flex-1 min-w-0 overflow-hidden" style={{whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{view === 'situation' ? 'Ihre Aktuelle Situation' : 'Ihr Persönliches Angebot'}</h1>
+                    {/* Beratungs-ID — nur im Offer-View im Header */}
+                    {view === 'offer' && (
+                        <div style={{display:'flex',alignItems:'center',gap:'5px',flexShrink:0,marginRight:'4px'}}>
+                            <span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Beratungs-ID</span>
+                            <div style={{position:'relative',height:'32px',width:beratungsIdMode==='pen'?'220px':'150px',border:`1.5px solid ${beratungsIdMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'width 0.2s ease'}}>
+                                {beratungsIdMode==='keyboard'
+                                    ?<input type="text" inputMode="numeric" maxLength={15} value={beratungsId} onChange={e=>setBeratungsId(e.target.value.replace(/\D/g,'').slice(0,15))} placeholder="000000000000000" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 10px',fontSize:'11px',fontWeight:700,fontFamily:'monospace',letterSpacing:'0.08em',color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>
+                                    :<canvas ref={beratungsIdCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={e=>startDrawing(e,beratungsIdCanvasRef,'beratungs_id')} onPointerMove={e=>draw(e,beratungsIdCanvasRef,'beratungs_id')} onPointerUp={e=>stopDrawing(e,beratungsIdCanvasRef)} onPointerLeave={e=>stopDrawing(e,beratungsIdCanvasRef)}/>
+                                }
+                            </div>
+                            <div style={{display:'flex',gap:'2px'}}>
+                                {[['keyboard','⌨'],['pen','✏']].map(([m,ic])=>(
+                                    <button key={m} onClick={()=>setBeratungsIdMode(m)} style={{width:'24px',height:'32px',borderRadius:'6px',fontSize:'11px',border:`1.5px solid ${beratungsIdMode===m?'#3b82f6':'#e2e8f0'}`,background:beratungsIdMode===m?'#eff6ff':'#f8fafc',color:beratungsIdMode===m?'#2563eb':'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{ic}</button>
+                                ))}
+                                {beratungsIdMode==='pen'&&<button onClick={()=>{const c=beratungsIdCanvasRef.current;if(c){c.getContext('2d').clearRect(0,0,c.width,c.height);}setDrawnStrokes(p=>({...p,beratungs_id:[]}));}} style={{width:'24px',height:'32px',borderRadius:'6px',fontSize:'11px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
+                            </div>
+                        </div>
+                    )}
                     {/* Schritt-Modus Toggle */}
                     {view === 'situation' && (
                         <button onClick={()=>{setSitLayoutMode(m=>m==='grid'?'step':'grid');setCurrentSitStep(0);}}
@@ -9383,7 +9696,7 @@ const handlePDFShare = async () => {
                                         return (<div className="sit-progress-bar" style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}><div style={{flex:1,height:'8px',background:'#e2e8f0',borderRadius:'999px',overflow:'hidden',minWidth:80}}><div style={{width:pct+'%',height:'100%',background:pct===100?'#16a34a':'#2563eb',borderRadius:'999px',transition:'width 0.5s ease'}}/></div><span style={{fontSize:'11px',fontWeight:800,color:pct===100?'#16a34a':'#94a3b8',flexShrink:0}}>{pct===100?'✓ Vollständig':filled+'/'+SITUATION_ITEMS.length+' Felder'}</span></div>);
                                     })()}
                                     {/* Grid — IMMER im DOM (auch für Druck wenn Step aktiv) */}
-                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'stretch',gridTemplateRows:'repeat(5, 1fr)',overflowY:'auto',visibility:sitLayoutMode==='step'?'hidden':'visible',pointerEvents:sitLayoutMode==='step'?'none':'auto'}}>
+                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'start',gridTemplateRows:'repeat(5, minmax(200px, 1fr))',overflowY:'auto',visibility:sitLayoutMode==='step'?'hidden':'visible',pointerEvents:sitLayoutMode==='step'?'none':'auto'}}>
                                         {SITUATION_ITEMS.map((item) => {
                                             const sitKey = `sit_${item.id.replace(/\s+/g,'')}`;
                                             const sitRefMap = {Kundenname:sitCanvasRef_Kundenname,Rufnummer:sitCanvasRef_Rufnummer,Anbieter:sitCanvasRef_Anbieter,Hardware:sitCanvasRef_Hardware,Nutzung:sitCanvasRef_Nutzung,Haushalt:sitCanvasRef_Haushalt,'Weitere Produkte':sitCanvasRef_WeitereProdukte,Fernsehen:sitCanvasRef_Fernsehen,WiFi:sitCanvasRef_WiFi,Gesamtkosten:sitCanvasRef_Gesamtkosten};
@@ -9647,7 +9960,7 @@ const handlePDFShare = async () => {
                                             ?<><select value={providerSelect} onChange={e=>{if(e.target.value==='Sonstiges'){setIsCustomProvider(true);setProviderSelect('Sonstiges');}else{setProviderSelect(e.target.value);setIsCustomProvider(false);setWlanRecommendation('');setSpeedRecommendation('');}}}
                                                 style={{width:'100%',height:'30px',background:'#f8fafc',border:`1.5px solid ${providerSelect?'#22c55e':'#f87171'}`,borderRadius:'8px',paddingLeft:'8px',paddingRight:'20px',fontSize:'10px',fontWeight:600,color:'#374151',outline:'none',appearance:'none',cursor:'pointer'}}>
                                                 <option value="" disabled hidden>DSL-Anbieter *</option>
-                                                <option>Telekom</option><option>1&1</option><option>Vodafone</option><option>O2</option><option value="Sonstiges">Sonstiges</option>
+                                                <option selected>Telekom</option><option>1&1</option><option>Vodafone</option><option>O2</option><option value="Sonstiges">Sonstiges</option>
                                             </select>
                                             <svg style={{position:'absolute',right:'6px',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg></>
                                             :<div style={{display:'flex',alignItems:'center',height:'30px',border:'1.5px solid #22c55e',borderRadius:'8px',background:'#f0fdf4',overflow:'hidden',position:'relative'}}>
@@ -9747,12 +10060,21 @@ const handlePDFShare = async () => {
                                         {key:'tv',label:'TV',col:'#8b5cf6',light:'#f5f3ff',bdr:'#ddd6fe'},
                                     ].map(f=>{
                                         const val=parseCost(costState[f.key]);
+                                        const isCalcActive = calcOpen === f.key;
                                         return(
                                         <div key={f.key} style={{display:'flex',alignItems:'center',gap:'5px'}}>
                                             <span style={{width:'6px',height:'6px',borderRadius:'50%',background:f.col,flexShrink:0}}/>
                                             <span style={{fontSize:'9px',fontWeight:700,color:'#64748b',width:'44px',flexShrink:0}}>{f.label}</span>
-                                            <input value={costState[f.key]} onChange={e=>handleCostChange(f.key,e)} inputMode="decimal" placeholder="0,00"
-                                                style={{flex:1,height:'24px',background:f.light,border:`1.5px solid ${f.bdr}`,borderRadius:'6px',padding:'0 6px',fontSize:'11px',fontWeight:700,color:'#1e293b',outline:'none',boxSizing:'border-box'}}/>
+                                            {inputMode==='pen' ? (
+                                                <button onClick={()=>{ setCalcOpen(isCalcActive?null:f.key); setCalcInput(costState[f.key]||''); }}
+                                                    style={{flex:1,height:'24px',background:isCalcActive?f.col:f.light,border:`1.5px solid ${isCalcActive?f.col:f.bdr}`,borderRadius:'6px',padding:'0 6px',fontSize:'11px',fontWeight:700,color:isCalcActive?'#fff':'#1e293b',outline:'none',boxSizing:'border-box',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between',transition:'all 0.15s'}}>
+                                                    <span>{costState[f.key]||'0,00'}</span>
+                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="10" x2="8.01" y2="10"/><line x1="12" y1="10" x2="12.01" y2="10"/><line x1="16" y1="10" x2="16.01" y2="10"/><line x1="8" y1="14" x2="8.01" y2="14"/><line x1="12" y1="14" x2="12.01" y2="14"/><line x1="8" y1="18" x2="8.01" y2="18"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                                                </button>
+                                            ) : (
+                                                <input value={costState[f.key]} onChange={e=>handleCostChange(f.key,e)} inputMode="decimal" placeholder="0,00"
+                                                    style={{flex:1,height:'24px',background:f.light,border:`1.5px solid ${f.bdr}`,borderRadius:'6px',padding:'0 6px',fontSize:'11px',fontWeight:700,color:'#1e293b',outline:'none',boxSizing:'border-box'}}/>
+                                            )}
                                             {val>0&&<span style={{fontSize:'10px',fontWeight:800,color:f.col,flexShrink:0,minWidth:'38px',textAlign:'right'}}>{costState[f.key]}€</span>}
                                         </div>);
                                     })}
@@ -9818,11 +10140,11 @@ const handlePDFShare = async () => {
                             {/* ── Zeile: Ersparnis links · Fusion-Box rechts ── */}
                             {(() => {
                                 const monthly = offerData.monatlich1 || 0;
-                                // Primär: Gesamtkosten aus Seite 1 (digital oder Handschrift-Erkennung)
+                                // Primär: Gesamtkosten aus Seite 1 (digital)
                                 const gesamtkostenRaw = textData.Gesamtkosten || '';
                                 const gesamtkostenVal = parseCost(gesamtkostenRaw.replace(/[^0-9.,]/g, ''));
                                 // Fallback: Kosten-ist-Block (mobile + landline + tv)
-                                const current = (gesamtkostenVal > 0) ? gesamtkostenVal : totalCost;
+                                const current = gesamtkostenVal > 0 ? gesamtkostenVal : totalCost;
                                 const saving = (current > 0 && monthly > 0) ? current - monthly : 0;
                                 const savingYear = saving * 12;
                                 const hasSaving = saving > 0.005 && offerLayoutMode !== 'step';
@@ -10168,28 +10490,218 @@ const handlePDFShare = async () => {
                     {/* Anlage-HTML direkt cachen — zuverlässiger als Closure-Bridge */}
                     {(window.__anlageHtml = (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot) ? buildPage3Html() : '', null)}
 
-                    <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
-                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 z-50 pointer-events-auto">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap hidden sm:block">Beratungs-ID</span>
-                            <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
-                                <div style={{position:'relative',height:'32px',width:beratungsIdMode==='pen'?'280px':'160px',border:`1.5px solid ${beratungsIdMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'width 0.2s ease'}}>
-                                    {beratungsIdMode==='keyboard'
-                                        ?<input type="text" inputMode="numeric" maxLength={15} value={beratungsId} onChange={e=>setBeratungsId(e.target.value.replace(/\D/g,'').slice(0,15))} placeholder="000000000000000" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 10px',fontSize:'11px',fontWeight:700,fontFamily:'monospace',letterSpacing:'0.08em',color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>
-                                        :<canvas ref={beratungsIdCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={e=>startDrawing(e,beratungsIdCanvasRef,'beratungs_id')} onPointerMove={e=>draw(e,beratungsIdCanvasRef,'beratungs_id')} onPointerUp={e=>stopDrawing(e,beratungsIdCanvasRef)} onPointerLeave={e=>stopDrawing(e,beratungsIdCanvasRef)}/>
-                                    }
+                    {/* ── MINI TASCHENRECHNER (Kosten IST, Stylus-Modus) ── */}
+                    {calcOpen && ReactDOM.createPortal((()=>{
+                        const FIELDS = {mobile:{label:'Mobil',col:'#3b82f6',light:'#eff6ff'},landline:{label:'Festnetz',col:'#06b6d4',light:'#ecfeff'},tv:{label:'TV',col:'#8b5cf6',light:'#f5f3ff'}};
+                        const f = FIELDS[calcOpen];
+                        const press = (k) => {
+                            setCalcInput(prev => {
+                                if(k==='⌫') return prev.slice(0,-1);
+                                if(k===','){
+                                    if(prev.includes(',')) return prev;
+                                    return prev===''?'0,':prev+',';
+                                }
+                                if(prev==='0' && k!==',') return k;
+                                if(prev.length>=8) return prev;
+                                return prev+k;
+                            });
+                        };
+                        const confirm = () => {
+                            const normalized = calcInput.replace(',','.');
+                            const num = parseFloat(normalized);
+                            const formatted = (!isNaN(num)&&num>0) ? num.toFixed(2).replace('.',',') : '';
+                            setCostState(p=>({...p,[calcOpen]:formatted}));
+                            setCalcOpen(null); setCalcInput('');
+                        };
+                        const KEYS = [['7','8','9'],['4','5','6'],['1','2','3'],[',','0','⌫']];
+                        return (
+                        <div onClick={e=>{if(e.target===e.currentTarget){setCalcOpen(null);setCalcInput('');} }}
+                            style={{position:'fixed',inset:0,zIndex:9998,background:'rgba(15,23,42,0.4)',backdropFilter:'blur(3px)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
+                            <div style={{background:'#fff',borderRadius:'20px 20px 0 0',width:'100%',maxWidth:'320px',boxShadow:'0 -6px 30px rgba(0,0,0,0.18)',overflow:'hidden'}}>
+
+                                {/* Header */}
+                                <div style={{background:f.light,padding:'12px 16px 8px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`2px solid ${f.col}22`}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                        <span style={{width:'10px',height:'10px',borderRadius:'50%',background:f.col,flexShrink:0,display:'inline-block'}}/>
+                                        <span style={{fontSize:'12px',fontWeight:800,color:'#1e293b',textTransform:'uppercase',letterSpacing:'0.05em'}}>{f.label}</span>
+                                    </div>
+                                    <button onClick={()=>{setCalcOpen(null);setCalcInput('');}} style={{width:'26px',height:'26px',borderRadius:'50%',border:'1px solid #e2e8f0',background:'#f8fafc',cursor:'pointer',fontSize:'14px',display:'flex',alignItems:'center',justifyContent:'center',color:'#64748b'}}>✕</button>
                                 </div>
-                                <div style={{display:'flex',gap:'2px',flexShrink:0,alignSelf:'flex-start'}}>
-                                    {[['keyboard','⌨'],['pen','✏']].map(([m,ic])=>(
-                                        <button key={m} onClick={()=>setBeratungsIdMode(m)} style={{width:'26px',height:'32px',borderRadius:'7px',fontSize:'12px',border:`1.5px solid ${beratungsIdMode===m?'#3b82f6':'#e2e8f0'}`,background:beratungsIdMode===m?'#eff6ff':'#f8fafc',color:beratungsIdMode===m?'#2563eb':'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{ic}</button>
+
+                                {/* Display */}
+                                <div style={{padding:'12px 16px 8px',textAlign:'right'}}>
+                                    <div style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'4px'}}>Betrag</div>
+                                    <div style={{fontSize:'36px',fontWeight:800,color:calcInput?'#0f172a':'#cbd5e1',fontFamily:'monospace',letterSpacing:'-1px',lineHeight:1}}>
+                                        {calcInput||'0'} <span style={{fontSize:'18px',fontWeight:600,color:f.col}}>€</span>
+                                    </div>
+                                </div>
+
+                                {/* Keys */}
+                                <div style={{padding:'6px 12px 16px',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'7px'}}>
+                                    {KEYS.flat().map(k=>(
+                                        <button key={k} onClick={()=>press(k)}
+                                            style={{height:'54px',borderRadius:'12px',border:'none',fontSize: k==='⌫'?'18px':'22px',fontWeight:700,cursor:'pointer',transition:'all 0.1s',
+                                                background: k==='⌫'?'#fef2f2':k===','?'#f8fafc':'#f1f5f9',
+                                                color: k==='⌫'?'#ef4444':k===','?'#64748b':'#1e293b',
+                                                fontFamily:'monospace',
+                                                boxShadow:'0 2px 4px rgba(0,0,0,0.06)'}}>
+                                            {k}
+                                        </button>
                                     ))}
-                                    {beratungsIdMode==='pen'&&<button onClick={()=>{const c=beratungsIdCanvasRef.current;if(c){const ctx=c.getContext('2d');ctx&&ctx.clearRect(0,0,c.width,c.height);}setDrawnStrokes(p=>({...p,beratungs_id:[]}));}} style={{width:'26px',height:'32px',borderRadius:'7px',fontSize:'11px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
+                                    <button onClick={()=>{setCalcInput(''); setCostState(p=>({...p,[calcOpen]:''}));}}
+                                        style={{height:'54px',borderRadius:'12px',border:'none',fontSize:'12px',fontWeight:800,cursor:'pointer',background:'#f1f5f9',color:'#94a3b8',gridColumn:'1',letterSpacing:'0.03em'}}>
+                                        C
+                                    </button>
+                                    <button onClick={confirm}
+                                        style={{height:'54px',borderRadius:'12px',border:'none',fontSize:'14px',fontWeight:800,cursor:'pointer',background:f.col,color:'#fff',gridColumn:'2 / 4',boxShadow:`0 3px 10px ${f.col}55`}}>
+                                        ✓ Übernehmen
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                        );
+                    })(), document.body)}
+
+                    {/* ── GUTSCHRIFT-RECHNER MODAL ── */}
+                    {showGutschriftRechner && view === 'offer' && ReactDOM.createPortal((()=>{
+                        const gut = parseFloat(gutschriftBetrag.replace(',','.')) || 0;
+                        const istK = totalCost > 0 ? totalCost : parseCost(textData.Gesamtkosten || '');
+                        const neuK = offerData.monatlich1 || 0;
+                        const gesK = istK + neuK;
+                        const cov = gesK > 0 ? gesK : 1;
+                        const MDE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+                        const gML = (i) => { const d=new Date(); d.setMonth(d.getMonth()+i); return MDE[d.getMonth()]+" '"+String(d.getFullYear()).slice(2); };
+                        const months = []; let rem = gut;
+                        while(rem>0 && months.length<36){ const a=Math.min(rem,cov); rem-=a; months.push({pays:Math.max(0,cov-a),rem:Math.max(0,rem),full:a>=cov-0.001}); }
+                        const freeC = months.filter(m=>m.pays<0.01).length;
+                        const partI = months.findIndex(m=>m.pays>=0.01&&m.pays<cov-0.01);
+                        return (
+                        <div onClick={e=>{if(e.target===e.currentTarget)setShowGutschriftRechner(false);}}
+                            style={{position:'fixed',inset:0,zIndex:9999,background:'rgba(15,23,42,0.55)',backdropFilter:'blur(4px)',display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0'}}>
+                            <div style={{background:'#fff',borderRadius:'24px 24px 0 0',width:'100%',maxWidth:'680px',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 -8px 40px rgba(0,0,0,0.2)',display:'flex',flexDirection:'column'}}>
+
+                                {/* Header */}
+                                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px 12px',borderBottom:'1px solid #f1f5f9',flexShrink:0}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                        <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'linear-gradient(135deg,#f59e0b,#d97706)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px'}}>🎁</div>
+                                        <div>
+                                            <div style={{fontWeight:800,fontSize:'15px',color:'#0f172a'}}>Gutschrift-Rechner</div>
+                                            <div style={{fontSize:'11px',color:'#94a3b8',fontWeight:500}}>Monat für Monat — was zahlt der Kunde?</div>
+                                        </div>
+                                    </div>
+                                    <button onClick={()=>setShowGutschriftRechner(false)} style={{width:'32px',height:'32px',borderRadius:'50%',border:'1.5px solid #e2e8f0',background:'#f8fafc',fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#64748b',fontWeight:700}}>✕</button>
+                                </div>
+
+                                <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:'14px',overflowY:'auto'}}>
+
+                                    {/* Eingaben */}
+                                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'10px'}}>
+                                        {[
+                                            {label:'Kosten IST',val:istK>0?istK.toFixed(2).replace('.',',')+' €':null,placeholder:'aus Sidebar',bg:'#fff7ed',bdr:'#fed7aa',col:'#9a3412'},
+                                            {label:'Neues Produkt',val:neuK>0?neuK.toFixed(2).replace('.',',')+' €':null,placeholder:'aus Monatl.',bg:'#f0fdf4',bdr:'#86efac',col:'#166534'},
+                                        ].map((f,i)=>(
+                                        <div key={i}>
+                                            <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'4px'}}>{f.label}</div>
+                                            <div style={{padding:'9px 10px',background:f.bg,border:`1.5px solid ${f.bdr}`,borderRadius:'10px',fontSize:'14px',fontWeight:800,color:f.col,fontFamily:'monospace'}}>
+                                                {f.val || <span style={{color:'#cbd5e1',fontSize:'11px'}}>{f.placeholder}</span>}
+                                            </div>
+                                        </div>
+                                        ))}
+                                        <div>
+                                            <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'4px'}}>Gutschrift</div>
+                                            <div style={{display:'flex',alignItems:'center',background:'#eff6ff',border:'1.5px solid #93c5fd',borderRadius:'10px',overflow:'hidden'}}>
+                                                <input type="number" value={gutschriftBetrag} onChange={e=>setGutschriftBetrag(e.target.value)} inputMode="decimal"
+                                                    style={{flex:1,border:'none',background:'transparent',padding:'9px 8px',fontSize:'14px',fontWeight:800,color:'#1e40af',outline:'none',fontFamily:'monospace',width:'100%'}}/>
+                                                <span style={{paddingRight:'10px',fontSize:'11px',fontWeight:700,color:'#3b82f6'}}>€</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Summary Banner */}
+                                    {gut>0&&gesK>0&&(
+                                    <div style={{background:'linear-gradient(135deg,#1e3a8a,#2563eb)',borderRadius:'14px',padding:'14px 18px',color:'#fff',display:'grid',gridTemplateColumns:'1fr 1px 1fr 1px 1fr',alignItems:'center',gap:0}}>
+                                        {[
+                                            {lbl:'Gesamt / Monat', val: gesK.toFixed(2).replace('.',',')+' €', valCol:'#fff'},
+                                            null,
+                                            {lbl:'Gratis-Monate', val: freeC+' '+(freeC===1?'Monat':'Monate'), valCol:'#6effc0'},
+                                            null,
+                                            {lbl:'Zahlt jetzt', val: '0,00 €', valCol:'#fff'},
+                                        ].map((it,i)=> it===null
+                                            ? <div key={i} style={{width:'1px',background:'rgba(255,255,255,0.15)',height:'36px',margin:'0 auto'}}/>
+                                            : <div key={i} style={{textAlign:'center'}}>
+                                                <div style={{fontSize:'9px',fontWeight:700,opacity:.65,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:'4px'}}>{it.lbl}</div>
+                                                <div style={{fontFamily:'monospace',fontSize:'18px',fontWeight:800,color:it.valCol}}>{it.val}</div>
+                                              </div>
+                                        )}
+                                    </div>
+                                    )}
+
+                                    {/* Erklärungstext */}
+                                    {gut>0&&gesK>0&&(
+                                    <div style={{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:'12px',padding:'12px 14px',fontSize:'13px',color:'#78350f',lineHeight:1.7}}>
+                                        💬 <strong>So erklären Sie es:</strong> Die Gutschrift von <strong>{gut.toFixed(0)} €</strong> wird automatisch jeden Monat verrechnet.
+                                        Ihre Gesamtrechnung beträgt <strong>{gesK.toFixed(2).replace('.',',')} €/Monat</strong> — davon zahlen Sie für <strong>{freeC} Monate nichts</strong>{partI>=0?`, im ${partI+1}. Monat nur ${months[partI].pays.toFixed(2).replace('.',',')} €`:''}.
+                                        Ab <strong>{gML(months.length)}</strong> zahlen Sie dann regulär {gesK.toFixed(2).replace('.',',')} €/Monat.
+                                    </div>
+                                    )}
+
+                                    {/* Monats-Grid */}
+                                    {gut>0&&months.length>0&&(
+                                    <div>
+                                        <div style={{fontSize:'10px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'8px'}}>📅 Monatsübersicht</div>
+                                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(72px,1fr))',gap:'6px'}}>
+                                            {months.map((m,i)=>{
+                                                const fr=m.pays<0.01; const pa=!fr&&m.pays<gesK-0.01;
+                                                const bg=fr?'#dcfce7':pa?'#fef9c3':'#dbeafe';
+                                                const bdr=fr?'#86efac':pa?'#fde68a':'#93c5fd';
+                                                const col=fr?'#15803d':pa?'#92400e':'#1e40af';
+                                                return(
+                                                <div key={i} style={{background:bg,border:`1.5px solid ${bdr}`,borderRadius:'10px',padding:'7px 4px',textAlign:'center'}}>
+                                                    <div style={{fontSize:'9px',fontWeight:700,color:col,opacity:.6,marginBottom:'2px'}}>{gML(i)}</div>
+                                                    <div style={{fontFamily:'monospace',fontSize:'13px',fontWeight:800,color:col}}>{fr?'0,00 €':m.pays.toFixed(2).replace('.',',')+' €'}</div>
+                                                    <div style={{fontSize:'8px',color:col,opacity:.5,marginTop:'2px'}}>{m.rem>0.005?'💳 '+m.rem.toFixed(0)+' €':'✓ Ende'}</div>
+                                                </div>);
+                                            })}
+                                            <div style={{background:'#fee2e2',border:'1.5px solid #fca5a5',borderRadius:'10px',padding:'7px 4px',textAlign:'center'}}>
+                                                <div style={{fontSize:'9px',fontWeight:700,color:'#991b1b',opacity:.6,marginBottom:'2px'}}>{gML(months.length)}</div>
+                                                <div style={{fontFamily:'monospace',fontSize:'13px',fontWeight:800,color:'#dc2626'}}>{gesK.toFixed(2).replace('.',',')} €</div>
+                                                <div style={{fontSize:'8px',color:'#dc2626',opacity:.5,marginTop:'2px'}}>Normal</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    )}
+
                                 </div>
                             </div>
                         </div>
-                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
+                        );
+                    })(), document.body)}
+
+
+                    <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
+                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => setShowSkipReasonModal(true)} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
                             <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
-                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5">{STROKE_SIZES.map(s => (<button key={s.id} onClick={() => setStrokeWidth(s.width)} className={`w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 ${strokeWidth === s.width ? 'bg-slate-200 shadow-inner' : ''}`}><div className="bg-slate-600 rounded-full" style={{ width: s.id * 3, height: s.id * 3 }}></div></button>))}</div>{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button><button onClick={() => setView('situation')} className="px-6 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors mr-2 flex items-center gap-1"><Icon d={ICONS.ArrowLeft} size={14}/> Zurück</button><button onClick={handleFinishOfferClick} disabled={!isReadyToFinish}  className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${
+                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
+                                {/* ── Gutschrift-Rechner Icon-Button ── */}
+                                {(()=>{
+                                    const gut2 = parseFloat(gutschriftBetrag.replace(',','.')) || 0;
+                                    const ist2 = totalCost > 0 ? totalCost : parseCost(textData.Gesamtkosten || '');
+                                    const neu2 = offerData.monatlich1 || 0;
+                                    const ges2 = ist2 + neu2;
+                                    const fc2 = ges2 > 0 && gut2 > 0 ? Math.floor(gut2 / ges2) : 0;
+                                    return (
+                                    <div className="relative mr-2">
+                                        <button onClick={()=>setShowGutschriftRechner(v=>!v)}
+                                            className={`p-2 rounded-lg border border-slate-200 shadow-sm transition-colors flex items-center justify-center ${showGutschriftRechner ? 'bg-amber-50 text-amber-600 border-amber-300' : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-blue-600'}`}
+                                            title="Gutschrift-Rechner">
+                                            <Icon d={ICONS.Wallet} size={18}/>
+                                        </button>
+                                    </div>
+                                    );
+                                })()}
+                                <button onClick={() => setView('situation')} className="px-6 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors mr-2 flex items-center gap-1"><Icon d={ICONS.ArrowLeft} size={14}/> Zurück</button><button onClick={handleFinishOfferClick} disabled={!isReadyToFinish}  className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${
                     (!isReadyToFinish)
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         : (customerSignature ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-green-600 hover:bg-green-700')
@@ -10229,7 +10741,7 @@ const handlePDFShare = async () => {
         h.innerHTML = `
             <div style="flex:1 1 auto; min-width:0; font-size:20px; font-weight:900; color:#0b1e42; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; text-align:left;">${titleText}</div>
             <div style="flex-shrink:0; display:flex; align-items:center;">
-                <img src="${HIDA_LOGO_DATA_URI}" style="height:26px; width:auto; max-width:160px; object-fit:contain; display:block;" />
+                <img src="${window.__HIDA_LOGO_DATA_URI || ''}" class="hida-logo-print" style="height:26px; width:auto; max-width:160px; object-fit:contain; display:block;" />
             </div>
         `;
         return h;
@@ -10243,13 +10755,41 @@ const handlePDFShare = async () => {
         sit.parentNode.insertBefore(h1, sit);
     }
 
-    // Seite 2 Header
+    // Seite 2 Header — mit Beratungs-ID als absolut positioniertes Element (kein Layout-Shift)
     const off = document.querySelector('.print-offer-view');
-    if (off) off.prepend(mkHeader('Ihr Persönliches Angebot'));
+    if (off) {
+        off.prepend(mkHeader('Ihr Persönliches Angebot'));
+        // Beratungs-ID aus DOM lesen
+        const bidInput = document.querySelector('input[inputMode="numeric"][maxLength="15"]');
+        const bidVal = bidInput ? bidInput.value.trim() : '';
+        if (bidVal) {
+            const bid = document.createElement('div');
+            bid.style.cssText = [
+                'position:absolute',
+                'top:47px',
+                'right:12px',
+                'z-index:20',
+                'display:flex',
+                'align-items:center',
+                'gap:5px',
+                'background:#eff6ff',
+                'border:1px solid #bfdbfe',
+                'border-radius:7px',
+                'padding:3px 10px',
+                'pointer-events:none',
+            ].join(';');
+            bid.innerHTML = `<span style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;">Beratungs-ID</span><span style="font-family:monospace;font-size:12px;font-weight:800;color:#1e40af;letter-spacing:0.05em;">${bidVal}</span>`;
+            off.style.position = 'relative';
+            off.appendChild(bid);
+        }
+    }
 
     // Seite 3 hat bereits einen eingebauten Header in buildPage3Html — kein extra Header nötig
 };
-            window.addEventListener('beforeprint', ensurePrintHeaders);
+            // Guard: Listener nur einmal registrieren (nicht bei jedem React-Render)
+            if (!window.__printListenersRegistered) {
+                window.__printListenersRegistered = true;
+                window.addEventListener('beforeprint', ensurePrintHeaders);
 
             // === PRINT: Kacheln kompakter machen (überschreibt Inline-Styles) ===
             const _printCardOrig = new Map();
@@ -10283,7 +10823,30 @@ const handlePDFShare = async () => {
                     offerWrapper.style.display = 'block';
                     offerWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
                         _printCardOrig.set('__offer_overflow_' + i, el.style.overflow);
-                        el.style.overflow = 'visible';
+                        if (!el.classList.contains('offer-canvas-container')) {
+                            el.style.overflow = 'visible';
+                        }
+                    });
+                    // Canvas-Container: overflow:hidden erzwingen
+                    offerWrapper.querySelectorAll('.offer-canvas-container').forEach(el => {
+                        el.style.overflow = 'hidden';
+                        el.style.position = 'relative';
+                        // Bundle-Overlay: im Print auf 35% skalieren + oben-links positionieren
+                        const overlayWrap = el.querySelector('.offer-html-overlay-wrap');
+                        if (overlayWrap) {
+                            const origWrapStyle = overlayWrap.getAttribute('style') || '';
+                            overlayWrap.setAttribute('data-orig-wrap-style', origWrapStyle);
+                            const newWrapStyle = origWrapStyle.replace(/scale\([^)]+\)/, 'scale(0.45)');
+                            overlayWrap.setAttribute('style', newWrapStyle);
+                            // Overlay-Parent: translate auf saubere Position setzen
+                            const overlayParent = overlayWrap.parentElement;
+                            if (overlayParent) {
+                                const origParentStyle = overlayParent.getAttribute('style') || '';
+                                overlayParent.setAttribute('data-orig-parent-style', origParentStyle);
+                                const newParentStyle = origParentStyle.replace(/translate\([^)]+\)/, 'translate(10px, 95px)');
+                                overlayParent.setAttribute('style', newParentStyle);
+                            }
+                        }
                     });
                     // Offer-Canvas-Container: Styles per data-Attribut sichern (robust gegen React Re-render)
                     offerWrapper.querySelectorAll('.offer-canvas-container').forEach((el) => {
@@ -10406,6 +10969,16 @@ const handlePDFShare = async () => {
                                 el.style.overflow = _printCardOrig.get('__offer_overflow_' + i) || '';
                             }
                         });
+                        // Bundle-Overlay: Screen-Styles wiederherstellen
+                        offerWrapper.querySelectorAll('.offer-html-overlay-wrap').forEach(wrap => {
+                            const orig = wrap.getAttribute('data-orig-wrap-style');
+                            if (orig !== null) { wrap.setAttribute('style', orig); wrap.removeAttribute('data-orig-wrap-style'); }
+                            const parent = wrap.parentElement;
+                            if (parent) {
+                                const origP = parent.getAttribute('data-orig-parent-style');
+                                if (origP !== null) { parent.setAttribute('style', origP); parent.removeAttribute('data-orig-parent-style'); }
+                            }
+                        });
                         // cost-overview-print margin wiederherstellen
                         offerWrapper.querySelectorAll('.cost-overview-print').forEach(el => {
                             el.style.marginTop    = el.getAttribute('data-pre-print-mt') || '';
@@ -10459,7 +11032,8 @@ const handlePDFShare = async () => {
                         window.__printResetView();
                     }
                 }, 50);
-            });
+            }); // end afterprint
+            } // end __printListenersRegistered guard
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
