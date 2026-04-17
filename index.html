@@ -262,18 +262,30 @@ html, body, #root{
 /* Ensure nothing forces a wider-than-viewport layout in fullscreen */
 #root{ max-width: 100vw !important; }
 
-/* ===== KLEINE BILDSCHIRME < 11 ZOLL (~1180px): Sidebar scrollbar ===== */
+/* ===== KLEINE BILDSCHIRME ≤ 1180px (iPad 10-Zoll, Hochformat, etc.) ===== */
+/* Sidebar: Höhe explizit begrenzen + scrollbar erzwingen.
+   Ohne max-height kann die Sidebar höher als der Viewport werden → kein Scroll möglich. */
 @media screen and (max-width: 1180px) {
-    /* Rechte Sidebar: AUCH scrollbar auf kleinen Bildschirmen (iPad etc.) */
     .sit-aside-panel {
+        /* Verfügbare Höhe: Viewport minus Header (64px) und Footer (56px) */
+        max-height: calc(100dvh - 64px - 56px) !important;
+        height:     calc(100dvh - 64px - 56px) !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important; /* iOS Smooth Scroll */
         scrollbar-width: thin !important;
         scrollbar-color: #cbd5e1 transparent !important;
     }
     .sit-aside-panel::-webkit-scrollbar { width: 3px !important; }
     .sit-aside-panel::-webkit-scrollbar-thumb { background: #cbd5e1 !important; border-radius: 99px !important; }
+
+    /* Inneres Scroll-Div: volle Höhe nutzen */
+    .sit-aside-panel > .flex-1 {
+        overflow-y: auto !important;
+        min-height: 0 !important;
+    }
 }
+/* Android ≥ 1181px: Standardlayout, keine Änderungen nötig */
 
 /* === FULLSCREEN/ROTATE: prevent canvas distortion === */
 .drawing-canvas{ width:100% !important; height:100% !important; }
@@ -11095,16 +11107,55 @@ const handlePDFShare = async () => {
                 });
 
                 // ── Fusion-Box (Empfehlung Seite 2) per Inline-Style explizit ausblenden ──
-                // Sicherheitsnetz: React setzt display:'flex' inline → überschreibt in manchen
-                // Browsern den @media print CSS-Block trotz !important. Hier wird per JS
-                // zusätzlich display:none gesetzt, damit die Empfehlung NICHT auf Seite 2
-                // erscheint, sondern ausschließlich auf der exklusiven Seite 3.
                 document.querySelectorAll('.print-hide-fusion').forEach((el, i) => {
                     _printCardOrig.set('__fusion_' + i, el.style.display);
                     el.style.setProperty('display', 'none', 'important');
                 });
 
                 // ── SEITE 3: Wird jetzt als statisches React-Element gerendert (kein DOM-Inject nötig) ──
+
+                // ════════════════════════════════════════════════════════════════
+                // IPAD/SAFARI 2-SEITEN-FIX (Inline-Style — gewinnt über !important CSS)
+                //
+                // Problem 1: ensurePrintHeaders fügt Header als Geschwister VOR dem
+                //   Wrapper ein (~54px). Ohne Korrektur: 54px + 210mm = 227mm > A4 → 3. Seite.
+                // Problem 2: Der obige Code setzt overflow:visible auf alle Kinder →
+                //   CSS overflow:hidden auf dem Wrapper wird ignoriert.
+                // Lösung: Inline-Styles direkt auf die Wrapper setzen (höchste Priorität).
+                // ════════════════════════════════════════════════════════════════
+                (() => {
+                    // Seite 1: Situation-Wrapper
+                    const sitW = document.querySelector('.situation-view-wrapper');
+                    if (sitW) {
+                        // Messe die tatsächliche Header-Höhe (inklusive Margin)
+                        const hdr = sitW.previousElementSibling;
+                        let hdrPx = 54; // Fallback: 40px Header + 7px margin + buffer
+                        if (hdr && hdr.classList.contains('print-page-header')) {
+                            const r = hdr.getBoundingClientRect();
+                            const mt = parseFloat(getComputedStyle(hdr).marginTop  || '0');
+                            const mb = parseFloat(getComputedStyle(hdr).marginBottom || '0');
+                            hdrPx = Math.round(r.height + mt + mb) || 54;
+                        }
+                        // Wrapper = A4-Höhe minus Header-Höhe
+                        sitW.style.setProperty('height',    `calc(210mm - ${hdrPx}px)`, 'important');
+                        sitW.style.setProperty('max-height',`calc(210mm - ${hdrPx}px)`, 'important');
+                        sitW.style.setProperty('min-height','0', 'important');
+                        sitW.style.setProperty('overflow',  'hidden', 'important');
+                        sitW.setAttribute('data-print-hdr-px', String(hdrPx));
+                    }
+
+                    // Seite 2: Offer-View (Header ist innen → volle 210mm)
+                    const ofW = document.querySelector('.print-offer-view');
+                    if (ofW) {
+                        ofW.style.setProperty('width',     '297mm', 'important');
+                        ofW.style.setProperty('max-width', '297mm', 'important');
+                        ofW.style.setProperty('min-width', '0',     'important');
+                        ofW.style.setProperty('height',    '210mm', 'important');
+                        ofW.style.setProperty('max-height','210mm', 'important');
+                        ofW.style.setProperty('overflow',  'hidden', 'important');
+                        ofW.style.setProperty('zoom',      '1',      'important');
+                    }
+                })();
             });
             window.addEventListener('afterprint', () => {
                 document.querySelectorAll('.print-page-header').forEach(el => el.remove());
@@ -11116,6 +11167,11 @@ const handlePDFShare = async () => {
                     if (sitWrapper) {
                         sitWrapper.style.display = _printCardOrig.get('__sit_display') || '';
                         if (_printCardOrig.get('__sit_cls_hidden')) sitWrapper.classList.add('hidden');
+                        // Print-Inline-Styles vom IPAD-FIX zurücksetzen
+                        ['height','maxHeight','minHeight','overflow'].forEach(p => {
+                            sitWrapper.style.removeProperty(p);
+                        });
+                        sitWrapper.removeAttribute('data-print-hdr-px');
                         sitWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
                             el.style.overflow  = _printCardOrig.get('__sit_overflow_' + i) || '';
                             el.style.height    = _printCardOrig.get('__sit_height_'   + i) || '';
