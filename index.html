@@ -3825,17 +3825,20 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
   const [tab, setTab] = useState('info');
   const [fuPreis, setFuPreis] = useState('');       // DE GB
   const [fuNettoBrutto, setFuNettoBrutto] = useState(''); // brutto price
+  const [fuUnlimited, setFuUnlimited] = useState(false); // unlimited tarif toggle
+  const [fuJahr, setFuJahr] = useState('2026'); // Berechnungsjahr
 
   if (!isOpen) return null;
 
-  const GWSP = 1.10;
+  const GWSP_MAP = {'2023':1.80,'2024':1.55,'2025':1.30,'2026':1.10};
+  const GWSP = GWSP_MAP[fuJahr] || 1.10;
   const fuDeGb = parseFloat((fuPreis||'').replace(',','.')) || 0;
   const fuBrutto = parseFloat((fuNettoBrutto||'').replace(',','.')) || 0;
   const fuNetto = fuBrutto > 0 ? fuBrutto / 1.19 : 0;
   const fuGbRaw = fuNetto > 0 ? Math.round((fuNetto / GWSP) * 2 * 10) / 10 : null;
-  // Echtes Limit: min(Formel-Ergebnis, DE-Volumen) — kann nie mehr sein als zuhause
-  const fuGb = fuGbRaw !== null ? (fuDeGb > 0 ? Math.min(fuGbRaw, fuDeGb) : fuGbRaw) : null;
-  const fuCapped = fuGbRaw !== null && fuDeGb > 0 && fuGbRaw > fuDeGb; // Deckel aktiv?
+  // Unlimited: kein DE-Deckel — Formel gilt direkt
+  const fuGb = fuGbRaw !== null ? ((!fuUnlimited && fuDeGb > 0) ? Math.min(fuGbRaw, fuDeGb) : fuGbRaw) : null;
+  const fuCapped = !fuUnlimited && fuGbRaw !== null && fuDeGb > 0 && fuGbRaw > fuDeGb;
   const fuCol = fuGb === null ? '#94a3b8' : fuGb >= 80 ? '#10b981' : fuGb >= 40 ? '#f59e0b' : '#3b82f6';
 
   const ZONES = {
@@ -3938,26 +3941,28 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
       .rm-country{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:7px;background:#f1f5f9;color:#475569;font-size:11px;font-weight:600;margin:3px;}
     `}</style>
 
-    <div className="rm-wrap bg-white w-full max-w-[900px] max-h-[95vh] overflow-hidden rounded-2xl flex flex-col" style={{boxShadow:'0 24px 60px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06)'}}>
+    <div className="rm-wrap bg-white w-full max-w-[900px] max-h-[95vh] overflow-hidden rounded-2xl flex flex-col" style={{boxShadow:'0 32px 80px rgba(0,0,0,0.4),0 0 0 1px rgba(0,0,0,.06)'}}>
 
-      {/* HEADER */}
-      <div className="relative flex items-center justify-between px-5 py-4 shrink-0 overflow-hidden" style={{background:z.headerBg,minHeight:'80px'}}>
-        <div className="absolute inset-0 opacity-10" style={{backgroundImage:'radial-gradient(circle at 80% 50%, rgba(255,255,255,.4) 0%, transparent 60%)'}}/>
-        <div className="relative flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl" style={{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)'}}>
-            {z.flag}
+      {/* HEADER — vereinheitlicht mit Speed-Rechner-Style */}
+      <div style={{background:'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)',padding:'24px 28px 20px',position:'relative',overflow:'hidden',minHeight:'80px'}}>
+        <div style={{position:'absolute',top:'-40px',right:'-40px',width:'200px',height:'200px',background:'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',pointerEvents:'none'}}></div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',position:'relative'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'14px'}}>
+            <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'linear-gradient(135deg,#3b82f6,#6366f1)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 16px rgba(99,102,241,0.5)',flexShrink:0,fontSize:'22px'}}>
+              🌍
+            </div>
+            <div>
+              <div style={{fontSize:'10px',fontWeight:700,color:'rgba(148,163,184,1)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'1px'}}>Interaktiver</div>
+              <h1 style={{margin:0,fontSize:'24px',fontWeight:900,color:'#fff',letterSpacing:'-0.03em',lineHeight:1}}>Roaming Check</h1>
+            </div>
           </div>
-          <div>
-            <div className="font-black text-white text-lg leading-tight">Roaming Check</div>
-            <div className="text-xs font-medium mt-0.5" style={{color:'rgba(255,255,255,.55)'}}>{z.subtitle}</div>
+          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+            <div style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'12px',padding:'8px 16px',textAlign:'center',minWidth:'120px'}}>
+              <div style={{fontSize:'9px',color:'rgba(148,163,184,1)',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>{z.flag} {z.label}</div>
+              <div style={{fontSize:'14px',fontWeight:900,color:z.status==='ok'?'#6ee7b7':z.status==='warn'?'#fde68a':'#fca5a5',letterSpacing:'-0.02em',lineHeight:1.1,marginTop:'2px'}}>{z.badge}</div>
+            </div>
+            <button onClick={onClose} style={{width:'34px',height:'34px',borderRadius:'10px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',lineHeight:1,flexShrink:0}}>✕</button>
           </div>
-        </div>
-        <div className="relative flex items-center gap-3">
-          <div className="text-right">
-            <div className="font-black text-white text-base leading-tight">{z.label}</div>
-            <div className="text-xs font-bold px-2 py-0.5 rounded-full mt-1 inline-block" style={{background:`${z.badgeColor}30`,color:z.badge.includes('€')?'#fca5a5':z.badgeColor==='#10b981'?'#6ee7b7':'#fde68a',border:`1px solid ${z.badgeColor}50`}}>{z.badge}</div>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/20" style={{background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.2)',color:'rgba(255,255,255,.7)'}}><Icon d={ICONS.X} size={15}/></button>
         </div>
       </div>
 
@@ -3984,14 +3989,22 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             <div style={{marginBottom:'6px'}}>
               <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',marginBottom:'3px'}}>GB in Deutschland</div>
               <div style={{position:'relative'}}>
-                <input type="number" min="0" step="1" placeholder="z.B. 40"
-                  value={fuPreis} onChange={e=>setFuPreis(e.target.value)}
-                  style={{width:'100%',padding:'7px 32px 7px 10px',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'14px',fontWeight:800,color:'#1e293b',outline:'none',boxSizing:'border-box',background:'#fff'}}
+                <input type="number" min="0" step="1" placeholder={fuUnlimited ? '∞ Unlimited' : 'z.B. 40'}
+                  value={fuUnlimited ? '' : fuPreis} onChange={e=>setFuPreis(e.target.value)}
+                  disabled={fuUnlimited}
+                  style={{width:'100%',padding:'7px 32px 7px 10px',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'14px',fontWeight:800,color: fuUnlimited?'#94a3b8':'#1e293b',outline:'none',boxSizing:'border-box',background: fuUnlimited?'#f1f5f9':'#fff'}}
                   onFocus={e=>e.target.style.borderColor='#3b82f6'}
                   onBlur={e=>e.target.style.borderColor='#e2e8f0'}
                 />
-                <span style={{position:'absolute',right:'8px',top:'50%',transform:'translateY(-50%)',fontSize:'10px',color:'#94a3b8',fontWeight:700}}>GB</span>
+                <span style={{position:'absolute',right:'8px',top:'50%',transform:'translateY(-50%)',fontSize:fuUnlimited?'16px':'10px',color:'#94a3b8',fontWeight:700}}>{fuUnlimited?'∞':'GB'}</span>
               </div>
+              {/* Unlimited Toggle */}
+              <label style={{display:'flex',alignItems:'center',gap:'6px',marginTop:'5px',cursor:'pointer',userSelect:'none'}}>
+                <div onClick={()=>setFuUnlimited(v=>!v)} style={{width:'28px',height:'16px',borderRadius:'99px',background:fuUnlimited?'#3b82f6':'#e2e8f0',position:'relative',transition:'background 0.2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:'2px',left:fuUnlimited?'14px':'2px',width:'12px',height:'12px',borderRadius:'50%',background:'#fff',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </div>
+                <span style={{fontSize:'9px',fontWeight:700,color:fuUnlimited?'#2563eb':'#64748b'}}>Unlimited-Tarif (∞ in DE)</span>
+              </label>
             </div>
 
             {/* Monatspreis brutto */}
@@ -4008,14 +4021,36 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
               </div>
             </div>
 
-            {/* Ergebnis */}
+            {/* Jahr / Rate wählen */}
+            <div style={{marginBottom:'8px'}}>
+              <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',marginBottom:'4px'}}>Berechnungsjahr (Großhandelspreis)</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'3px'}}>
+                {[['2023','1,80€'],['2024','1,55€'],['2025','1,30€'],['2026','1,10€']].map(([yr,rate])=>(
+                  <button key={yr} onClick={()=>setFuJahr(yr)}
+                    style={{padding:'4px 2px',borderRadius:'6px',border:`1.5px solid ${fuJahr===yr?'#3b82f6':'#e2e8f0'}`,background:fuJahr===yr?'#eff6ff':'#f8fafc',cursor:'pointer',textAlign:'center'}}>
+                    <div style={{fontSize:'9px',fontWeight:800,color:fuJahr===yr?'#1d4ed8':'#374151'}}>{yr}</div>
+                    <div style={{fontSize:'8px',color:fuJahr===yr?'#3b82f6':'#94a3b8',fontWeight:600}}>{rate}</div>
+                  </button>
+                ))}
+              </div>
+              {fuJahr==='2023'&&<div style={{fontSize:'8px',color:'#f59e0b',marginTop:'3px',fontWeight:700}}>⚠️ o2-Vertragsberechnung oft mit diesem Satz</div>}
+            </div>
             <div style={{borderRadius:'10px',padding:'10px',textAlign:'center',background: fuGb!==null ? fuCol+'15' : '#f1f5f9',border:`1.5px solid ${fuGb!==null?fuCol+'40':'#e2e8f0'}`,transition:'all 0.2s'}}>
               <div style={{fontSize:'24px',fontWeight:900,color: fuGb!==null?fuCol:'#cbd5e1',lineHeight:1}}>{fuGb!==null?`~${fuGb}`:'–'}</div>
               <div style={{fontSize:'10px',fontWeight:700,color:'#64748b',marginTop:'2px'}}>GB im EU-Ausland</div>
 
-              {/* Deckel-Hinweis */}
+              {fuUnlimited && fuGb !== null && (
+                <div style={{marginTop:'5px',padding:'4px 6px',borderRadius:'5px',background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',fontSize:'8px',fontWeight:800,color:'#93c5fd'}}>
+                  🇩🇪 ∞ in DE &nbsp;→&nbsp; 🇪🇺 ~{fuGb} GB max. im Ausland
+                </div>
+              )}
+              {fuUnlimited && fuGb !== null && (
+                <div style={{marginTop:'4px',padding:'3px 6px',borderRadius:'4px',background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.3)',fontSize:'8px',color:'#fcd34d',fontWeight:700}}>
+                  ⚠️ danach ~1,10 €/GB Aufpreis
+                </div>
+              )}
               {fuCapped && <div style={{marginTop:'5px',padding:'3px 6px',borderRadius:'5px',background:'#fef3c7',border:'1px solid #fde68a',fontSize:'8px',fontWeight:800,color:'#92400e'}}>📌 Formel: {fuGbRaw} GB → Deckel: {fuDeGb} GB</div>}
-              {fuGb!==null && !fuCapped && fuDeGb>0 && <div style={{marginTop:'5px',padding:'3px 6px',borderRadius:'5px',background:'#dcfce7',border:'1px solid #bbf7d0',fontSize:'8px',fontWeight:700,color:'#166534'}}>✅ Fair-Use unter DE-Volumen</div>}
+              {fuGb!==null && !fuCapped && !fuUnlimited && fuDeGb>0 && <div style={{marginTop:'5px',padding:'3px 6px',borderRadius:'5px',background:'#dcfce7',border:'1px solid #bbf7d0',fontSize:'8px',fontWeight:700,color:'#166534'}}>✅ Fair-Use unter DE-Volumen</div>}
 
               {/* Vergleichsbalken DE vs EU */}
               {fuGb!==null && fuDeGb>0 && (
@@ -9976,13 +10011,14 @@ const handlePDFShare = async () => {
                                         }
                                     </div>
                                     {wlanRecommendation&&<div style={{padding:'4px 8px',background:'#f0fdf4',border:'1px solid #86efac',borderRadius:'7px',fontSize:'10px',fontWeight:700,color:'#166534'}}>✓ {wlanRecommendation}</div>}
-                                    <button onClick={()=>setShowWlanModal(true)} style={{width:'100%',height:'30px',display:'flex',alignItems:'center',gap:'7px',padding:'0 10px',borderRadius:'8px',border:`1.5px solid ${wlanRecommendation?'#86efac':'#e2e8f0'}`,background:wlanRecommendation?'#f0fdf4':'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
+                                    <button onClick={()=>setShowWlanModal(true)}
+                                        style={{width:'100%',display:'flex',alignItems:'center',gap:'9px',padding:'7px 10px',borderRadius:'9px',border:`1.5px solid ${wlanRecommendation?'#86efac':'#f1f5f9'}`,background:wlanRecommendation?'#f0fdf4':'#fafafa',cursor:'pointer',transition:'all 0.15s',textAlign:'left'}}
                                         onMouseEnter={e=>{e.currentTarget.style.borderColor='#3b82f6';e.currentTarget.style.background='#eff6ff';}}
-                                        onMouseLeave={e=>{e.currentTarget.style.borderColor=wlanRecommendation?'#86efac':'#e2e8f0';e.currentTarget.style.background=wlanRecommendation?'#f0fdf4':'#f8fafc';}}>
-                                        <div style={{width:'18px',height:'18px',borderRadius:'5px',background:wlanRecommendation?'#22c55e':'#e2e8f0',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                                            <Icon d={ICONS.Wifi} size={10} style={{color:wlanRecommendation?'white':'#94a3b8'}}/>
+                                        onMouseLeave={e=>{e.currentTarget.style.borderColor=wlanRecommendation?'#86efac':'#f1f5f9';e.currentTarget.style.background=wlanRecommendation?'#f0fdf4':'#fafafa';}}>
+                                        <div style={{width:'20px',height:'20px',borderRadius:'6px',background:wlanRecommendation?'#22c55e':'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                            <Icon d={ICONS.Wifi} size={11} style={{color:wlanRecommendation?'white':'#3b82f6'}}/>
                                         </div>
-                                        <span style={{fontSize:'10px',fontWeight:700,color:wlanRecommendation?'#166534':'#64748b'}}>{wlanRecommendation?'✓ WLAN-Empfehlung':'WLAN-Planer öffnen'}</span>
+                                        <span style={{fontSize:'11px',fontWeight:700,color:wlanRecommendation?'#166534':'#374151'}}>{wlanRecommendation?'WLAN-Empfehlung ✓':'WLAN-Planer öffnen'}</span>
                                     </button>
                                 </div>
                             </div>
@@ -9995,18 +10031,19 @@ const handlePDFShare = async () => {
                                     </div>
                                     <span style={{fontSize:'10px',fontWeight:800,color:'#1e293b',letterSpacing:'0.02em'}}>Technologie & Speed</span>
                                 </div>
-                                <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'5px'}}>
+                                <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'4px'}}>
                                     {[
-                                        {label:checkedTechs&&Object.values(checkedTechs).some(Boolean)?`✓ Technologie (${Object.values(checkedTechs).filter(Boolean).length})`:'Technologie-Check',icon:ICONS.Zap,active:checkedTechs&&Object.values(checkedTechs).some(Boolean),onClick:()=>setShowTechModal(true),hov:'#f59e0b',hovBg:'#fffbeb'},
-                                        {label:speedRecommendation?'✓ Speed ermittelt':'Speed-Rechner',icon:ICONS.Gauge,active:!!speedRecommendation,onClick:()=>setShowSpeedModal(true),hov:'#f59e0b',hovBg:'#fffbeb'},
+                                        {label:checkedTechs&&Object.values(checkedTechs).some(Boolean)?`Technologie (${Object.values(checkedTechs).filter(Boolean).length} ✓)`:'Technologie-Check',icon:ICONS.Zap,active:checkedTechs&&Object.values(checkedTechs).some(Boolean),onClick:()=>setShowTechModal(true),accentCol:'#f59e0b'},
+                                        {label:speedRecommendation?'Speed ermittelt ✓':'Speed-Rechner',icon:ICONS.Gauge,active:!!speedRecommendation,onClick:()=>setShowSpeedModal(true),accentCol:'#f59e0b'},
                                     ].map((btn,i)=>(
-                                        <button key={i} onClick={btn.onClick} style={{width:'100%',height:'30px',display:'flex',alignItems:'center',gap:'7px',padding:'0 10px',borderRadius:'8px',border:`1.5px solid ${btn.active?'#86efac':'#e2e8f0'}`,background:btn.active?'#f0fdf4':'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
-                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.hov;e.currentTarget.style.background=btn.hovBg;}}
-                                            onMouseLeave={e=>{e.currentTarget.style.borderColor=btn.active?'#86efac':'#e2e8f0';e.currentTarget.style.background=btn.active?'#f0fdf4':'#f8fafc';}}>
-                                            <div style={{width:'18px',height:'18px',borderRadius:'5px',background:btn.active?'#22c55e':'#fef3c7',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                                                <Icon d={btn.icon} size={10} style={{color:btn.active?'white':'#f59e0b'}}/>
+                                        <button key={i} onClick={btn.onClick}
+                                            style={{width:'100%',display:'flex',alignItems:'center',gap:'9px',padding:'7px 10px',borderRadius:'9px',border:`1.5px solid ${btn.active?'#86efac':'#f1f5f9'}`,background:btn.active?'#f0fdf4':'#fafafa',cursor:'pointer',transition:'all 0.15s',textAlign:'left'}}
+                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.accentCol;e.currentTarget.style.background='#fffbf0';}}
+                                            onMouseLeave={e=>{e.currentTarget.style.borderColor=btn.active?'#86efac':'#f1f5f9';e.currentTarget.style.background=btn.active?'#f0fdf4':'#fafafa';}}>
+                                            <div style={{width:'20px',height:'20px',borderRadius:'6px',background:btn.active?'#22c55e':btn.accentCol+'20',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                                <Icon d={btn.icon} size={11} style={{color:btn.active?'#fff':btn.accentCol}}/>
                                             </div>
-                                            <span style={{fontSize:'10px',fontWeight:700,color:btn.active?'#166534':'#64748b'}}>{btn.label}</span>
+                                            <span style={{fontSize:'11px',fontWeight:700,color:btn.active?'#166534':'#374151'}}>{btn.label}</span>
                                         </button>
                                     ))}
                                     {speedRecommendation&&<div style={{padding:'4px 8px',background:'#f0fdf4',border:'1px solid #86efac',borderRadius:'7px',fontSize:'10px',fontWeight:700,color:'#166534'}}>✓ {speedRecommendation}</div>}
@@ -10021,16 +10058,19 @@ const handlePDFShare = async () => {
                                     </div>
                                     <span style={{fontSize:'10px',fontWeight:800,color:'#1e293b',letterSpacing:'0.02em'}}>Roaming & TV</span>
                                 </div>
-                                <div style={{padding:'7px 10px',display:'flex',gap:'5px'}}>
+                                <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'4px'}}>
                                     {[
-                                        {label:'Roaming Check',icon:ICONS.Globe,col:'#8b5cf6',bg:'#f5f3ff',onClick:()=>setShowRoamingModal(true)},
-                                        {label:'TV Kalkulation',icon:ICONS.Tv,col:'#ec4899',bg:'#fdf4ff',onClick:()=>setShowTvModal(true)},
+                                        {label:'Roaming Check',icon:ICONS.Globe,accentCol:'#8b5cf6',onClick:()=>setShowRoamingModal(true)},
+                                        {label:'TV Kalkulation',icon:ICONS.Tv,accentCol:'#ec4899',onClick:()=>setShowTvModal(true)},
                                     ].map(btn=>(
-                                        <button key={btn.label} onClick={btn.onClick} style={{flex:1,height:'30px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',borderRadius:'8px',border:'1.5px solid #e2e8f0',background:'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
-                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.col;e.currentTarget.style.background=btn.bg;}}
-                                            onMouseLeave={e=>{e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.background='#f8fafc';}}>
-                                            <Icon d={btn.icon} size={11} style={{color:btn.col,flexShrink:0}}/>
-                                            <span style={{fontSize:'10px',fontWeight:700,color:'#64748b'}}>{btn.label}</span>
+                                        <button key={btn.label} onClick={btn.onClick}
+                                            style={{width:'100%',display:'flex',alignItems:'center',gap:'9px',padding:'7px 10px',borderRadius:'9px',border:'1.5px solid #f1f5f9',background:'#fafafa',cursor:'pointer',transition:'all 0.15s',textAlign:'left'}}
+                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.accentCol;e.currentTarget.style.background=btn.accentCol+'10';}}
+                                            onMouseLeave={e=>{e.currentTarget.style.borderColor='#f1f5f9';e.currentTarget.style.background='#fafafa';}}>
+                                            <div style={{width:'20px',height:'20px',borderRadius:'6px',background:btn.accentCol+'15',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                                <Icon d={btn.icon} size={11} style={{color:btn.accentCol}}/>
+                                            </div>
+                                            <span style={{fontSize:'11px',fontWeight:700,color:'#374151'}}>{btn.label}</span>
                                         </button>
                                     ))}
                                 </div>
