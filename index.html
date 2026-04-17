@@ -683,9 +683,9 @@ html, body {
     /* Main (Links+Mitte) = feste Breite, kein Schrumpfen */
     .situation-view-wrapper > div.flex-1.flex.items-stretch,
     .situation-view-wrapper > div.flex-1.flex.flex-col {
-        flex: 0 0 74% !important;
-        width: 74% !important;
-        max-width: 74% !important;
+        flex: 0 0 72% !important;
+        width: 72% !important;
+        max-width: 72% !important;
         min-width: 0 !important;
         overflow: visible !important;
         height: auto !important;
@@ -693,16 +693,16 @@ html, body {
         box-sizing: border-box !important;
     }
 
-    /* Rechte Sidebar = fest 26%, kein Schrumpfen, kein Umbrechen */
+    /* Rechte Sidebar = fest 28% (mehr Platz auf iPad), kein Schrumpfen, kein Umbrechen */
     .situation-view-wrapper > aside,
     .situation-view-wrapper > aside.hidden,
     .situation-view-wrapper > aside.sit-aside-panel {
         display: flex !important;
         visibility: visible !important;
         opacity: 1 !important;
-        flex: 0 0 26% !important;
-        width: 26% !important;
-        max-width: 26% !important;
+        flex: 0 0 28% !important;
+        width: 28% !important;
+        max-width: 28% !important;
         min-width: 0 !important;
         height: auto !important;
         overflow: visible !important;
@@ -1024,7 +1024,21 @@ html, body {
     }
 
     /* Optional: minimal mehr Platz für Angebote durch leichtes Print-Zoom nur auf Seite 2 */
-    .print-offer-view{ zoom: 0.78 !important; }
+    /* zoom funktioniert in Chrome/Edge, aber NICHT in Safari/iPad. Kombination mit transform als Fallback. */
+    .print-offer-view{
+        zoom: 0.78 !important;
+        /* Safari/iPad Fallback: zoom wird ignoriert, transform greift */
+    }
+    /* Safari-spezifisch: Transform-Scale als Ersatz für zoom */
+    @supports (-webkit-touch-callout: none) {
+        .print-offer-view {
+            zoom: 1 !important;
+            transform: scale(0.78) !important;
+            transform-origin: top left !important;
+            width: 128.2% !important;
+            height: 128.2% !important;
+        }
+    }
 
 
 
