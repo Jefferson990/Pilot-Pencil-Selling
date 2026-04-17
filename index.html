@@ -838,13 +838,16 @@ html, body {
         opacity: 1 !important;
         position: relative !important;
 
-        width: 1120px !important;
-        max-width: 1120px !important;
-        min-width: 1120px !important;
-        height: auto !important;
-        overflow: visible !important;
+        /* iPad Safari: 1120px + zoom:0.80 = 896px > A4-Breite bei 72pt/inch (842px) → Overflow!
+           Lösung: mm-Breite, die bei 96dpi UND 72pt/inch korrekt passt. */
+        width: 297mm !important;
+        max-width: 297mm !important;
+        min-width: 0 !important;
+        height: 210mm !important;
+        max-height: 210mm !important;
+        overflow: hidden !important;
 
-        zoom: 0.80;
+        zoom: 1;
 
         margin: 0 !important;
         padding: 0 !important;
@@ -922,10 +925,12 @@ html, body {
 
 
 
-    /* Print-Compact: Angebot + Kosten müssen auf 1 Seite passen (ohne Screen zu ändern) */
+    /* Print-Compact: 297mm Breite → Canvases resizen sich proportional mit.
+       min-height auf 47mm setzen: bei 96dpi=180px, bei 72pt/in=134px – passt auf eine Seite. */
     .print-offer-view .offer-canvas-container {
-        min-height: 350px !important;
-        margin-bottom: 12px !important;
+        min-height: 47mm !important;
+        max-height: 65mm !important;
+        margin-bottom: 6px !important;
     }
     .print-offer-view .print-page-header {
         margin-bottom: 8px !important;
@@ -2300,10 +2305,11 @@ body.pdf-share-mode .sit-card-grid > div > button > div:first-child {
     .situation-view-wrapper > div > div:first-child {
         display: none !important;
     }
-    /* Situation-Wrapper: exakt eine Seite */
+    /* Situation-Wrapper: exakt eine A4-Seite (210mm = 793px @ 96dpi / 595px @ 72pt) */
     .situation-view-wrapper {
-        height: auto !important;
-        max-height: 100vh !important;
+        height: 210mm !important;
+        max-height: 210mm !important;
+        min-height: 0 !important;
         overflow: hidden !important;
         page-break-after: always !important;
         break-after: page !important;
@@ -2340,10 +2346,10 @@ body.pdf-share-mode .sit-card-grid > div > button > div:first-child {
 @media print {
     .sit-question-chips { display:none !important; }
 
-    /* Situation-Wrapper: volle Seitenhöhe ausfüllen */
+    /* Situation-Wrapper: A4 landscape = 210mm Höhe (100vh ≠ 210mm auf iPad!) */
     .situation-view-wrapper {
-        height: 100vh !important;
-        max-height: 100vh !important;
+        height: 210mm !important;
+        max-height: 210mm !important;
         overflow: hidden !important;
     }
 
@@ -2706,6 +2712,56 @@ html.dark-mode .bg-white.p-3.rounded-xl { background-color:var(--dm-card-bg) !im
 body.pdf-share-mode .situation-view-wrapper,
 body.pdf-share-mode .print-situation-view {
   zoom: inherit !important;
+}
+</style>
+
+<!-- ===================================================================
+     FINALER PRINT-OVERRIDE: gewinnt über alle früheren @media print Blöcke.
+     Behebt: iPad Safari 3-Seiten-Bug (100vh ≠ 210mm, 1120px > A4-Breite)
+     =================================================================== -->
+<style>
+@media print {
+  /* ── Seite 1: Situation exakt 1 A4-Landscape-Seite (210mm) ── */
+  .situation-view-wrapper {
+    height: 210mm !important;
+    max-height: 210mm !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+  /* Direktes Kind (Flex-Container): Rest ausfüllen, nicht überlaufen */
+  .situation-view-wrapper > div.flex-1 {
+    height: auto !important;
+    max-height: calc(210mm - 54px) !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+  /* Sidebar: ebenfalls auf Seitenhöhe begrenzen */
+  .situation-view-wrapper > aside {
+    max-height: calc(210mm - 54px) !important;
+    overflow: hidden !important;
+  }
+
+  /* ── Seite 2: Angebot exakt 1 A4-Landscape-Seite ── */
+  .print-offer-view {
+    width: 297mm !important;
+    max-width: 297mm !important;
+    min-width: 0 !important;
+    height: 210mm !important;
+    max-height: 210mm !important;
+    overflow: hidden !important;
+    zoom: 1 !important;
+  }
+  /* Innen: flex-column damit Canvases+Kosten proportional verteilt werden */
+  .print-offer-view > div {
+    overflow: hidden !important;
+  }
+  /* Canvases: mm-Höhe statt px – funktioniert auf iPad (72pt/in) und Android (96dpi) */
+  .print-offer-view .offer-canvas-container {
+    min-height: 47mm !important;
+    max-height: 65mm !important;
+  }
 }
 </style>
 
