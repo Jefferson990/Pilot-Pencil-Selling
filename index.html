@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vertriebs-Dashboard – Telekom Edition</title>
+
+    <!-- ===== PWA / iOS Vollbild (kein Safari-Banner beim Fullscreen) ===== -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pencil Tool">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- ================================================================== -->
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -470,8 +477,10 @@ html, body{
         color-adjust: exact !important;
     }
 html, body {
-        width: 100% !important;
-        min-width: 1122px !important; /* A4 landscape @ 96dpi = 297mm ≈ 1122px */
+        /* A4 landscape in mm — funktioniert auf Android (96dpi) UND iPad Safari (72pt/inch).
+           min-width:1122px würde auf iPad zu breit sein → 3. Seite! */
+        width: 297mm !important;
+        min-width: 0 !important;
         height: auto !important;
         overflow: visible !important;
         margin: 0 !important;
@@ -598,8 +607,8 @@ html, body {
 
     #root {
         display: block !important;
-        width: 100% !important;
-        min-width: 1122px !important;
+        width: 297mm !important;
+        min-width: 0 !important;
         height: auto !important;
         overflow: visible !important;
         background: #ffffff !important;
@@ -7111,12 +7120,57 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             // Global vor/nach Print (falls User STRG+P direkt nutzt)
             useEffect(() => {
                 const bp = () => injectPrintBgLayers();
-                const ap = () => cleanupPrintBgLayers();
+
+                // iOS Safari feuert 'afterprint' beim Abbruch oft NICHT.
+                // → matchMedia('print') als zuverlässiger Fallback.
+                const restoreScreen = () => {
+                    try {
+                        cleanupPrintBgLayers();
+                        // HTML/Body explizit auf Screen-Werte zurücksetzen,
+                        // damit die Print-CSS-Overrides nicht hängen bleiben.
+                        const h = document.documentElement;
+                        const b = document.body;
+                        for (const el of [h, b]) {
+                            el.style.removeProperty('min-width');
+                            el.style.removeProperty('width');
+                            el.style.removeProperty('height');
+                            el.style.removeProperty('overflow');
+                            el.style.removeProperty('overflow-x');
+                            el.style.removeProperty('overflow-y');
+                        }
+                        // Force reflow so CSS @media screen rules re-apply
+                        void h.offsetHeight;
+                        // React-State-Reset: Trigger einen Re-Render damit
+                        // alle Canvases & Layouts neu berechnet werden
+                        if (typeof window.__printResetView === 'function') {
+                            window.__printResetView();
+                        }
+                    } catch(e) { /* ignore */ }
+                };
+
+                const ap = () => restoreScreen();
                 window.addEventListener('beforeprint', bp);
                 window.addEventListener('afterprint', ap);
+
+                // iOS Safari Fallback: matchMedia('print') change → nicht-print = afterprint-Ersatz
+                let mqPrint = null;
+                try {
+                    mqPrint = window.matchMedia('print');
+                    const mqHandler = (e) => { if (!e.matches) restoreScreen(); };
+                    if (mqPrint.addEventListener) mqPrint.addEventListener('change', mqHandler);
+                    else if (mqPrint.addListener) mqPrint.addListener(mqHandler); // Safari < 14
+                    mqPrint._psHandler = mqHandler;
+                } catch(e) {}
+
                 return () => {
                     window.removeEventListener('beforeprint', bp);
                     window.removeEventListener('afterprint', ap);
+                    try {
+                        if (mqPrint && mqPrint._psHandler) {
+                            if (mqPrint.removeEventListener) mqPrint.removeEventListener('change', mqPrint._psHandler);
+                            else if (mqPrint.removeListener) mqPrint.removeListener(mqPrint._psHandler);
+                        }
+                    } catch(e) {}
                 };
             }, [injectPrintBgLayers, cleanupPrintBgLayers]);
 
