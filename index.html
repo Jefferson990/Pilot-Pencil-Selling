@@ -255,6 +255,19 @@ html, body, #root{
 /* Ensure nothing forces a wider-than-viewport layout in fullscreen */
 #root{ max-width: 100vw !important; }
 
+/* ===== KLEINE BILDSCHIRME < 11 ZOLL (~1180px): Sidebar scrollbar ===== */
+@media screen and (max-width: 1180px) {
+    /* Rechte Sidebar: AUCH scrollbar auf kleinen Bildschirmen (iPad etc.) */
+    .sit-aside-panel {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: #cbd5e1 transparent !important;
+    }
+    .sit-aside-panel::-webkit-scrollbar { width: 3px !important; }
+    .sit-aside-panel::-webkit-scrollbar-thumb { background: #cbd5e1 !important; border-radius: 99px !important; }
+}
+
 /* === FULLSCREEN/ROTATE: prevent canvas distortion === */
 .drawing-canvas{ width:100% !important; height:100% !important; }
 
@@ -6985,11 +6998,31 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
             const userExitingFullscreenRef = useRef(false);
 
+            // Swipe-down-Erkennung für Apple (iPad/iPhone) → Fullscreen beenden
+            useEffect(() => {
+                let touchStartY = 0;
+                const onTouchStart = (e) => { touchStartY = e.touches[0].clientY; };
+                const onTouchEnd = (e) => {
+                    const dy = e.changedTouches[0].clientY - touchStartY;
+                    // Swipe nach unten > 80px → Fullscreen beenden
+                    if (dy > 80 && document.fullscreenElement) {
+                        userExitingFullscreenRef.current = true;
+                        (document.exitFullscreen || document.webkitExitFullscreen || (()=>{})).call(document);
+                    }
+                };
+                document.addEventListener('touchstart', onTouchStart, { passive: true });
+                document.addEventListener('touchend', onTouchEnd, { passive: true });
+                return () => {
+                    document.removeEventListener('touchstart', onTouchStart);
+                    document.removeEventListener('touchend', onTouchEnd);
+                };
+            }, []);
+
             useEffect(() => {
                 const onFsChange = () => {
                     const inFs = !!document.fullscreenElement;
                     setIsFullscreen(inFs);
-                    // Wenn Fullscreen unbeabsichtigt beendet (Swipe, Esc) → sofort wieder rein
+                    // Nur automatisch wieder rein wenn NICHT Swipe/User-Exit
                     if (!inFs && !userExitingFullscreenRef.current) {
                         const el = document.documentElement;
                         setTimeout(() => {
