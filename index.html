@@ -11,7 +11,55 @@
     <meta name="apple-mobile-web-app-title" content="Pencil Tool">
     <meta name="mobile-web-app-capable" content="yes">
     <!-- ================================================================== -->
-    
+
+    <!-- ===== DEVICE DETECTION (läuft SOFORT, bevor CSS/React lädt) ===== -->
+    <script>
+    (function(){
+        var ua  = navigator.userAgent || '';
+        var pl  = navigator.platform  || '';
+        var mt  = navigator.maxTouchPoints || 0;
+
+        // iOS/iPadOS: iPhone, iPad (auch iPadOS 13+ meldet sich als MacIntel mit Touch)
+        var isIOS = /iPhone|iPad|iPod/.test(ua) ||
+                    (pl === 'MacIntel' && mt > 1);
+
+        // Android-Tablet oder -Phone
+        var isAndroid = /Android/.test(ua);
+
+        // Desktop (kein Touch)
+        var isDesktop = !isIOS && !isAndroid;
+
+        // iPad vs iPhone unterscheiden (Größe)
+        var isIpad  = isIOS && (!/iPhone|iPod/.test(ua) || mt > 2);
+        var isIphone= isIOS && !isIpad;
+
+        // Android-Tablet: Viewport > 900px (Landscape) oder UA enthält kein "Mobile"
+        var isAndroidTablet = isAndroid && (!/Mobile/.test(ua) || window.screen.width >= 900);
+        var isAndroidPhone  = isAndroid && !isAndroidTablet;
+
+        var html = document.documentElement;
+        if (isIOS)           html.classList.add('device-ios');
+        if (isIpad)          html.classList.add('device-ipad');
+        if (isIphone)        html.classList.add('device-iphone');
+        if (isAndroid)       html.classList.add('device-android');
+        if (isAndroidTablet) html.classList.add('device-android-tablet');
+        if (isAndroidPhone)  html.classList.add('device-android-phone');
+        if (isDesktop)       html.classList.add('device-desktop');
+
+        // Safari-Browser (nicht Chrome-on-iOS)
+        var isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
+        if (isSafari) html.classList.add('browser-safari');
+
+        // Global verfügbar für JS-Logik
+        window.__device = {
+            isIOS: isIOS, isIpad: isIpad, isIphone: isIphone,
+            isAndroid: isAndroid, isAndroidTablet: isAndroidTablet,
+            isDesktop: isDesktop, isSafari: isSafari
+        };
+    })();
+    </script>
+    <!-- ================================================================== -->
+
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -262,33 +310,67 @@ html, body, #root{
 /* Ensure nothing forces a wider-than-viewport layout in fullscreen */
 #root{ max-width: 100vw !important; }
 
-/* ===== KLEINE BILDSCHIRME ≤ 1180px (iPad 10-Zoll, Hochformat, etc.) ===== */
-/* Sidebar: Höhe explizit begrenzen + scrollbar erzwingen.
-   Ohne max-height kann die Sidebar höher als der Viewport werden → kein Scroll möglich. */
+/* ===== SIDEBAR SCROLL: iPad (automatisch erkannt via device-ipad Klasse) ===== */
+/* iOS/iPad: Sidebar braucht explizite max-height + touch-scroll */
+html.device-ipad .sit-aside-panel,
+html.device-iphone .sit-aside-panel {
+    max-height: calc(100dvh - 64px - 56px) !important;
+    height:     calc(100dvh - 64px - 56px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #cbd5e1 transparent !important;
+}
+html.device-ipad .sit-aside-panel::-webkit-scrollbar,
+html.device-iphone .sit-aside-panel::-webkit-scrollbar { width: 3px !important; }
+html.device-ipad .sit-aside-panel::-webkit-scrollbar-thumb,
+html.device-iphone .sit-aside-panel::-webkit-scrollbar-thumb { background: #cbd5e1 !important; border-radius: 99px !important; }
+
+/* Android-Tablet ≥ 900px: funktioniert bereits gut, nur sanfter Scroll */
+html.device-android-tablet .sit-aside-panel {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: thin !important;
+}
+
+/* Fallback für alle kleinen Screens ohne erkanntes Device */
 @media screen and (max-width: 1180px) {
     .sit-aside-panel {
-        /* Verfügbare Höhe: Viewport minus Header (64px) und Footer (56px) */
-        max-height: calc(100dvh - 64px - 56px) !important;
-        height:     calc(100dvh - 64px - 56px) !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important; /* iOS Smooth Scroll */
         scrollbar-width: thin !important;
         scrollbar-color: #cbd5e1 transparent !important;
     }
     .sit-aside-panel::-webkit-scrollbar { width: 3px !important; }
     .sit-aside-panel::-webkit-scrollbar-thumb { background: #cbd5e1 !important; border-radius: 99px !important; }
-
-    /* Inneres Scroll-Div: volle Höhe nutzen */
-    .sit-aside-panel > .flex-1 {
-        overflow-y: auto !important;
-        min-height: 0 !important;
-    }
 }
-/* Android ≥ 1181px: Standardlayout, keine Änderungen nötig */
 
 /* === FULLSCREEN/ROTATE: prevent canvas distortion === */
 .drawing-canvas{ width:100% !important; height:100% !important; }
+
+/* ===== TOOLBAR FIXED: bleibt immer sichtbar, auch beim Zoom ===== */
+.footer-bar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 56px !important;
+    z-index: 9000 !important;        /* Hoch genug um über allem zu liegen */
+    box-sizing: border-box !important;
+    /* iOS Safe Area (HomeBar) */
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    /* Verhindert dass overflow:hidden des Parents die Toolbar clippt */
+    transform: translateZ(0);        /* eigener Stacking Context */
+    -webkit-transform: translateZ(0);
+}
+/* Hauptinhalt: Platz für fixe Toolbar lassen */
+.situation-view-wrapper,
+.print-offer-view {
+    padding-bottom: 56px;
+}
 
 
         
@@ -2872,6 +2954,105 @@ body.pdf-share-mode .print-situation-view {
             localStorage.removeItem(ANALYTICS_STORAGE_KEY);
         };
 
+        // ═══════════════════════════════════════════════════════════════════
+        // SESSION TRACKING — abgebrochene Beratungen automatisch erfassen
+        // ═══════════════════════════════════════════════════════════════════
+        const SESSION_KEY    = 'ps_session_v1';
+        const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 Stunden → danach = abgebrochen
+
+        // Stale Sessions beim App-Start aufräumen und als "Abgebrochen" loggen
+        const flushStaleSessions = () => {
+            try {
+                const raw = localStorage.getItem(SESSION_KEY);
+                if (!raw) return;
+                const sessions = JSON.parse(raw);
+                const now = Date.now();
+                const remaining = [];
+                sessions.forEach(s => {
+                    const age = now - (s.startTs || 0);
+                    if (s.status === 'gestartet' && age > SESSION_TTL_MS) {
+                        // Als "Abgebrochen" in Analytics loggen
+                        appendAnalyticsRow({
+                            id:          's_' + s.id,
+                            ts:          new Date(s.startTs).toISOString(),
+                            user:        s.agent || '–',
+                            shop:        s.shop  || 'Telekom',
+                            result:      'Abgebrochen',
+                            beratungsId: s.beratungsId || '',
+                            durationMin: Math.round(age / 60000),
+                            canvasStats: {},
+                            _fromSession: true,
+                        });
+                        // Auch an Power Automate melden
+                        sendToSharePoint({
+                            result:      'Abgebrochen',
+                            agent:       s.agent || '–',
+                            beratungsId: s.beratungsId || '',
+                            startTs:     s.startTs,
+                            durationMin: Math.round(age / 60000),
+                        });
+                    } else if (s.status !== 'abgeschlossen' && age <= SESSION_TTL_MS) {
+                        remaining.push(s); // noch aktiv → behalten
+                    }
+                    // abgeschlossene Sessions entfernen (nicht mehr nötig)
+                });
+                localStorage.setItem(SESSION_KEY, JSON.stringify(remaining));
+            } catch(e) {}
+        };
+
+        const startSession = (agent, beratungsId) => {
+            try {
+                const id = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+                const sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
+                sessions.push({ id, startTs: Date.now(), status: 'gestartet', agent, beratungsId, shop: 'Telekom' });
+                localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
+                return id;
+            } catch(e) { return null; }
+        };
+
+        const closeSession = (sessionId, status = 'abgeschlossen') => {
+            try {
+                if (!sessionId) return;
+                const sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
+                const updated = sessions.map(s => s.id === sessionId ? { ...s, status, endTs: Date.now() } : s);
+                localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+            } catch(e) {}
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // POWER AUTOMATE / SHAREPOINT — Metadaten-Webhook
+        // ═══════════════════════════════════════════════════════════════════
+        // Webhook-URL wird im Admin-Bereich gespeichert:
+        const getWebhookUrl = () => {
+            try { return localStorage.getItem('ps_pa_webhook') || ''; } catch(e) { return ''; }
+        };
+
+        const sendToSharePoint = async (payload) => {
+            const url = getWebhookUrl();
+            if (!url || !url.startsWith('https://')) return; // nicht konfiguriert
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        timestamp:   new Date().toISOString(),
+                        shop:        payload.shop        || 'Telekom',
+                        agent:       payload.agent       || '–',
+                        beratungsId: payload.beratungsId || '',
+                        result:      payload.result      || 'offen',
+                        durationMin: payload.durationMin || null,
+                        mobil:       payload.mobil       || '',
+                        festnetz:    payload.festnetz    || '',
+                        tv:          payload.tv          || '',
+                        dslAngeboten:payload.dslAngeboten|| 'nein',
+                        source:      'PencilSellingTool_v15',
+                    }),
+                });
+            } catch(e) {
+                console.warn('SharePoint Webhook fehlgeschlagen:', e);
+            }
+        };
+
         // ─── Activity thresholds (anti-manipulation) ─────────────────────────
         const ACT_SIT_MIN_CHARS   = 3;    // Seite 1 Kachel: mind. 3 Zeichen → "Angefragt"
         const ACT_SIT_MIN_STROKES = 2;    // Seite 1 Kachel Pen: mind. 2 Strokes
@@ -4342,13 +4523,25 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         const AdminModal = ({ isOpen, onClose, questions, onUpdate, oneDriveLink, onUpdateLink }) => { 
             const [localData, setLocalData] = useState(questions); 
             const [localLink, setLocalLink] = useState(oneDriveLink || '');
+            const [localWebhook, setLocalWebhook] = useState(() => { try { return localStorage.getItem('ps_pa_webhook') || ''; } catch(e) { return ''; } });
             const [expandedCat, setExpandedCat] = useState(null); 
-            useEffect(() => { setLocalData(questions); setLocalLink(oneDriveLink || ''); }, [questions, oneDriveLink, isOpen]); 
+            useEffect(() => { setLocalData(questions); setLocalLink(oneDriveLink || ''); setLocalWebhook(()=>{ try{return localStorage.getItem('ps_pa_webhook')||'';}catch(e){return '';} }); }, [questions, oneDriveLink, isOpen]); 
             const handleQuestionChange = (cat, index, val) => { const newQs = [...(localData[cat] || [])]; newQs[index] = val; setLocalData(prev => ({ ...prev, [cat]: newQs.filter(q => q.trim() !== '') })); }; 
             const handleAddQuestion = (cat) => { const newQs = [...(localData[cat] || []), "Neue Frage..."]; setLocalData(prev => ({ ...prev, [cat]: newQs })); }; 
-            const handleSave = () => { const cleanedData = Object.keys(localData).reduce((acc, cat) => { acc[cat] = localData[cat].filter(q => q.trim() !== ''); return acc; }, {}); Object.keys(cleanedData).forEach(cat => onUpdate(cat, cleanedData[cat])); if (onUpdateLink) onUpdateLink(localLink.trim()); onClose(); }; 
+            const handleSave = () => { const cleanedData = Object.keys(localData).reduce((acc, cat) => { acc[cat] = localData[cat].filter(q => q.trim() !== ''); return acc; }, {}); Object.keys(cleanedData).forEach(cat => onUpdate(cat, cleanedData[cat])); if (onUpdateLink) onUpdateLink(localLink.trim()); try { if (localWebhook.trim()) { localStorage.setItem('ps_pa_webhook', localWebhook.trim()); } else { localStorage.removeItem('ps_pa_webhook'); } } catch(e) {} onClose(); }; 
             if (!isOpen) return null; 
-            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Fragen & Links</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div><div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{localData[cat].map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
+            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Einstellungen</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div>
+
+                <div className="border border-green-200 rounded-lg p-4 bg-green-50 shadow-sm">
+                    <h4 className="font-bold text-slate-700 mb-1 text-sm flex items-center gap-2">
+                        <span style={{fontSize:'16px'}}>⚡</span> Power Automate – SharePoint Webhook-URL
+                    </h4>
+                    <input type="url" value={localWebhook} onChange={(e) => setLocalWebhook(e.target.value)} placeholder="https://prod-xx.westeurope.logic.azure.com/workflows/..." className="w-full border border-green-300 p-2 rounded text-sm focus:ring-2 focus:ring-green-200 outline-none text-slate-600 mt-1"/>
+                    <p className="text-[10px] text-slate-500 mt-1">In Power Automate: <strong>„When an HTTP request is received"</strong> Trigger → URL hier einfügen. Jeder Abschluss/Abbruch wird automatisch an SharePoint gesendet.</p>
+                    {localWebhook && localWebhook.startsWith('https://') && <p className="text-[10px] text-green-600 font-bold mt-1">✅ Webhook konfiguriert</p>}
+                </div>
+
+                <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{localData[cat].map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
         };
 
         const TvPriceModal = ({ isOpen, onClose, onUebernehmen }) => {
@@ -5637,6 +5830,7 @@ const resolveUserName = (raw) => {
             const totalAnfragen     = filtered.filter(r => r.result === 'Anfrage').length;
             const totalAngebote     = filtered.filter(r => r.result === 'Angebot').length;
             const totalAbschluesse  = filtered.filter(r => r.result === 'Abschluss').length;
+            const totalAbgebrochen  = filtered.filter(r => r.result === 'Abgebrochen').length;
             const convRate = totalVorgaenge ? Math.round((totalAbschluesse / totalVorgaenge) * 100) : 0;
             const offerRate = (totalAnfragen + totalAngebote + totalAbschluesse) > 0
                 ? Math.round(((totalAngebote + totalAbschluesse) / (totalAnfragen + totalAngebote + totalAbschluesse)) * 100)
@@ -5679,12 +5873,13 @@ const resolveUserName = (raw) => {
                         <div className="custom-scrollbar" style={{overflowY:'auto',flex:1,padding:'16px 20px',display:'flex',flexDirection:'column',gap:'16px'}}>
 
                             {/* KPI Kacheln */}
-                            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'8px'}}>
+                            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'8px'}}>
                                 {[
-                                    {label:'Vorgänge',   value:totalVorgaenge,   color:'#3b82f6', bg:'#eff6ff', icon:'📋'},
-                                    {label:'Anfragen',   value:totalAnfragen,    color:'#64748b', bg:'#f1f5f9', icon:'🔍'},
-                                    {label:'Angebote',   value:totalAngebote,    color:'#8b5cf6', bg:'#f5f3ff', icon:'📄'},
-                                    {label:'Abschlüsse', value:totalAbschluesse, color:'#10b981', bg:'#ecfdf5', icon:'✅'},
+                                    {label:'Vorgänge',    value:totalVorgaenge,   color:'#3b82f6', bg:'#eff6ff', icon:'📋'},
+                                    {label:'Anfragen',    value:totalAnfragen,    color:'#64748b', bg:'#f1f5f9', icon:'🔍'},
+                                    {label:'Angebote',    value:totalAngebote,    color:'#8b5cf6', bg:'#f5f3ff', icon:'📄'},
+                                    {label:'Abschlüsse',  value:totalAbschluesse, color:'#10b981', bg:'#ecfdf5', icon:'✅'},
+                                    {label:'Abgebrochen', value:totalAbgebrochen, color:'#f59e0b', bg:'#fffbeb', icon:'⏹'},
                                     {label:'Abschluss-Quote', value:`${convRate}%`, color:convRate>=30?'#10b981':convRate>=15?'#f59e0b':'#ef4444', bg:convRate>=30?'#ecfdf5':convRate>=15?'#fffbeb':'#fef2f2', icon:'🎯'},
                                 ].map(k=>(
                                     <div key={k.label} style={{background:k.bg,borderRadius:'12px',padding:'10px 12px',border:`1px solid ${k.color}22`}}>
@@ -6553,6 +6748,47 @@ const toolRef = useRef('pen');
 
             const [isWritingEnabled, setIsWritingEnabled] = useState(true); 
             const [inputMode, setInputMode] = useState('pen'); 
+
+
+
+            // ── VisualViewport: Toolbar beim Zoom immer sichtbar halten ──
+            // Beim Pinch-Zoom verschiebt sich window.visualViewport (der sichtbare Ausschnitt).
+            // position:fixed allein reicht nicht – wir müssen left/bottom manuell nachführen.
+            useEffect(() => {
+                const vv = window.visualViewport;
+                const bar = document.querySelector('.footer-bar');
+                if (!vv || !bar) return;
+
+                const sync = () => {
+                    try {
+                        // Sichtbarer Bereich im Layout-Koordinatensystem
+                        const top    = vv.offsetTop;
+                        const left   = vv.offsetLeft;
+                        const width  = vv.width;
+                        const height = vv.height;
+
+                        // Toolbar ans Ende des sichtbaren Bereichs setzen
+                        bar.style.left   = left  + 'px';
+                        bar.style.width  = width + 'px';
+                        bar.style.top    = (top + height - bar.offsetHeight) + 'px';
+                        bar.style.bottom = 'auto';
+                    } catch(e) {}
+                };
+
+                vv.addEventListener('resize', sync);
+                vv.addEventListener('scroll', sync);
+                sync();
+
+                return () => {
+                    vv.removeEventListener('resize', sync);
+                    vv.removeEventListener('scroll', sync);
+                    // Screen-Werte zurücksetzen
+                    bar.style.left   = '';
+                    bar.style.width  = '';
+                    bar.style.top    = '';
+                    bar.style.bottom = '0';
+                };
+            }, []);
             const [showColorPicker, setShowColorPicker] = useState(false);
             const [showAdmin, setShowAdmin] = useState(false);
             const [showStats, setShowStats] = useState(false);
@@ -6572,8 +6808,6 @@ const openBundleModal = useCallback((mode = 'customer', targetKey = 'offer1') =>
 }, [BUNDLE_URL]);
 
 const handleOpenStats = () => {
-                const pw = prompt('Statistik Passwort:');
-                if (pw !== STATS_PASSWORD) { alert('Falsches Passwort'); return; }
                 setShowStats(true);
             };
             const dprRef = useRef(window.devicePixelRatio || 1); 
@@ -6841,6 +7075,20 @@ const fileInputRef = useRef(null);
             const getStaticLabel = useCallback((key) => { if (displayLanguage === 'de') return STATIC_LABELS[key] || key; return staticTranslations[displayLanguage]?.[key] || MOCK_TRANSLATIONS[displayLanguage]?.[key] || STATIC_LABELS[key] || key; }, [staticTranslations, displayLanguage]);
 
             const triggerToast = (message) => { clearTimeout(toastTimerRef.current); setToastMessage(message); toastTimerRef.current = setTimeout(() => setToastMessage(null), 3000); };
+
+            // ── Session Tracking: stale Sessions aufräumen + neue starten ──
+            const sessionIdRef = React.useRef(null);
+            React.useEffect(() => {
+                // 1) Alte hängende Sessions (> 2h) als "Abgebrochen" loggen
+                flushStaleSessions();
+                // 2) Neue Session für diese Beratung starten
+                const agent = (textData && textData.AgentName) || LINK_EMPLOYEE || '–';
+                sessionIdRef.current = startSession(agent, beratungsId);
+                return () => {
+                    // Beim Unmount (Tab schließen, Reload): Session bleibt offen
+                    // → wird beim nächsten Start von flushStaleSessions aufgeräumt
+                };
+            }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
             // ── Autosave: schützt vor Datenverlust bei Browser-Reload / Android-Zurück ──
             const AUTOSAVE_KEY = 'ps_autosave_v1';
@@ -7194,8 +7442,7 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                 const restoreScreen = () => {
                     try {
                         cleanupPrintBgLayers();
-                        // HTML/Body explizit auf Screen-Werte zurücksetzen,
-                        // damit die Print-CSS-Overrides nicht hängen bleiben.
+                        // HTML/Body explizit auf Screen-Werte zurücksetzen
                         const h = document.documentElement;
                         const b = document.body;
                         for (const el of [h, b]) {
@@ -7206,10 +7453,19 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                             el.style.removeProperty('overflow-x');
                             el.style.removeProperty('overflow-y');
                         }
+                        // Device-Print-Fix Inline-Styles zurücksetzen (iOS + Android)
+                        const sitW = document.querySelector('.situation-view-wrapper');
+                        if (sitW) {
+                            ['height','max-height','min-height','overflow'].forEach(p => sitW.style.removeProperty(p));
+                            sitW.removeAttribute('data-print-hdr-px');
+                        }
+                        const ofW = document.querySelector('.print-offer-view');
+                        if (ofW) {
+                            ['width','max-width','min-width','height','max-height','overflow','zoom'].forEach(p => ofW.style.removeProperty(p));
+                        }
                         // Force reflow so CSS @media screen rules re-apply
                         void h.offsetHeight;
-                        // React-State-Reset: Trigger einen Re-Render damit
-                        // alle Canvases & Layouts neu berechnet werden
+                        // React-State-Reset
                         if (typeof window.__printResetView === 'function') {
                             window.__printResetView();
                         }
@@ -7407,6 +7663,18 @@ const handleFinishOfferClick = () => {
                     });
                 } catch (e) { /* ignore */ }
 
+                // ── Session schließen + SharePoint ──
+                closeSession(sessionIdRef.current, 'abgeschlossen');
+                sendToSharePoint({
+                    result:       computedResult,
+                    agent:        getAgentDisplayNameForUpload(),
+                    beratungsId:  beratungsId || '',
+                    mobil:        costState?.mobile   || '',
+                    festnetz:     costState?.landline  || '',
+                    tv:           costState?.tv        || '',
+                    dslAngeboten: getDslFlagForUpload(),
+                });
+
                 try {
                     const _slug = (new URLSearchParams(window.location.search||'')).get('m')||'';
                     const _nr = 'PS-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
@@ -7441,7 +7709,11 @@ const handleFinishOfferClick = () => {
                 setTimeout(() => setRedrawCounter(r => r + 1), 500);
 
                 // ── Analytics loggen ──
-                const computedResult = computeResultFromActivity(drawnStrokes, textData, isRealDigitalSig);
+                // FIX: Papier-Unterschrift zählt jetzt auch als Abschluss
+                const effectiveResult = isRealDigitalSig
+                    ? computeResultFromActivity(drawnStrokes, textData, true)
+                    : 'Abschluss'; // Papier-Sig = echter Abschluss
+                const computedResult = effectiveResult;
                 try {
                     appendAnalyticsRow({
                         ts: new Date().toISOString(),
@@ -7454,9 +7726,23 @@ const handleFinishOfferClick = () => {
                         shop: 'Telekom',
                         beratungsId: beratungsId || '',
                         result: computedResult,
+                        sigType: isRealDigitalSig ? 'digital' : 'papier',
                         canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
                     });
                 } catch(e) {}
+
+                // ── Session schließen + SharePoint ──
+                closeSession(sessionIdRef.current, 'abgeschlossen');
+                sendToSharePoint({
+                    result:       computedResult,
+                    agent:        getAgentDisplayNameForUpload(),
+                    beratungsId:  beratungsId || '',
+                    mobil:        costState?.mobile   || '',
+                    festnetz:     costState?.landline  || '',
+                    tv:           costState?.tv        || '',
+                    dslAngeboten: getDslFlagForUpload(),
+                    sigType:      isRealDigitalSig ? 'digital' : 'papier',
+                });
                 try {
                     const _slug = (new URLSearchParams(window.location.search||'')).get('m')||'';
                     const _nr = 'PS-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
@@ -7470,7 +7756,7 @@ const handleFinishOfferClick = () => {
             
             const handleSkipToOffer = (reasonData) => { setSkipReason(reasonData); setShowSkipReasonModal(false); setView('offer'); setViewOfferCounter(c => c + 1); triggerToast(`Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`); };
 
-            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
+            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} // Neue Session starten try { sessionIdRef.current = startSession((textData&&textData.AgentName)||LINK_EMPLOYEE||'–', ''); } catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
 
             const Toast = ({ message }) => { if (!message) return null; return (<div className="print-hide-toast fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg border border-slate-700 animate-in fade-in duration-300"><div className="flex items-center gap-2"><Icon d={ICONS.Clipboard} size={16} className="text-green-400"/><span className="text-sm font-medium">{message}</span></div></div>); };
 
@@ -9783,7 +10069,7 @@ const handlePDFShare = async () => {
             };
 
             return (
-                <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col overflow-hidden text-sm">
+                <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col text-sm" style={{overflow:'hidden',position:'relative'}}>
                     <Toast message={toastMessage} />
                     <RestoreToastBanner />
                     <WlanModal isOpen={showWlanModal} onClose={() => setShowWlanModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setWlanRecommendation(rec)} onUebernehmen={(snap) => setWlanSnapshot(snap)} />
@@ -9830,7 +10116,14 @@ const handlePDFShare = async () => {
                     <ImagePlacementModal isOpen={isImageSelectModalOpen} onClose={() => setIsImageSelectModalOpen(false)} onPlace={handleImagePlacement} imageName={currentImagePayload?.name || 'Datei'} />
                     <SignatureModal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} onSign={handleSignatureSave} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik (passwortgeschützt)"><Icon d={ICONS.Lock} size={18}/></button><button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div>
+                    {/* Device-Badge: zeigt erkanntes Gerät (nur für Admins / Debugging) */}
+                    <div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:2,cursor:"default",opacity:0.55}} title={`Erkanntes Gerät: ${(window.__device||{}).isIpad?'iPad':(window.__device||{}).isAndroidTablet?'Android-Tablet':(window.__device||{}).isDesktop?'Desktop':'Unbekannt'}`}>
+                        <span style={{fontSize:8,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none",background:"#f1f5f9",borderRadius:4,padding:"1px 5px"}}>
+                            {(window.__device||{}).isIpad ? '🍎 iPad' : (window.__device||{}).isIphone ? '🍎 iPhone' : (window.__device||{}).isAndroidTablet ? '🤖 Tab' : (window.__device||{}).isAndroidPhone ? '🤖 Phone' : '🖥 Desktop'}
+                        </span>
+                    </div>
+                    <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik"><Icon d={ICONS.Lock} size={18}/></button><button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -10888,11 +11181,11 @@ const handlePDFShare = async () => {
                     })(), document.body)}
 
 
-                    <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm relative w-full footer-bar">
-                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
+                    <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm footer-bar" style={{position:'fixed',bottom:0,left:0,right:0,width:'100%',boxSizing:'border-box',zIndex:40}}>
+                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Zeichnen)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus (Tippen)"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => setShowSkipReasonModal(true)} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
                             <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
-                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
+                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Zeichnen)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus (Tippen)"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
                                 {/* ── Gutschrift-Rechner Icon-Button ── */}
                                 {(()=>{
                                     const gut2 = parseFloat(gutschriftBetrag.replace(',','.')) || 0;
@@ -11115,45 +11408,57 @@ const handlePDFShare = async () => {
                 // ── SEITE 3: Wird jetzt als statisches React-Element gerendert (kein DOM-Inject nötig) ──
 
                 // ════════════════════════════════════════════════════════════════
-                // IPAD/SAFARI 2-SEITEN-FIX (Inline-Style — gewinnt über !important CSS)
-                //
-                // Problem 1: ensurePrintHeaders fügt Header als Geschwister VOR dem
-                //   Wrapper ein (~54px). Ohne Korrektur: 54px + 210mm = 227mm > A4 → 3. Seite.
-                // Problem 2: Der obige Code setzt overflow:visible auf alle Kinder →
-                //   CSS overflow:hidden auf dem Wrapper wird ignoriert.
-                // Lösung: Inline-Styles direkt auf die Wrapper setzen (höchste Priorität).
+                // DEVICE-AWARE PRINT FIX
+                // iOS/iPad Safari: mm-basierte Höhen, Header-Offset-Messung
+                // Android/Desktop: funktionieren bereits korrekt mit dem CSS
                 // ════════════════════════════════════════════════════════════════
                 (() => {
+                    const dev = window.__device || {};
+
                     // Seite 1: Situation-Wrapper
                     const sitW = document.querySelector('.situation-view-wrapper');
                     if (sitW) {
-                        // Messe die tatsächliche Header-Höhe (inklusive Margin)
                         const hdr = sitW.previousElementSibling;
-                        let hdrPx = 54; // Fallback: 40px Header + 7px margin + buffer
+                        let hdrPx = 54;
                         if (hdr && hdr.classList.contains('print-page-header')) {
-                            const r = hdr.getBoundingClientRect();
-                            const mt = parseFloat(getComputedStyle(hdr).marginTop  || '0');
+                            const r  = hdr.getBoundingClientRect();
                             const mb = parseFloat(getComputedStyle(hdr).marginBottom || '0');
-                            hdrPx = Math.round(r.height + mt + mb) || 54;
+                            hdrPx = Math.round(r.height + mb) || 54;
                         }
-                        // Wrapper = A4-Höhe minus Header-Höhe
-                        sitW.style.setProperty('height',    `calc(210mm - ${hdrPx}px)`, 'important');
-                        sitW.style.setProperty('max-height',`calc(210mm - ${hdrPx}px)`, 'important');
-                        sitW.style.setProperty('min-height','0', 'important');
-                        sitW.style.setProperty('overflow',  'hidden', 'important');
+                        if (dev.isIOS) {
+                            // iPad/iPhone Safari: mm-Werte sind zuverlässiger als px
+                            sitW.style.setProperty('height',    `calc(210mm - ${hdrPx}px)`, 'important');
+                            sitW.style.setProperty('max-height',`calc(210mm - ${hdrPx}px)`, 'important');
+                        } else {
+                            // Android/Desktop: px-Basis (96dpi)
+                            const a4HeightPx = 794; // 210mm @ 96dpi
+                            sitW.style.setProperty('height',    `${a4HeightPx - hdrPx}px`, 'important');
+                            sitW.style.setProperty('max-height',`${a4HeightPx - hdrPx}px`, 'important');
+                        }
+                        sitW.style.setProperty('min-height', '0',      'important');
+                        sitW.style.setProperty('overflow',   'hidden',  'important');
                         sitW.setAttribute('data-print-hdr-px', String(hdrPx));
                     }
 
-                    // Seite 2: Offer-View (Header ist innen → volle 210mm)
+                    // Seite 2: Offer-View
                     const ofW = document.querySelector('.print-offer-view');
                     if (ofW) {
-                        ofW.style.setProperty('width',     '297mm', 'important');
-                        ofW.style.setProperty('max-width', '297mm', 'important');
+                        if (dev.isIOS) {
+                            ofW.style.setProperty('width',     '297mm', 'important');
+                            ofW.style.setProperty('max-width', '297mm', 'important');
+                            ofW.style.setProperty('height',    '210mm', 'important');
+                            ofW.style.setProperty('max-height','210mm', 'important');
+                            ofW.style.setProperty('zoom',      '1',     'important');
+                        } else {
+                            // Android: bewährtes Layout beibehalten
+                            ofW.style.setProperty('width',     '297mm', 'important');
+                            ofW.style.setProperty('max-width', '297mm', 'important');
+                            ofW.style.setProperty('height',    '210mm', 'important');
+                            ofW.style.setProperty('max-height','210mm', 'important');
+                            ofW.style.setProperty('zoom',      '1',     'important');
+                        }
                         ofW.style.setProperty('min-width', '0',     'important');
-                        ofW.style.setProperty('height',    '210mm', 'important');
-                        ofW.style.setProperty('max-height','210mm', 'important');
                         ofW.style.setProperty('overflow',  'hidden', 'important');
-                        ofW.style.setProperty('zoom',      '1',      'important');
                     }
                 })();
             });
