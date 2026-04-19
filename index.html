@@ -2954,105 +2954,6 @@ body.pdf-share-mode .print-situation-view {
             localStorage.removeItem(ANALYTICS_STORAGE_KEY);
         };
 
-        // ═══════════════════════════════════════════════════════════════════
-        // SESSION TRACKING — abgebrochene Beratungen automatisch erfassen
-        // ═══════════════════════════════════════════════════════════════════
-        const SESSION_KEY    = 'ps_session_v1';
-        const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 Stunden → danach = abgebrochen
-
-        // Stale Sessions beim App-Start aufräumen und als "Abgebrochen" loggen
-        const flushStaleSessions = () => {
-            try {
-                const raw = localStorage.getItem(SESSION_KEY);
-                if (!raw) return;
-                const sessions = JSON.parse(raw);
-                const now = Date.now();
-                const remaining = [];
-                sessions.forEach(s => {
-                    const age = now - (s.startTs || 0);
-                    if (s.status === 'gestartet' && age > SESSION_TTL_MS) {
-                        // Als "Abgebrochen" in Analytics loggen
-                        appendAnalyticsRow({
-                            id:          's_' + s.id,
-                            ts:          new Date(s.startTs).toISOString(),
-                            user:        s.agent || '–',
-                            shop:        s.shop  || 'Telekom',
-                            result:      'Abgebrochen',
-                            beratungsId: s.beratungsId || '',
-                            durationMin: Math.round(age / 60000),
-                            canvasStats: {},
-                            _fromSession: true,
-                        });
-                        // Auch an Power Automate melden
-                        sendToSharePoint({
-                            result:      'Abgebrochen',
-                            agent:       s.agent || '–',
-                            beratungsId: s.beratungsId || '',
-                            startTs:     s.startTs,
-                            durationMin: Math.round(age / 60000),
-                        });
-                    } else if (s.status !== 'abgeschlossen' && age <= SESSION_TTL_MS) {
-                        remaining.push(s); // noch aktiv → behalten
-                    }
-                    // abgeschlossene Sessions entfernen (nicht mehr nötig)
-                });
-                localStorage.setItem(SESSION_KEY, JSON.stringify(remaining));
-            } catch(e) {}
-        };
-
-        const startSession = (agent, beratungsId) => {
-            try {
-                const id = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-                const sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
-                sessions.push({ id, startTs: Date.now(), status: 'gestartet', agent, beratungsId, shop: 'Telekom' });
-                localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
-                return id;
-            } catch(e) { return null; }
-        };
-
-        const closeSession = (sessionId, status = 'abgeschlossen') => {
-            try {
-                if (!sessionId) return;
-                const sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
-                const updated = sessions.map(s => s.id === sessionId ? { ...s, status, endTs: Date.now() } : s);
-                localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
-            } catch(e) {}
-        };
-
-        // ═══════════════════════════════════════════════════════════════════
-        // POWER AUTOMATE / SHAREPOINT — Metadaten-Webhook
-        // ═══════════════════════════════════════════════════════════════════
-        // Webhook-URL wird im Admin-Bereich gespeichert:
-        const getWebhookUrl = () => {
-            try { return localStorage.getItem('ps_pa_webhook') || ''; } catch(e) { return ''; }
-        };
-
-        const sendToSharePoint = async (payload) => {
-            const url = getWebhookUrl();
-            if (!url || !url.startsWith('https://')) return; // nicht konfiguriert
-            try {
-                await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        timestamp:   new Date().toISOString(),
-                        shop:        payload.shop        || 'Telekom',
-                        agent:       payload.agent       || '–',
-                        beratungsId: payload.beratungsId || '',
-                        result:      payload.result      || 'offen',
-                        durationMin: payload.durationMin || null,
-                        mobil:       payload.mobil       || '',
-                        festnetz:    payload.festnetz    || '',
-                        tv:          payload.tv          || '',
-                        dslAngeboten:payload.dslAngeboten|| 'nein',
-                        source:      'PencilSellingTool_v15',
-                    }),
-                });
-            } catch(e) {
-                console.warn('SharePoint Webhook fehlgeschlagen:', e);
-            }
-        };
-
         // ─── Activity thresholds (anti-manipulation) ─────────────────────────
         const ACT_SIT_MIN_CHARS   = 3;    // Seite 1 Kachel: mind. 3 Zeichen → "Angefragt"
         const ACT_SIT_MIN_STROKES = 2;    // Seite 1 Kachel Pen: mind. 2 Strokes
@@ -4523,25 +4424,13 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         const AdminModal = ({ isOpen, onClose, questions, onUpdate, oneDriveLink, onUpdateLink }) => { 
             const [localData, setLocalData] = useState(questions); 
             const [localLink, setLocalLink] = useState(oneDriveLink || '');
-            const [localWebhook, setLocalWebhook] = useState(() => { try { return localStorage.getItem('ps_pa_webhook') || ''; } catch(e) { return ''; } });
             const [expandedCat, setExpandedCat] = useState(null); 
-            useEffect(() => { setLocalData(questions); setLocalLink(oneDriveLink || ''); setLocalWebhook(()=>{ try{return localStorage.getItem('ps_pa_webhook')||'';}catch(e){return '';} }); }, [questions, oneDriveLink, isOpen]); 
+            useEffect(() => { setLocalData(questions); setLocalLink(oneDriveLink || ''); }, [questions, oneDriveLink, isOpen]); 
             const handleQuestionChange = (cat, index, val) => { const newQs = [...(localData[cat] || [])]; newQs[index] = val; setLocalData(prev => ({ ...prev, [cat]: newQs.filter(q => q.trim() !== '') })); }; 
             const handleAddQuestion = (cat) => { const newQs = [...(localData[cat] || []), "Neue Frage..."]; setLocalData(prev => ({ ...prev, [cat]: newQs })); }; 
-            const handleSave = () => { const cleanedData = Object.keys(localData).reduce((acc, cat) => { acc[cat] = localData[cat].filter(q => q.trim() !== ''); return acc; }, {}); Object.keys(cleanedData).forEach(cat => onUpdate(cat, cleanedData[cat])); if (onUpdateLink) onUpdateLink(localLink.trim()); try { if (localWebhook.trim()) { localStorage.setItem('ps_pa_webhook', localWebhook.trim()); } else { localStorage.removeItem('ps_pa_webhook'); } } catch(e) {} onClose(); }; 
+            const handleSave = () => { const cleanedData = Object.keys(localData).reduce((acc, cat) => { acc[cat] = localData[cat].filter(q => q.trim() !== ''); return acc; }, {}); Object.keys(cleanedData).forEach(cat => onUpdate(cat, cleanedData[cat])); if (onUpdateLink) onUpdateLink(localLink.trim()); onClose(); }; 
             if (!isOpen) return null; 
-            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Einstellungen</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div>
-
-                <div className="border border-green-200 rounded-lg p-4 bg-green-50 shadow-sm">
-                    <h4 className="font-bold text-slate-700 mb-1 text-sm flex items-center gap-2">
-                        <span style={{fontSize:'16px'}}>⚡</span> Power Automate – SharePoint Webhook-URL
-                    </h4>
-                    <input type="url" value={localWebhook} onChange={(e) => setLocalWebhook(e.target.value)} placeholder="https://prod-xx.westeurope.logic.azure.com/workflows/..." className="w-full border border-green-300 p-2 rounded text-sm focus:ring-2 focus:ring-green-200 outline-none text-slate-600 mt-1"/>
-                    <p className="text-[10px] text-slate-500 mt-1">In Power Automate: <strong>„When an HTTP request is received"</strong> Trigger → URL hier einfügen. Jeder Abschluss/Abbruch wird automatisch an SharePoint gesendet.</p>
-                    {localWebhook && localWebhook.startsWith('https://') && <p className="text-[10px] text-green-600 font-bold mt-1">✅ Webhook konfiguriert</p>}
-                </div>
-
-                <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{localData[cat].map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
+            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Fragen & Links</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div><div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{localData[cat].map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
         };
 
         const TvPriceModal = ({ isOpen, onClose, onUebernehmen }) => {
@@ -5830,7 +5719,6 @@ const resolveUserName = (raw) => {
             const totalAnfragen     = filtered.filter(r => r.result === 'Anfrage').length;
             const totalAngebote     = filtered.filter(r => r.result === 'Angebot').length;
             const totalAbschluesse  = filtered.filter(r => r.result === 'Abschluss').length;
-            const totalAbgebrochen  = filtered.filter(r => r.result === 'Abgebrochen').length;
             const convRate = totalVorgaenge ? Math.round((totalAbschluesse / totalVorgaenge) * 100) : 0;
             const offerRate = (totalAnfragen + totalAngebote + totalAbschluesse) > 0
                 ? Math.round(((totalAngebote + totalAbschluesse) / (totalAnfragen + totalAngebote + totalAbschluesse)) * 100)
@@ -5873,13 +5761,12 @@ const resolveUserName = (raw) => {
                         <div className="custom-scrollbar" style={{overflowY:'auto',flex:1,padding:'16px 20px',display:'flex',flexDirection:'column',gap:'16px'}}>
 
                             {/* KPI Kacheln */}
-                            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'8px'}}>
+                            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'8px'}}>
                                 {[
-                                    {label:'Vorgänge',    value:totalVorgaenge,   color:'#3b82f6', bg:'#eff6ff', icon:'📋'},
-                                    {label:'Anfragen',    value:totalAnfragen,    color:'#64748b', bg:'#f1f5f9', icon:'🔍'},
-                                    {label:'Angebote',    value:totalAngebote,    color:'#8b5cf6', bg:'#f5f3ff', icon:'📄'},
-                                    {label:'Abschlüsse',  value:totalAbschluesse, color:'#10b981', bg:'#ecfdf5', icon:'✅'},
-                                    {label:'Abgebrochen', value:totalAbgebrochen, color:'#f59e0b', bg:'#fffbeb', icon:'⏹'},
+                                    {label:'Vorgänge',   value:totalVorgaenge,   color:'#3b82f6', bg:'#eff6ff', icon:'📋'},
+                                    {label:'Anfragen',   value:totalAnfragen,    color:'#64748b', bg:'#f1f5f9', icon:'🔍'},
+                                    {label:'Angebote',   value:totalAngebote,    color:'#8b5cf6', bg:'#f5f3ff', icon:'📄'},
+                                    {label:'Abschlüsse', value:totalAbschluesse, color:'#10b981', bg:'#ecfdf5', icon:'✅'},
                                     {label:'Abschluss-Quote', value:`${convRate}%`, color:convRate>=30?'#10b981':convRate>=15?'#f59e0b':'#ef4444', bg:convRate>=30?'#ecfdf5':convRate>=15?'#fffbeb':'#fef2f2', icon:'🎯'},
                                 ].map(k=>(
                                     <div key={k.label} style={{background:k.bg,borderRadius:'12px',padding:'10px 12px',border:`1px solid ${k.color}22`}}>
@@ -7076,20 +6963,6 @@ const fileInputRef = useRef(null);
 
             const triggerToast = (message) => { clearTimeout(toastTimerRef.current); setToastMessage(message); toastTimerRef.current = setTimeout(() => setToastMessage(null), 3000); };
 
-            // ── Session Tracking: stale Sessions aufräumen + neue starten ──
-            const sessionIdRef = React.useRef(null);
-            React.useEffect(() => {
-                // 1) Alte hängende Sessions (> 2h) als "Abgebrochen" loggen
-                flushStaleSessions();
-                // 2) Neue Session für diese Beratung starten
-                const agent = (textData && textData.AgentName) || LINK_EMPLOYEE || '–';
-                sessionIdRef.current = startSession(agent, beratungsId);
-                return () => {
-                    // Beim Unmount (Tab schließen, Reload): Session bleibt offen
-                    // → wird beim nächsten Start von flushStaleSessions aufgeräumt
-                };
-            }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
             // ── Autosave: schützt vor Datenverlust bei Browser-Reload / Android-Zurück ──
             const AUTOSAVE_KEY = 'ps_autosave_v1';
             const autosaveTimerRef = React.useRef(null);
@@ -7663,18 +7536,6 @@ const handleFinishOfferClick = () => {
                     });
                 } catch (e) { /* ignore */ }
 
-                // ── Session schließen + SharePoint ──
-                closeSession(sessionIdRef.current, 'abgeschlossen');
-                sendToSharePoint({
-                    result:       computedResult,
-                    agent:        getAgentDisplayNameForUpload(),
-                    beratungsId:  beratungsId || '',
-                    mobil:        costState?.mobile   || '',
-                    festnetz:     costState?.landline  || '',
-                    tv:           costState?.tv        || '',
-                    dslAngeboten: getDslFlagForUpload(),
-                });
-
                 try {
                     const _slug = (new URLSearchParams(window.location.search||'')).get('m')||'';
                     const _nr = 'PS-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
@@ -7709,11 +7570,7 @@ const handleFinishOfferClick = () => {
                 setTimeout(() => setRedrawCounter(r => r + 1), 500);
 
                 // ── Analytics loggen ──
-                // FIX: Papier-Unterschrift zählt jetzt auch als Abschluss
-                const effectiveResult = isRealDigitalSig
-                    ? computeResultFromActivity(drawnStrokes, textData, true)
-                    : 'Abschluss'; // Papier-Sig = echter Abschluss
-                const computedResult = effectiveResult;
+                const computedResult = computeResultFromActivity(drawnStrokes, textData, isRealDigitalSig);
                 try {
                     appendAnalyticsRow({
                         ts: new Date().toISOString(),
@@ -7726,23 +7583,9 @@ const handleFinishOfferClick = () => {
                         shop: 'Telekom',
                         beratungsId: beratungsId || '',
                         result: computedResult,
-                        sigType: isRealDigitalSig ? 'digital' : 'papier',
                         canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
                     });
                 } catch(e) {}
-
-                // ── Session schließen + SharePoint ──
-                closeSession(sessionIdRef.current, 'abgeschlossen');
-                sendToSharePoint({
-                    result:       computedResult,
-                    agent:        getAgentDisplayNameForUpload(),
-                    beratungsId:  beratungsId || '',
-                    mobil:        costState?.mobile   || '',
-                    festnetz:     costState?.landline  || '',
-                    tv:           costState?.tv        || '',
-                    dslAngeboten: getDslFlagForUpload(),
-                    sigType:      isRealDigitalSig ? 'digital' : 'papier',
-                });
                 try {
                     const _slug = (new URLSearchParams(window.location.search||'')).get('m')||'';
                     const _nr = 'PS-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
@@ -7756,7 +7599,7 @@ const handleFinishOfferClick = () => {
             
             const handleSkipToOffer = (reasonData) => { setSkipReason(reasonData); setShowSkipReasonModal(false); setView('offer'); setViewOfferCounter(c => c + 1); triggerToast(`Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`); };
 
-            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} // Neue Session starten try { sessionIdRef.current = startSession((textData&&textData.AgentName)||LINK_EMPLOYEE||'–', ''); } catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
+            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
 
             const Toast = ({ message }) => { if (!message) return null; return (<div className="print-hide-toast fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg border border-slate-700 animate-in fade-in duration-300"><div className="flex items-center gap-2"><Icon d={ICONS.Clipboard} size={16} className="text-green-400"/><span className="text-sm font-medium">{message}</span></div></div>); };
 
