@@ -472,6 +472,20 @@ html, body{
         /* Print-Header wird nur zur Druckzeit per JS eingefügt */
         .print-page-header{ display:none; }
 
+        /* ── PRINT: Marketing-Fallback für leere Angebots-Felder ── */
+        .print-offer-fallback {
+            display: none; /* wird nur per JS im beforeprint eingeblendet */
+        }
+        @media print {
+            .print-offer-fallback {
+                display: block !important;
+                height: 100% !important;
+                min-height: 200px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
         /* --- PRINT STYLES (EXAKT 2 SEITEN A4 mit GRAFIKEN) --- */
         
         
@@ -6940,6 +6954,15 @@ const fileInputRef = useRef(null);
                 window.__canvasHtmlOffer3 = canvasHtml.offer3 || null;
             }, [canvasHtml.offer1, canvasHtml.offer2, canvasHtml.offer3]);
 
+            // Brücke: Angebots-Inhalt-Status für beforeprint (inkl. Bilder)
+            React.useEffect(() => {
+                window.__offerHasContent = {
+                    offer1: offerAreaHasContent('offer1', drawnStrokes, textData) || !!(canvasImages && canvasImages.offer1) || !!canvasHtml.offer1,
+                    offer2: offerAreaHasContent('offer2', drawnStrokes, textData) || !!(canvasImages && canvasImages.offer2) || !!canvasHtml.offer2,
+                    offer3: offerAreaHasContent('offer3', drawnStrokes, textData) || !!(canvasImages && canvasImages.offer3) || !!canvasHtml.offer3,
+                };
+            }, [drawnStrokes, textData, canvasImages, canvasHtml]);
+
             // Seite-3-Daten für beforeprint bereitstellen — per Ref immer aktuell
             const printSnap3Ref = React.useRef({ wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot });
             React.useEffect(() => {
@@ -11339,10 +11362,153 @@ const handlePDFShare = async () => {
                 })();
 
                 // ── SEITE 3: Wird jetzt als statisches React-Element gerendert (kein DOM-Inject nötig) ──
+
+                // ══════════════════════════════════════════════════════════════════════
+                // LEERE ANGEBOTS-FELDER: Marketing-Fallback + Grid-Anpassung im Print
+                // Wenn ein Angebot leer ist → ansprechende Fallback-Karte statt Leerfeld.
+                // Gefüllte Angebote bekommen mehr Breite im Grid.
+                // ══════════════════════════════════════════════════════════════════════
+                (() => {
+                    try {
+                        const offerGrid = document.querySelector('.print-offer-view .offer-print-grid');
+                        if (!offerGrid) return;
+
+                        const offerKeys  = ['offer1','offer2','offer3'];
+                        const offerCols  = Array.from(offerGrid.children).slice(0, 3);
+                        const contentMap = window.__offerHasContent || { offer1:true, offer2:true, offer3:true };
+
+                        // DOM-Check zusätzlich: Bilder / HTML-Overlays erkennen
+                        const realHasContent = offerKeys.map((key, i) => {
+                            const col = offerCols[i];
+                            if (!col) return false;
+                            const hasDomImg  = !!col.querySelector('img.canvas-image');
+                            const hasDomHtml = !!col.querySelector('.offer-html-overlay-wrap');
+                            return contentMap[key] || hasDomImg || hasDomHtml;
+                        });
+
+                        const filledCount = realHasContent.filter(Boolean).length;
+
+                        // Original-Grid-Spalten sichern
+                        _printCardOrig.set('__offerGrid_templateCols', offerGrid.style.gridTemplateColumns);
+
+                        offerCols.forEach((col, i) => {
+                            if (realHasContent[i]) return; // hat Inhalt → unverändert lassen
+
+                            // Leer → echten Canvas-Container verbergen
+                            const realCanvas = col.querySelector('.offer-canvas-container');
+                            if (realCanvas) {
+                                realCanvas.setAttribute('data-print-was-display', realCanvas.style.display || '');
+                                realCanvas.style.setProperty('display', 'none', 'important');
+                            }
+                            col.setAttribute('data-print-offer-empty', '1');
+
+                            // Marketing-Fallback-Karte einfügen
+                            const fallback = document.createElement('div');
+                            fallback.className = 'print-offer-fallback';
+                            fallback.setAttribute('data-print-injected', '1');
+
+                            // ── Individuelle Texte & Farben pro Angebots-Slot ──
+                            const fallbackContent = [
+                                // offer1 – Hardware, Anbieter & Nutzung
+                                {
+                                    icon: '😅',
+                                    gradient: 'linear-gradient(155deg,#eff6ff 0%,#dbeafe 55%,#bfdbfe 100%)',
+                                    border: '#60a5fa',
+                                    headColor: '#1e3a8a',
+                                    subColor: '#1d4ed8',
+                                    btnBg: '#2563eb',
+                                    head: 'Huch – da hab ich glatt was vergessen!',
+                                    sub: 'Ihren Smartphone-Tarif und aktuellen Anbieter hätte ich Ihnen noch gerne gezeigt. Kommen Sie einfach nochmal vorbei – beim nächsten Mal lasse ich das garantiert nicht aus!',
+                                    btn: '🎁&nbsp; 10 € Folie-Gutschein – als kleines Sorry!'
+                                },
+                                // offer2 – Haushalt & weitere Produkte
+                                {
+                                    icon: '🤦',
+                                    gradient: 'linear-gradient(155deg,#f0fdf4 0%,#dcfce7 55%,#bbf7d0 100%)',
+                                    border: '#4ade80',
+                                    headColor: '#14532d',
+                                    subColor: '#15803d',
+                                    btnBg: '#16a34a',
+                                    head: 'Mensch – da hätte ich noch was für Sie gehabt!',
+                                    sub: 'Smarte Zusatzprodukte und clevere Bundles für Ihren Haushalt – das hätte ich Ihnen unbedingt zeigen wollen. Beim nächsten Besuch hole ich das nach, versprochen!',
+                                    btn: '🎁&nbsp; 10 € Folie-Gutschein – weil Sie nochmal kommen!'
+                                },
+                                // offer3 – Fernsehen & Wi-Fi
+                                {
+                                    icon: '📺',
+                                    gradient: 'linear-gradient(155deg,#fdf4ff 0%,#fae8ff 55%,#e9d5ff 100%)',
+                                    border: '#c084fc',
+                                    headColor: '#4a1272',
+                                    subColor: '#7e22ce',
+                                    btnBg: '#9333ea',
+                                    head: 'Das wäre noch was gewesen – Fernsehen & WLAN!',
+                                    sub: 'Hier hätte sich für Sie wirklich noch was gelohnt. Kommen Sie nochmal vorbei – das Beste kommt manchmal zuletzt, und ich zeige Ihnen dann, was Sie fast verpasst hätten!',
+                                    btn: '🎁&nbsp; 10 € Folie-Gutschein – beim nächsten Besuch!'
+                                }
+                            ][i] || {};
+
+                            fallback.innerHTML = [
+                                '<div style="',
+                                  'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+                                  'height:100%;min-height:220px;padding:22px 18px;text-align:center;',
+                                  'background:' + fallbackContent.gradient + ';',
+                                  'border-radius:12px;border:2px dashed ' + fallbackContent.border + ';',
+                                  'font-family:ui-sans-serif,system-ui,sans-serif;',
+                                  '-webkit-print-color-adjust:exact;print-color-adjust:exact;',
+                                '">',
+                                  '<div style="font-size:30px;margin-bottom:10px;line-height:1;">' + fallbackContent.icon + '</div>',
+                                  '<div style="font-size:12px;font-weight:900;color:' + fallbackContent.headColor + ';margin-bottom:7px;line-height:1.35;max-width:230px;">',
+                                    fallbackContent.head,
+                                  '</div>',
+                                  '<div style="font-size:10px;color:' + fallbackContent.subColor + ';font-weight:600;line-height:1.45;margin-bottom:16px;max-width:215px;">',
+                                    fallbackContent.sub,
+                                  '</div>',
+                                  '<div style="',
+                                    'background:' + fallbackContent.btnBg + ';color:#ffffff;',
+                                    'padding:7px 16px;border-radius:999px;',
+                                    'font-size:10px;font-weight:800;letter-spacing:0.04em;',
+                                    '-webkit-print-color-adjust:exact;print-color-adjust:exact;',
+                                  '">',
+                                    fallbackContent.btn,
+                                  '</div>',
+                                '</div>'
+                            ].join('');
+                            col.appendChild(fallback);
+                        });
+
+                        // Grid-Spaltenbreiten anpassen:
+                        // Gefüllte Spalten bekommen mehr Platz, Fallback-Spalten weniger.
+                        if (filledCount > 0 && filledCount < 3) {
+                            const colWidths = realHasContent.map(h => h ? '1fr' : '0.55fr');
+                            offerGrid.style.gridTemplateColumns = colWidths.join(' ');
+                        } else if (filledCount === 0) {
+                            // Alle leer → alle gleich groß (3 Fallback-Karten)
+                            offerGrid.style.gridTemplateColumns = '1fr 1fr 1fr';
+                        }
+                    } catch(e) { /* robust – kein Absturz bei Print-Fehler */ }
+                })();
             });
             window.addEventListener('afterprint', () => {
                 document.querySelectorAll('.print-page-header').forEach(el => el.remove());
                 // print-netzwerk-anlage wird von React verwaltet → kein Remove nötig
+
+                // ── Marketing-Fallback-Karten entfernen + Canvases wiederherstellen ──
+                try {
+                    document.querySelectorAll('[data-print-injected="1"]').forEach(el => el.remove());
+                    document.querySelectorAll('[data-print-offer-empty="1"]').forEach(col => {
+                        col.removeAttribute('data-print-offer-empty');
+                        const realCanvas = col.querySelector('.offer-canvas-container');
+                        if (realCanvas) {
+                            const orig = realCanvas.getAttribute('data-print-was-display') || '';
+                            realCanvas.style.display = orig;
+                            realCanvas.removeAttribute('data-print-was-display');
+                        }
+                    });
+                    const offerGrid = document.querySelector('.print-offer-view .offer-print-grid');
+                    if (offerGrid && _printCardOrig.has('__offerGrid_templateCols')) {
+                        offerGrid.style.gridTemplateColumns = _printCardOrig.get('__offerGrid_templateCols') || '';
+                    }
+                } catch(e) { /* ignore */ }
 
                 const doRestore = () => {
                     // ── 1. Situation-View ──
