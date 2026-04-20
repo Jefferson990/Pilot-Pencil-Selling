@@ -3,62 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vertriebs-Dashboard – Telekom Edition</title>
 
-    <!-- ===== PWA / iOS Vollbild (kein Safari-Banner beim Fullscreen) ===== -->
+    <!-- ===== PWA / iOS Vollbild ===== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pencil Tool">
     <meta name="mobile-web-app-capable" content="yes">
-    <!-- ================================================================== -->
-
-    <!-- ===== DEVICE DETECTION (läuft SOFORT, bevor CSS/React lädt) ===== -->
+    <title>Vertriebs-Dashboard – Telekom Edition</title>
+    
+    <!-- ===== DEVICE DETECTION ===== -->
     <script>
     (function(){
-        var ua  = navigator.userAgent || '';
-        var pl  = navigator.platform  || '';
-        var mt  = navigator.maxTouchPoints || 0;
-
-        // iOS/iPadOS: iPhone, iPad (auch iPadOS 13+ meldet sich als MacIntel mit Touch)
-        var isIOS = /iPhone|iPad|iPod/.test(ua) ||
-                    (pl === 'MacIntel' && mt > 1);
-
-        // Android-Tablet oder -Phone
-        var isAndroid = /Android/.test(ua);
-
-        // Desktop (kein Touch)
-        var isDesktop = !isIOS && !isAndroid;
-
-        // iPad vs iPhone unterscheiden (Größe)
-        var isIpad  = isIOS && (!/iPhone|iPod/.test(ua) || mt > 2);
-        var isIphone= isIOS && !isIpad;
-
-        // Android-Tablet: Viewport > 900px (Landscape) oder UA enthält kein "Mobile"
-        var isAndroidTablet = isAndroid && (!/Mobile/.test(ua) || window.screen.width >= 900);
-        var isAndroidPhone  = isAndroid && !isAndroidTablet;
-
-        var html = document.documentElement;
-        if (isIOS)           html.classList.add('device-ios');
-        if (isIpad)          html.classList.add('device-ipad');
-        if (isIphone)        html.classList.add('device-iphone');
-        if (isAndroid)       html.classList.add('device-android');
-        if (isAndroidTablet) html.classList.add('device-android-tablet');
-        if (isAndroidPhone)  html.classList.add('device-android-phone');
-        if (isDesktop)       html.classList.add('device-desktop');
-
-        // Safari-Browser (nicht Chrome-on-iOS)
-        var isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
-        if (isSafari) html.classList.add('browser-safari');
-
-        // Global verfügbar für JS-Logik
-        window.__device = {
-            isIOS: isIOS, isIpad: isIpad, isIphone: isIphone,
-            isAndroid: isAndroid, isAndroidTablet: isAndroidTablet,
-            isDesktop: isDesktop, isSafari: isSafari
-        };
+        var ua=navigator.userAgent||'',pl=navigator.platform||'',mt=navigator.maxTouchPoints||0;
+        var isIOS=/iPhone|iPad|iPod/.test(ua)||(pl==='MacIntel'&&mt>1);
+        var isAndroid=/Android/.test(ua);
+        var isIpad=isIOS&&(!/iPhone|iPod/.test(ua)||mt>2);
+        var isIphone=isIOS&&!isIpad;
+        var isAndroidTablet=isAndroid&&(!/Mobile/.test(ua)||window.screen.width>=900);
+        var isSafari=/Safari/.test(ua)&&!/Chrome|CriOS|FxiOS/.test(ua);
+        var h=document.documentElement;
+        if(isIOS)h.classList.add('device-ios');
+        if(isIpad)h.classList.add('device-ipad');
+        if(isIphone)h.classList.add('device-iphone');
+        if(isAndroid)h.classList.add('device-android');
+        if(isAndroidTablet)h.classList.add('device-android-tablet');
+        if(!isIOS&&!isAndroid)h.classList.add('device-desktop');
+        if(isSafari)h.classList.add('browser-safari');
+        window.__device={isIOS:isIOS,isIpad:isIpad,isIphone:isIphone,isAndroid:isAndroid,isAndroidTablet:isAndroidTablet,isSafari:isSafari};
     })();
     </script>
-    <!-- ================================================================== -->
 
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -310,33 +283,9 @@ html, body, #root{
 /* Ensure nothing forces a wider-than-viewport layout in fullscreen */
 #root{ max-width: 100vw !important; }
 
-/* ===== SIDEBAR SCROLL: iPad (automatisch erkannt via device-ipad Klasse) ===== */
-/* iOS/iPad: Sidebar braucht explizite max-height + touch-scroll */
-html.device-ipad .sit-aside-panel,
-html.device-iphone .sit-aside-panel {
-    max-height: calc(100dvh - 64px - 56px) !important;
-    height:     calc(100dvh - 64px - 56px) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: #cbd5e1 transparent !important;
-}
-html.device-ipad .sit-aside-panel::-webkit-scrollbar,
-html.device-iphone .sit-aside-panel::-webkit-scrollbar { width: 3px !important; }
-html.device-ipad .sit-aside-panel::-webkit-scrollbar-thumb,
-html.device-iphone .sit-aside-panel::-webkit-scrollbar-thumb { background: #cbd5e1 !important; border-radius: 99px !important; }
-
-/* Android-Tablet ≥ 900px: funktioniert bereits gut, nur sanfter Scroll */
-html.device-android-tablet .sit-aside-panel {
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: thin !important;
-}
-
-/* Fallback für alle kleinen Screens ohne erkanntes Device */
+/* ===== KLEINE BILDSCHIRME < 11 ZOLL (~1180px): Sidebar scrollbar ===== */
 @media screen and (max-width: 1180px) {
+    /* Rechte Sidebar: AUCH scrollbar auf kleinen Bildschirmen (iPad etc.) */
     .sit-aside-panel {
         overflow-y: auto !important;
         overflow-x: hidden !important;
@@ -349,28 +298,6 @@ html.device-android-tablet .sit-aside-panel {
 
 /* === FULLSCREEN/ROTATE: prevent canvas distortion === */
 .drawing-canvas{ width:100% !important; height:100% !important; }
-
-/* ===== TOOLBAR FIXED: bleibt immer sichtbar, auch beim Zoom ===== */
-.footer-bar {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    height: 56px !important;
-    z-index: 9000 !important;        /* Hoch genug um über allem zu liegen */
-    box-sizing: border-box !important;
-    /* iOS Safe Area (HomeBar) */
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-    /* Verhindert dass overflow:hidden des Parents die Toolbar clippt */
-    transform: translateZ(0);        /* eigener Stacking Context */
-    -webkit-transform: translateZ(0);
-}
-/* Hauptinhalt: Platz für fixe Toolbar lassen */
-.situation-view-wrapper,
-.print-offer-view {
-    padding-bottom: 56px;
-}
 
 
         
@@ -571,8 +498,6 @@ html, body{
         color-adjust: exact !important;
     }
 html, body {
-        /* A4 landscape in mm — funktioniert auf Android (96dpi) UND iPad Safari (72pt/inch).
-           min-width:1122px würde auf iPad zu breit sein → 3. Seite! */
         width: 297mm !important;
         min-width: 0 !important;
         height: auto !important;
@@ -932,16 +857,13 @@ html, body {
         opacity: 1 !important;
         position: relative !important;
 
-        /* iPad Safari: 1120px + zoom:0.80 = 896px > A4-Breite bei 72pt/inch (842px) → Overflow!
-           Lösung: mm-Breite, die bei 96dpi UND 72pt/inch korrekt passt. */
-        width: 297mm !important;
-        max-width: 297mm !important;
-        min-width: 0 !important;
-        height: 210mm !important;
-        max-height: 210mm !important;
-        overflow: hidden !important;
+        width: 1120px !important;
+        max-width: 1120px !important;
+        min-width: 1120px !important;
+        height: auto !important;
+        overflow: visible !important;
 
-        zoom: 1;
+        zoom: 0.80;
 
         margin: 0 !important;
         padding: 0 !important;
@@ -1019,12 +941,10 @@ html, body {
 
 
 
-    /* Print-Compact: 297mm Breite → Canvases resizen sich proportional mit.
-       min-height auf 47mm setzen: bei 96dpi=180px, bei 72pt/in=134px – passt auf eine Seite. */
+    /* Print-Compact: Angebot + Kosten müssen auf 1 Seite passen (ohne Screen zu ändern) */
     .print-offer-view .offer-canvas-container {
-        min-height: 47mm !important;
-        max-height: 65mm !important;
-        margin-bottom: 6px !important;
+        min-height: 350px !important;
+        margin-bottom: 12px !important;
     }
     .print-offer-view .print-page-header {
         margin-bottom: 8px !important;
@@ -2399,11 +2319,10 @@ body.pdf-share-mode .sit-card-grid > div > button > div:first-child {
     .situation-view-wrapper > div > div:first-child {
         display: none !important;
     }
-    /* Situation-Wrapper: exakt eine A4-Seite (210mm = 793px @ 96dpi / 595px @ 72pt) */
+    /* Situation-Wrapper: exakt eine Seite */
     .situation-view-wrapper {
-        height: 210mm !important;
-        max-height: 210mm !important;
-        min-height: 0 !important;
+        height: auto !important;
+        max-height: 100vh !important;
         overflow: hidden !important;
         page-break-after: always !important;
         break-after: page !important;
@@ -2440,10 +2359,10 @@ body.pdf-share-mode .sit-card-grid > div > button > div:first-child {
 @media print {
     .sit-question-chips { display:none !important; }
 
-    /* Situation-Wrapper: A4 landscape = 210mm Höhe (100vh ≠ 210mm auf iPad!) */
+    /* Situation-Wrapper: volle Seitenhöhe ausfüllen */
     .situation-view-wrapper {
-        height: 210mm !important;
-        max-height: 210mm !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
         overflow: hidden !important;
     }
 
@@ -2807,58 +2726,175 @@ body.pdf-share-mode .situation-view-wrapper,
 body.pdf-share-mode .print-situation-view {
   zoom: inherit !important;
 }
-</style>
 
-<!-- ===================================================================
-     FINALER PRINT-OVERRIDE: gewinnt über alle früheren @media print Blöcke.
-     Behebt: iPad Safari 3-Seiten-Bug (100vh ≠ 210mm, 1120px > A4-Breite)
-     =================================================================== -->
-<style>
-@media print {
-  /* ── Seite 1: Situation exakt 1 A4-Landscape-Seite (210mm) ── */
-  .situation-view-wrapper {
-    height: 210mm !important;
-    max-height: 210mm !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    page-break-after: always !important;
-    break-after: page !important;
-  }
-  /* Direktes Kind (Flex-Container): Rest ausfüllen, nicht überlaufen */
-  .situation-view-wrapper > div.flex-1 {
-    height: auto !important;
-    max-height: calc(210mm - 54px) !important;
-    overflow: hidden !important;
-    min-height: 0 !important;
-  }
-  /* Sidebar: ebenfalls auf Seitenhöhe begrenzen */
-  .situation-view-wrapper > aside {
-    max-height: calc(210mm - 54px) !important;
-    overflow: hidden !important;
-  }
+/* ===== iPAD HOCHFORMAT: Sidebar unter Kacheln (wie Android) ===== */
+@media screen and (orientation: portrait) {
+    html.device-ipad .situation-view-wrapper,
+    html.device-iphone .situation-view-wrapper {
+        flex-direction: column !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        height: calc(100dvh - 64px - 56px) !important;
+        max-height: calc(100dvh - 64px - 56px) !important;
+    }
+    html.device-ipad .situation-view-wrapper > div.flex-1,
+    html.device-iphone .situation-view-wrapper > div.flex-1 {
+        width: 100% !important;
+        flex: 0 0 auto !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    html.device-ipad .sit-card-grid,
+    html.device-iphone .sit-card-grid {
+        grid-template-rows: none !important;
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+    html.device-ipad .sit-card-grid > div,
+    html.device-iphone .sit-card-grid > div {
+        min-height: 140px !important;
+        height: auto !important;
+    }
+    html.device-ipad .sit-aside-panel,
+    html.device-iphone .sit-aside-panel {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        border-left: none !important;
+        border-top: 1px solid #e2e8f0 !important;
+        overflow-y: visible !important;
+        flex-shrink: 0 !important;
+    }
+}
 
-  /* ── Seite 2: Angebot exakt 1 A4-Landscape-Seite ── */
-  .print-offer-view {
-    width: 297mm !important;
-    max-width: 297mm !important;
-    min-width: 0 !important;
-    height: 210mm !important;
-    max-height: 210mm !important;
-    overflow: hidden !important;
-    zoom: 1 !important;
-  }
-  /* Innen: flex-column damit Canvases+Kosten proportional verteilt werden */
-  .print-offer-view > div {
-    overflow: hidden !important;
-  }
-  /* Canvases: mm-Höhe statt px – funktioniert auf iPad (72pt/in) und Android (96dpi) */
-  .print-offer-view .offer-canvas-container {
-    min-height: 47mm !important;
-    max-height: 65mm !important;
-  }
+/* ===== SIDEBAR SCROLL: iPad ===== */
+html.device-ipad .sit-aside-panel,
+html.device-iphone .sit-aside-panel {
+    max-height: calc(100dvh - 64px - 56px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: thin !important;
+}
+html.device-android-tablet .sit-aside-panel {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+@media screen and (max-width: 1180px) {
+    .sit-aside-panel {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        scrollbar-width: thin !important;
+    }
+}
+
+/* ===== TOOLBAR FIXED (bleibt beim Zoom sichtbar) ===== */
+.footer-bar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 56px !important;
+    z-index: 9000 !important;
+    box-sizing: border-box !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 </style>
 
+
+    <!-- ===== SESSION TRACKING + POWER AUTOMATE ===== -->
+    <script>
+    (function() {
+        var SESSION_KEY = 'ps_session_v1';
+        var SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2h
+
+        window.psStartSession = function(agent, beratungsId) {
+            try {
+                var id = Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+                var sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
+                sessions.push({id:id, startTs:Date.now(), status:'gestartet', agent:agent, beratungsId:beratungsId||''});
+                localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
+                return id;
+            } catch(e) { return null; }
+        };
+
+        window.psCloseSession = function(sessionId) {
+            try {
+                if (!sessionId) return;
+                var sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
+                sessions = sessions.map(function(s) {
+                    return s.id === sessionId ? Object.assign({}, s, {status:'abgeschlossen', endTs:Date.now()}) : s;
+                });
+                localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
+            } catch(e) {}
+        };
+
+        window.psFlushStaleSessions = function() {
+            try {
+                var sessions = JSON.parse(localStorage.getItem(SESSION_KEY) || '[]');
+                var now = Date.now();
+                var remaining = [];
+                sessions.forEach(function(s) {
+                    var age = now - (s.startTs || 0);
+                    if (s.status === 'gestartet' && age > SESSION_TTL_MS) {
+                        // Log as abandoned
+                        try {
+                            var rows = JSON.parse(localStorage.getItem('pencil_analytics_v1') || '[]');
+                            rows.push({
+                                id: 'ab_' + s.id,
+                                ts: new Date(s.startTs).toISOString(),
+                                user: s.agent || 'Unbekannt',
+                                shop: 'Telekom',
+                                result: 'Abgebrochen',
+                                beratungsId: s.beratungsId || '',
+                                durationMin: Math.round(age / 60000),
+                                canvasStats: {}
+                            });
+                            localStorage.setItem('pencil_analytics_v1', JSON.stringify(rows));
+                        } catch(e2) {}
+                        window.psSendToSharePoint({result:'Abgebrochen', agent:s.agent||'', beratungsId:s.beratungsId||'', durationMin:Math.round(age/60000)});
+                    } else if (s.status !== 'abgeschlossen' && age <= SESSION_TTL_MS) {
+                        remaining.push(s);
+                    }
+                });
+                localStorage.setItem(SESSION_KEY, JSON.stringify(remaining));
+            } catch(e) {}
+        };
+
+        window.psSendToSharePoint = function(payload) {
+            try {
+                var url = localStorage.getItem('ps_pa_webhook') || '';
+                if (!url || !url.startsWith('https://')) return;
+                fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        timestamp: new Date().toISOString(),
+                        shop: payload.shop || 'Telekom',
+                        agent: payload.agent || '',
+                        beratungsId: payload.beratungsId || '',
+                        result: payload.result || 'offen',
+                        durationMin: payload.durationMin || null,
+                        mobil: payload.mobil || '',
+                        festnetz: payload.festnetz || '',
+                        tv: payload.tv || '',
+                        dslAngeboten: payload.dslAngeboten || 'nein',
+                        source: 'PencilSellingTool_v16'
+                    })
+                }).catch(function(){});
+            } catch(e) {}
+        };
+
+        // Flush stale sessions on load
+        setTimeout(function() { window.psFlushStaleSessions(); }, 1000);
+    })();
+    </script>
+    <!-- ============================= -->
 </head>
 <body>
     <div id="root"></div>
@@ -4430,7 +4466,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             const handleAddQuestion = (cat) => { const newQs = [...(localData[cat] || []), "Neue Frage..."]; setLocalData(prev => ({ ...prev, [cat]: newQs })); }; 
             const handleSave = () => { const cleanedData = Object.keys(localData).reduce((acc, cat) => { acc[cat] = localData[cat].filter(q => q.trim() !== ''); return acc; }, {}); Object.keys(cleanedData).forEach(cat => onUpdate(cat, cleanedData[cat])); if (onUpdateLink) onUpdateLink(localLink.trim()); onClose(); }; 
             if (!isOpen) return null; 
-            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Fragen & Links</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div><div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{localData[cat].map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
+            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Fragen & Links</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div><div className="border border-green-200 rounded-lg p-4 bg-green-50 shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm">Power Automate Webhook-URL</h4><input type="url" defaultValue={(()=>{try{return localStorage.getItem('ps_pa_webhook')||'';}catch(e){return '';}})()}  onChange={(e)=>{try{if(e.target.value.trim())localStorage.setItem('ps_pa_webhook',e.target.value.trim());else localStorage.removeItem('ps_pa_webhook');}catch(err){}}} placeholder="https://prod-xx.westeurope.logic.azure.com/workflows/..." className="w-full border border-green-300 p-2 rounded text-sm focus:ring-2 focus:ring-green-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Power Automate: When an HTTP request is received. Jeden Abschluss automatisch an SharePoint senden.</p></div><div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{localData[cat].map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
         };
 
         const TvPriceModal = ({ isOpen, onClose, onUebernehmen }) => {
@@ -5719,6 +5755,7 @@ const resolveUserName = (raw) => {
             const totalAnfragen     = filtered.filter(r => r.result === 'Anfrage').length;
             const totalAngebote     = filtered.filter(r => r.result === 'Angebot').length;
             const totalAbschluesse  = filtered.filter(r => r.result === 'Abschluss').length;
+            const totalAbgebrochen  = filtered.filter(r => r.result === 'Abgebrochen').length;
             const convRate = totalVorgaenge ? Math.round((totalAbschluesse / totalVorgaenge) * 100) : 0;
             const offerRate = (totalAnfragen + totalAngebote + totalAbschluesse) > 0
                 ? Math.round(((totalAngebote + totalAbschluesse) / (totalAnfragen + totalAngebote + totalAbschluesse)) * 100)
@@ -5761,12 +5798,13 @@ const resolveUserName = (raw) => {
                         <div className="custom-scrollbar" style={{overflowY:'auto',flex:1,padding:'16px 20px',display:'flex',flexDirection:'column',gap:'16px'}}>
 
                             {/* KPI Kacheln */}
-                            <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'8px'}}>
+                            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'8px'}}>
                                 {[
                                     {label:'Vorgänge',   value:totalVorgaenge,   color:'#3b82f6', bg:'#eff6ff', icon:'📋'},
                                     {label:'Anfragen',   value:totalAnfragen,    color:'#64748b', bg:'#f1f5f9', icon:'🔍'},
                                     {label:'Angebote',   value:totalAngebote,    color:'#8b5cf6', bg:'#f5f3ff', icon:'📄'},
                                     {label:'Abschlüsse', value:totalAbschluesse, color:'#10b981', bg:'#ecfdf5', icon:'✅'},
+                                    {label:'Abgebrochen', value:totalAbgebrochen, color:'#f59e0b', bg:'#fffbeb', icon:'⏹'},
                                     {label:'Abschluss-Quote', value:`${convRate}%`, color:convRate>=30?'#10b981':convRate>=15?'#f59e0b':'#ef4444', bg:convRate>=30?'#ecfdf5':convRate>=15?'#fffbeb':'#fef2f2', icon:'🎯'},
                                 ].map(k=>(
                                     <div key={k.label} style={{background:k.bg,borderRadius:'12px',padding:'10px 12px',border:`1px solid ${k.color}22`}}>
@@ -6635,47 +6673,6 @@ const toolRef = useRef('pen');
 
             const [isWritingEnabled, setIsWritingEnabled] = useState(true); 
             const [inputMode, setInputMode] = useState('pen'); 
-
-
-
-            // ── VisualViewport: Toolbar beim Zoom immer sichtbar halten ──
-            // Beim Pinch-Zoom verschiebt sich window.visualViewport (der sichtbare Ausschnitt).
-            // position:fixed allein reicht nicht – wir müssen left/bottom manuell nachführen.
-            useEffect(() => {
-                const vv = window.visualViewport;
-                const bar = document.querySelector('.footer-bar');
-                if (!vv || !bar) return;
-
-                const sync = () => {
-                    try {
-                        // Sichtbarer Bereich im Layout-Koordinatensystem
-                        const top    = vv.offsetTop;
-                        const left   = vv.offsetLeft;
-                        const width  = vv.width;
-                        const height = vv.height;
-
-                        // Toolbar ans Ende des sichtbaren Bereichs setzen
-                        bar.style.left   = left  + 'px';
-                        bar.style.width  = width + 'px';
-                        bar.style.top    = (top + height - bar.offsetHeight) + 'px';
-                        bar.style.bottom = 'auto';
-                    } catch(e) {}
-                };
-
-                vv.addEventListener('resize', sync);
-                vv.addEventListener('scroll', sync);
-                sync();
-
-                return () => {
-                    vv.removeEventListener('resize', sync);
-                    vv.removeEventListener('scroll', sync);
-                    // Screen-Werte zurücksetzen
-                    bar.style.left   = '';
-                    bar.style.width  = '';
-                    bar.style.top    = '';
-                    bar.style.bottom = '0';
-                };
-            }, []);
             const [showColorPicker, setShowColorPicker] = useState(false);
             const [showAdmin, setShowAdmin] = useState(false);
             const [showStats, setShowStats] = useState(false);
@@ -6694,9 +6691,7 @@ const openBundleModal = useCallback((mode = 'customer', targetKey = 'offer1') =>
     setShowBundleModal(true);
 }, [BUNDLE_URL]);
 
-const handleOpenStats = () => {
-                setShowStats(true);
-            };
+const handleOpenStats = () => { setShowStats(true); };
             const dprRef = useRef(window.devicePixelRatio || 1); 
             const [textSize, setTextSize] = useState('medium'); 
             const [textStyle, setTextStyle] = useState({ bold: false, italic: false });
@@ -6990,6 +6985,38 @@ const fileInputRef = useRef(null);
                 customerSignature, canvasHtml, wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot, canvasImages, imageTransform]);
 
             const clearAutosave = () => { try { localStorage.removeItem(AUTOSAVE_KEY); } catch(e){} };
+
+
+            // VisualViewport: Toolbar beim Zoom immer sichtbar halten
+            React.useEffect(() => {
+                var vv = window.visualViewport;
+                var bar = document.querySelector('.footer-bar');
+                if (!vv || !bar) return;
+                var sync = function() {
+                    try {
+                        bar.style.left = vv.offsetLeft + 'px';
+                        bar.style.width = vv.width + 'px';
+                        bar.style.top = (vv.offsetTop + vv.height - 56) + 'px';
+                        bar.style.bottom = 'auto';
+                    } catch(e) {}
+                };
+                vv.addEventListener('resize', sync);
+                vv.addEventListener('scroll', sync);
+                sync();
+                return function() {
+                    vv.removeEventListener('resize', sync);
+                    vv.removeEventListener('scroll', sync);
+                };
+            }, []);
+
+            // Session tracking via window globals (plain JS, no Babel issues)
+            var sessionIdRef = React.useRef(null);
+            React.useEffect(function() {
+                if (window.psStartSession) {
+                    var agent = (window.__LINK_EMPLOYEE) || 'Unbekannt';
+                    sessionIdRef.current = window.psStartSession(agent, '');
+                }
+            }, []);
 
             React.useEffect(() => {
                 autosaveTimerRef.current = setInterval(saveToAutosave, 30000);
@@ -7309,65 +7336,12 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             // Global vor/nach Print (falls User STRG+P direkt nutzt)
             useEffect(() => {
                 const bp = () => injectPrintBgLayers();
-
-                // iOS Safari feuert 'afterprint' beim Abbruch oft NICHT.
-                // → matchMedia('print') als zuverlässiger Fallback.
-                const restoreScreen = () => {
-                    try {
-                        cleanupPrintBgLayers();
-                        // HTML/Body explizit auf Screen-Werte zurücksetzen
-                        const h = document.documentElement;
-                        const b = document.body;
-                        for (const el of [h, b]) {
-                            el.style.removeProperty('min-width');
-                            el.style.removeProperty('width');
-                            el.style.removeProperty('height');
-                            el.style.removeProperty('overflow');
-                            el.style.removeProperty('overflow-x');
-                            el.style.removeProperty('overflow-y');
-                        }
-                        // Device-Print-Fix Inline-Styles zurücksetzen (iOS + Android)
-                        const sitW = document.querySelector('.situation-view-wrapper');
-                        if (sitW) {
-                            ['height','max-height','min-height','overflow'].forEach(p => sitW.style.removeProperty(p));
-                            sitW.removeAttribute('data-print-hdr-px');
-                        }
-                        const ofW = document.querySelector('.print-offer-view');
-                        if (ofW) {
-                            ['width','max-width','min-width','height','max-height','overflow','zoom'].forEach(p => ofW.style.removeProperty(p));
-                        }
-                        // Force reflow so CSS @media screen rules re-apply
-                        void h.offsetHeight;
-                        // React-State-Reset
-                        if (typeof window.__printResetView === 'function') {
-                            window.__printResetView();
-                        }
-                    } catch(e) { /* ignore */ }
-                };
-
-                const ap = () => restoreScreen();
+                const ap = () => cleanupPrintBgLayers();
                 window.addEventListener('beforeprint', bp);
                 window.addEventListener('afterprint', ap);
-
-                // iOS Safari Fallback: matchMedia('print') change → nicht-print = afterprint-Ersatz
-                let mqPrint = null;
-                try {
-                    mqPrint = window.matchMedia('print');
-                    const mqHandler = (e) => { if (!e.matches) restoreScreen(); };
-                    if (mqPrint.addEventListener) mqPrint.addEventListener('change', mqHandler);
-                    else if (mqPrint.addListener) mqPrint.addListener(mqHandler); // Safari < 14
-                    mqPrint._psHandler = mqHandler;
-                } catch(e) {}
-
                 return () => {
                     window.removeEventListener('beforeprint', bp);
                     window.removeEventListener('afterprint', ap);
-                    try {
-                        if (mqPrint && mqPrint._psHandler) {
-                            if (mqPrint.removeEventListener) mqPrint.removeEventListener('change', mqPrint._psHandler);
-                            else if (mqPrint.removeListener) mqPrint.removeListener(mqPrint._psHandler);
-                        }
-                    } catch(e) {}
                 };
             }, [injectPrintBgLayers, cleanupPrintBgLayers]);
 
@@ -7570,7 +7544,17 @@ const handleFinishOfferClick = () => {
                 setTimeout(() => setRedrawCounter(r => r + 1), 500);
 
                 // ── Analytics loggen ──
-                const computedResult = computeResultFromActivity(drawnStrokes, textData, isRealDigitalSig);
+                const computedResult = isRealDigitalSig ? computeResultFromActivity(drawnStrokes, textData, true) : 'Abschluss';
+                // Session + SharePoint
+                if (window.psCloseSession) window.psCloseSession(sessionIdRef.current);
+                if (window.psSendToSharePoint) window.psSendToSharePoint({
+                    result: computedResult,
+                    agent: (textData && textData.AgentName) || '',
+                    beratungsId: beratungsId || '',
+                    mobil: (costState && costState.mobile) || '',
+                    festnetz: (costState && costState.landline) || '',
+                    tv: (costState && costState.tv) || ''
+                });
                 try {
                     appendAnalyticsRow({
                         ts: new Date().toISOString(),
@@ -9912,7 +9896,7 @@ const handlePDFShare = async () => {
             };
 
             return (
-                <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col text-sm" style={{overflow:'hidden',position:'relative'}}>
+                <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col overflow-hidden text-sm">
                     <Toast message={toastMessage} />
                     <RestoreToastBanner />
                     <WlanModal isOpen={showWlanModal} onClose={() => setShowWlanModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setWlanRecommendation(rec)} onUebernehmen={(snap) => setWlanSnapshot(snap)} />
@@ -9959,14 +9943,7 @@ const handlePDFShare = async () => {
                     <ImagePlacementModal isOpen={isImageSelectModalOpen} onClose={() => setIsImageSelectModalOpen(false)} onPlace={handleImagePlacement} imageName={currentImagePayload?.name || 'Datei'} />
                     <SignatureModal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} onSign={handleSignatureSave} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div>
-                    {/* Device-Badge: zeigt erkanntes Gerät (nur für Admins / Debugging) */}
-                    <div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:2,cursor:"default",opacity:0.55}} title={`Erkanntes Gerät: ${(window.__device||{}).isIpad?'iPad':(window.__device||{}).isAndroidTablet?'Android-Tablet':(window.__device||{}).isDesktop?'Desktop':'Unbekannt'}`}>
-                        <span style={{fontSize:8,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none",background:"#f1f5f9",borderRadius:4,padding:"1px 5px"}}>
-                            {(window.__device||{}).isIpad ? '🍎 iPad' : (window.__device||{}).isIphone ? '🍎 iPhone' : (window.__device||{}).isAndroidTablet ? '🤖 Tab' : (window.__device||{}).isAndroidPhone ? '🤖 Phone' : '🖥 Desktop'}
-                        </span>
-                    </div>
-                    <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik"><Icon d={ICONS.Lock} size={18}/></button><button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik (passwortgeschützt)"><Icon d={ICONS.Lock} size={18}/></button><button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -11024,11 +11001,11 @@ const handlePDFShare = async () => {
                     })(), document.body)}
 
 
-                    <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 z-40 justify-between shadow-sm footer-bar" style={{position:'fixed',bottom:0,left:0,right:0,width:'100%',boxSizing:'border-box',zIndex:40}}>
-                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Zeichnen)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus (Tippen)"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
+                    <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 justify-between shadow-sm footer-bar" style={{position:"fixed",bottom:0,left:0,right:0,width:"100%",zIndex:9000,boxSizing:"border-box"}}>
+                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => setShowSkipReasonModal(true)} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
                             <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
-                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Zeichnen)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus (Tippen)"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
+                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
                                 {/* ── Gutschrift-Rechner Icon-Button ── */}
                                 {(()=>{
                                     const gut2 = parseFloat(gutschriftBetrag.replace(',','.')) || 0;
@@ -11243,67 +11220,16 @@ const handlePDFShare = async () => {
                 });
 
                 // ── Fusion-Box (Empfehlung Seite 2) per Inline-Style explizit ausblenden ──
+                // Sicherheitsnetz: React setzt display:'flex' inline → überschreibt in manchen
+                // Browsern den @media print CSS-Block trotz !important. Hier wird per JS
+                // zusätzlich display:none gesetzt, damit die Empfehlung NICHT auf Seite 2
+                // erscheint, sondern ausschließlich auf der exklusiven Seite 3.
                 document.querySelectorAll('.print-hide-fusion').forEach((el, i) => {
                     _printCardOrig.set('__fusion_' + i, el.style.display);
                     el.style.setProperty('display', 'none', 'important');
                 });
 
                 // ── SEITE 3: Wird jetzt als statisches React-Element gerendert (kein DOM-Inject nötig) ──
-
-                // ════════════════════════════════════════════════════════════════
-                // DEVICE-AWARE PRINT FIX
-                // iOS/iPad Safari: mm-basierte Höhen, Header-Offset-Messung
-                // Android/Desktop: funktionieren bereits korrekt mit dem CSS
-                // ════════════════════════════════════════════════════════════════
-                (() => {
-                    const dev = window.__device || {};
-
-                    // Seite 1: Situation-Wrapper
-                    const sitW = document.querySelector('.situation-view-wrapper');
-                    if (sitW) {
-                        const hdr = sitW.previousElementSibling;
-                        let hdrPx = 54;
-                        if (hdr && hdr.classList.contains('print-page-header')) {
-                            const r  = hdr.getBoundingClientRect();
-                            const mb = parseFloat(getComputedStyle(hdr).marginBottom || '0');
-                            hdrPx = Math.round(r.height + mb) || 54;
-                        }
-                        if (dev.isIOS) {
-                            // iPad/iPhone Safari: mm-Werte sind zuverlässiger als px
-                            sitW.style.setProperty('height',    `calc(210mm - ${hdrPx}px)`, 'important');
-                            sitW.style.setProperty('max-height',`calc(210mm - ${hdrPx}px)`, 'important');
-                        } else {
-                            // Android/Desktop: px-Basis (96dpi)
-                            const a4HeightPx = 794; // 210mm @ 96dpi
-                            sitW.style.setProperty('height',    `${a4HeightPx - hdrPx}px`, 'important');
-                            sitW.style.setProperty('max-height',`${a4HeightPx - hdrPx}px`, 'important');
-                        }
-                        sitW.style.setProperty('min-height', '0',      'important');
-                        sitW.style.setProperty('overflow',   'hidden',  'important');
-                        sitW.setAttribute('data-print-hdr-px', String(hdrPx));
-                    }
-
-                    // Seite 2: Offer-View
-                    const ofW = document.querySelector('.print-offer-view');
-                    if (ofW) {
-                        if (dev.isIOS) {
-                            ofW.style.setProperty('width',     '297mm', 'important');
-                            ofW.style.setProperty('max-width', '297mm', 'important');
-                            ofW.style.setProperty('height',    '210mm', 'important');
-                            ofW.style.setProperty('max-height','210mm', 'important');
-                            ofW.style.setProperty('zoom',      '1',     'important');
-                        } else {
-                            // Android: bewährtes Layout beibehalten
-                            ofW.style.setProperty('width',     '297mm', 'important');
-                            ofW.style.setProperty('max-width', '297mm', 'important');
-                            ofW.style.setProperty('height',    '210mm', 'important');
-                            ofW.style.setProperty('max-height','210mm', 'important');
-                            ofW.style.setProperty('zoom',      '1',     'important');
-                        }
-                        ofW.style.setProperty('min-width', '0',     'important');
-                        ofW.style.setProperty('overflow',  'hidden', 'important');
-                    }
-                })();
             });
             window.addEventListener('afterprint', () => {
                 document.querySelectorAll('.print-page-header').forEach(el => el.remove());
@@ -11315,11 +11241,6 @@ const handlePDFShare = async () => {
                     if (sitWrapper) {
                         sitWrapper.style.display = _printCardOrig.get('__sit_display') || '';
                         if (_printCardOrig.get('__sit_cls_hidden')) sitWrapper.classList.add('hidden');
-                        // Print-Inline-Styles vom IPAD-FIX zurücksetzen
-                        ['height','maxHeight','minHeight','overflow'].forEach(p => {
-                            sitWrapper.style.removeProperty(p);
-                        });
-                        sitWrapper.removeAttribute('data-print-hdr-px');
                         sitWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
                             el.style.overflow  = _printCardOrig.get('__sit_overflow_' + i) || '';
                             el.style.height    = _printCardOrig.get('__sit_height_'   + i) || '';
