@@ -234,8 +234,11 @@
             /* Seite 3: Netzwerk-Empfehlung */
             .print-netzwerk-anlage {
                 display: block !important;
-                page-break-before: always !important;
-                break-before: always !important;
+                page-break-before: auto !important;
+                break-before: auto !important;
+                margin-top: 8px !important;
+                zoom: 0.80 !important;
+                transform-origin: top left !important;
             }
         }
         /* Seite 3 auf Bildschirm komplett verstecken — @media screen damit @media print gewinnt */
@@ -1020,7 +1023,7 @@ html, body {
     .print-offer-view .cost-overview-print{
         padding: 10px 12px !important;
         box-shadow: none !important;
-        margin-top: 0px !important;
+        margin-top: 60px !important;
     }
 
     /* Print-Safety: Kostenfelder (1./2. Jahr) bleiben immer nebeneinander -> verhindert zusätzliche Druck-Seite */
@@ -2321,8 +2324,9 @@ body.pdf-share-mode .sit-card-grid > div > button > div:first-child {
     }
     /* Situation-Wrapper: exakt eine Seite */
     .situation-view-wrapper {
-        height: auto !important;
-        max-height: 100vh !important;
+        height: 210mm !important;
+        max-height: 210mm !important;
+        min-height: 0 !important;
         overflow: hidden !important;
         page-break-after: always !important;
         break-after: page !important;
@@ -2359,10 +2363,11 @@ body.pdf-share-mode .sit-card-grid > div > button > div:first-child {
 @media print {
     .sit-question-chips { display:none !important; }
 
-    /* Situation-Wrapper: volle Seitenhöhe ausfüllen */
+    /* Situation-Wrapper: A4 Landscape = 210mm (100vh != 210mm auf iPad!) */
     .situation-view-wrapper {
-        height: 100vh !important;
-        max-height: 100vh !important;
+        height: 210mm !important;
+        max-height: 210mm !important;
+        min-height: 0 !important;
         overflow: hidden !important;
     }
 
@@ -6084,7 +6089,7 @@ const resolveUserName = (raw) => {
                     }
                 };
 
-                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '22px' : '17px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '24px' : textSize === 'large' ? '44px' : '32px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
                 // Immer wenn ein neues Bundle/Bild eingefügt wird: Edit-Modus aktivieren (blau = bewegbar).
                 // bundleInsertCount wird bei jedem Import erhöht – dadurch feuert dieser Effect garantiert,
                 // auch wenn dasselbe Bundle nochmals eingefügt wird.
@@ -6863,6 +6868,8 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             const totalCost = parseCost(costState.mobile) + parseCost(costState.landline) + parseCost(costState.tv);
             
             const initialOfferData = { einmalig: 0, monatlich1: 0, monatlich2: 0, einmaligRaw: '', monatlich1Raw: '', monatlich2Raw: '' };
+            const [showSavingsBlock, setShowSavingsBlock] = React.useState(false);
+            const [dismissSavingsHint, setDismissSavingsHint] = React.useState(false);
             const [offerData, setOfferData] = useState(initialOfferData);
             const [canvasStatus, setCanvasStatus] = useState({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' });
 
@@ -7100,14 +7107,22 @@ const fileInputRef = useRef(null);
                 }, [showRestoreToast]);
                 if (!showRestoreToast) return null;
                 return (
-                <div className="print-hide-toast fixed bottom-4 left-1/2 -translate-x-1/2 z-[110] animate-in fade-in" style={{display:'flex',alignItems:'center',gap:12,background:'#1e3a8a',color:'white',padding:'12px 18px',borderRadius:16,boxShadow:'0 8px 32px rgba(0,0,0,0.35)',border:'1px solid #3b5bdb',maxWidth:'90vw',minWidth:280}}>
-                    <span style={{fontSize:20}}>💾</span>
-                    <div style={{flex:1}}>
-                        <div style={{fontWeight:800,fontSize:13}}>Ungespeicherte Sitzung gefunden</div>
-                        <div style={{fontSize:11,opacity:0.75,marginTop:2}}>Möchten Sie den letzten Stand wiederherstellen?</div>
-                    </div>
-                    <button onClick={handleRestoreAutosave} style={{padding:'7px 14px',borderRadius:8,background:'#2563eb',border:'none',color:'white',fontWeight:800,fontSize:12,cursor:'pointer',flexShrink:0}}>Wiederherstellen</button>
-                    <button onClick={()=>{setShowRestoreToast(false);clearAutosave();}} style={{padding:'7px 10px',borderRadius:8,background:'rgba(255,255,255,0.12)',border:'none',color:'white',fontWeight:700,fontSize:12,cursor:'pointer',flexShrink:0,minWidth:32,textAlign:'center'}}>✕ {countdown}</button>
+                <div className="print-hide-toast animate-in fade-in" style={{
+                    display:'flex',alignItems:'center',gap:6,
+                    background:'#f0f6ff',
+                    color:'#1e3a8a',
+                    padding:'4px 6px 4px 8px',
+                    borderRadius:'8px',
+                    border:'1.5px solid #bfdbfe',
+                    boxShadow:'0 2px 8px rgba(37,99,235,0.12)',
+                    fontSize:'11px',fontWeight:600,
+                    flexShrink:0,
+                    whiteSpace:'nowrap',
+                }}>
+                    <span style={{fontSize:13}}>💾</span>
+                    <span style={{color:'#1d4ed8',fontWeight:700}}>Sitzung gefunden</span>
+                    <button onClick={handleRestoreAutosave} style={{padding:'3px 8px',borderRadius:6,background:'#2563eb',border:'none',color:'white',fontWeight:800,fontSize:10,cursor:'pointer',flexShrink:0}}>Laden</button>
+                    <button onClick={()=>{setShowRestoreToast(false);clearAutosave();}} style={{padding:'3px 6px',borderRadius:6,background:'transparent',border:'1px solid #bfdbfe',color:'#64748b',fontWeight:700,fontSize:10,cursor:'pointer',flexShrink:0}}>✕ {countdown}</button>
                 </div>
             );}
 
@@ -9678,7 +9693,7 @@ const handlePDFShare = async () => {
 
 
             // ── SEITE 3 HTML-BUILDER ── Premium Sales Design ──
-            const buildPage3Html = () => {
+            const buildPage3Html = (inline = false) => {
                 const ws = wlanSnapshot;
                 const techs = techUebernommen || [];
                 const nb = netBundleMatched;
@@ -9839,6 +9854,21 @@ const handlePDFShare = async () => {
                 const z = cards.length >= 4 ? 0.68 : cards.length === 3 ? 0.78 : cards.length === 2 ? 0.88 : 1.0;
                 const invW = Math.round(10000/z)/100;
 
+                if (inline) return `
+                <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;width:100%;height:auto;background:linear-gradient(160deg,#f0f6ff 0%,#f8faff 40%,#ffffff 100%);box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif;">
+                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(135deg,#0b1e42 0%,#1e3a8a 60%,#2563eb 100%);padding:10px 24px;display:flex;align-items:center;gap:12px">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                    <div style="font-size:13px;font-weight:900;color:#ffffff">Netzwerk-Empfehlung</div>
+                    <div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>
+                    <div style="font-size:9px;font-weight:700;color:rgba(147,197,253,0.8);text-transform:uppercase;letter-spacing:0.12em">Auf Basis Ihrer Angaben</div>
+                  </div>
+                  <div style="padding:12px 24px;display:grid;grid-template-columns:${gridCols};gap:14px;align-items:start">${cards.join('')}</div>
+                  <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0 24px 12px;padding:8px 16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-size:9px;font-weight:600;color:#64748b">Alle Angaben ohne Gewähr · Preise können abweichen · Stand: ${new Date().toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</span>
+                    <span style="font-size:9px;font-weight:800;color:#2563eb">HeTec — WIR GESTALTEN ZUKUNFT</span>
+                  </div>
+                </div>`;
+
                 return `
                 <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;
                      width:1122px;height:794px;overflow:hidden;position:relative;
@@ -9898,12 +9928,17 @@ const handlePDFShare = async () => {
             return (
                 <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col overflow-hidden text-sm">
                     <Toast message={toastMessage} />
-                    <RestoreToastBanner />
                     <WlanModal isOpen={showWlanModal} onClose={() => setShowWlanModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setWlanRecommendation(rec)} onUebernehmen={(snap) => setWlanSnapshot(snap)} />
                     <SpeedModal isOpen={showSpeedModal} onClose={() => setShowSpeedModal(false)} triggerToast={triggerToast} onRecommendation={(rec) => setSpeedRecommendation(rec)} />
                     <TechModal isOpen={showTechModal} onClose={() => toggleTech(false)} checkedTechs={checkedTechs} setCheckedTechs={setCheckedTechs} onUebernehmen={(list) => { setTechUebernommen(list); triggerToast('✅ Technologien übernommen!'); }} />
                     <RoamingModal isOpen={showRoamingModal} onClose={() => setShowRoamingModal(false)} />
-                    <TvPriceModal isOpen={showTvModal} onClose={() => setShowTvModal(false)} onUebernehmen={(snap) => { const val = typeof snap === 'object' ? snap.price : snap; setCostState(prev => ({ ...prev, tv: val })); if (typeof snap === 'object') setTvSnapshot(snap); triggerToast('📺 TV-Paket übernommen!'); setShowTvModal(false); }} />
+                    <TvPriceModal isOpen={showTvModal} onClose={() => setShowTvModal(false)} onUebernehmen={(snap) => { 
+    // TV-Paket NICHT in Kosten (Ist) übernehmen – das sind Kundenbestandskosten, nicht neue!
+    if (typeof snap === 'object') setTvSnapshot(snap); 
+    else setTvSnapshot({ price: snap }); 
+    triggerToast('📺 TV-Paket übernommen! (Nicht in Kosten Ist eingerechnet)'); 
+    setShowTvModal(false); 
+}} />
                     <QuestionModal isOpen={!!activeCategory && !showAdmin} onClose={() => setActiveCategory(null)} category={activeCategory} question={getCurrentQuestion()} onNextQuestion={handleNextQuestion} />
                     <ReferralModal isOpen={showReferralModal} onClose={(mode) => {
                         setShowReferralModal(false);
@@ -9968,6 +10003,8 @@ const handlePDFShare = async () => {
                             </div>
                         </div>
                     )}
+                    {/* Sitzungs-Restore: dezent neben Schritt-Button */}
+                    <RestoreToastBanner />
                     {/* Schritt-Modus Toggle */}
                     {view === 'situation' && (
                         <button onClick={()=>{setSitLayoutMode(m=>m==='grid'?'step':'grid');setCurrentSitStep(0);}}
@@ -10013,7 +10050,7 @@ const handlePDFShare = async () => {
                                         return (<div className="sit-progress-bar" style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}><div style={{flex:1,height:'8px',background:'#e2e8f0',borderRadius:'999px',overflow:'hidden',minWidth:80}}><div style={{width:pct+'%',height:'100%',background:pct===100?'#16a34a':'#2563eb',borderRadius:'999px',transition:'width 0.5s ease'}}/></div><span style={{fontSize:'11px',fontWeight:800,color:pct===100?'#16a34a':'#94a3b8',flexShrink:0}}>{pct===100?'✓ Vollständig':filled+'/'+SITUATION_ITEMS.length+' Felder'}</span></div>);
                                     })()}
                                     {/* Grid — IMMER im DOM (auch für Druck wenn Step aktiv) */}
-                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'start',gridTemplateRows:'repeat(5, minmax(200px, 1fr))',overflowY:'auto',visibility:sitLayoutMode==='step'?'hidden':'visible',pointerEvents:sitLayoutMode==='step'?'none':'auto'}}>
+                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'start',gridTemplateRows:'repeat(5, minmax(200px, 1fr))',overflowY:'auto',visibility:sitLayoutMode==='step'?'hidden':'visible',pointerEvents:sitLayoutMode==='step'?'none':'auto',paddingBottom:'64px'}}>
                                         {SITUATION_ITEMS.map((item) => {
                                             const sitKey = `sit_${item.id.replace(/\s+/g,'')}`;
                                             const sitRefMap = {Kundenname:sitCanvasRef_Kundenname,Rufnummer:sitCanvasRef_Rufnummer,Anbieter:sitCanvasRef_Anbieter,Hardware:sitCanvasRef_Hardware,Nutzung:sitCanvasRef_Nutzung,Haushalt:sitCanvasRef_Haushalt,'Weitere Produkte':sitCanvasRef_WeitereProdukte,Fernsehen:sitCanvasRef_Fernsehen,WiFi:sitCanvasRef_WiFi,Gesamtkosten:sitCanvasRef_Gesamtkosten};
@@ -10035,7 +10072,27 @@ const handlePDFShare = async () => {
                                                         <div style={{width:'10px',height:'10px',borderRadius:'50%',flexShrink:0,background:hasContent?'#4ade80':'#e2e8f0',boxShadow:hasContent?'0 0 0 2px #fff,0 0 0 4px #4ade80':'none',transition:'all 0.3s'}}/>
                                                     </button>
                                                     <div className='sit-card-canvas' style={{flex:1,position:'relative',minHeight:'38px'}}>
-                                                        <input type="text" value={getDisplayText(item.id)} onChange={(e)=>handleTextChange(item.id,e.target.value)} style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'12px':textSize==='large'?'18px':'14px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} placeholder="" readOnly={inputMode==='pen'}/>
+                                                        <input type="text" value={getDisplayText(item.id)} onChange={(e)=>handleTextChange(item.id,e.target.value)}
+  onKeyDown={(e)=>{
+    if(e.key==='Tab'){
+      e.preventDefault();
+      const items=SITUATION_ITEMS;
+      const idx=items.findIndex(x=>x.id===item.id);
+      const next=items[e.shiftKey?idx-1:idx+1];
+      if(next){
+        const key='sit_'+next.id.replace(/\s+/g,'');
+        const el=document.querySelector('[data-sit-key="'+key+'"]');
+        if(el){
+          const card=el.closest('.sit-card-grid > div');
+          if(card){card.scrollIntoView({behavior:'smooth',block:'nearest'});}
+          // Fokus auf nächstes Inputfeld
+          const nextInput=card&&card.querySelector('input[type="text"]');
+          if(nextInput){setTimeout(()=>nextInput.focus(),100);}
+        }
+      }
+    }
+  }}
+  style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'24px':textSize==='large'?'44px':'32px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} placeholder="" readOnly={inputMode==='pen'}/>
                                                         <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen')?'auto':'none',touchAction:'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
                                                     </div>
                                                 </div>
@@ -10213,7 +10270,7 @@ const handlePDFShare = async () => {
 
                         <aside className="w-[340px] xl:w-[360px] min-w-[340px] shrink-0 sit-aside-panel flex flex-col border-l border-slate-200/60 z-10 h-full overflow-hidden" style={{background:'linear-gradient(180deg,#f8faff 0%,#f0f6ff 100%)'}}>
                             
-                            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar" style={{padding:'8px 10px',gap:'6px',display:'flex',flexDirection:'column'}}>
+                            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar" style={{padding:'8px 10px 72px 10px',gap:'6px',display:'flex',flexDirection:'column'}}>
 
                             {/* ── Karten-Helper: Header ── */}
                             {/* STAMMDATEN */}
@@ -10462,17 +10519,35 @@ const handlePDFShare = async () => {
                             {/* ── Zeile: Ersparnis links · Fusion-Box rechts ── */}
                             {(() => {
                                 const monthly = offerData.monatlich1 || 0;
+                                const monthly2 = offerData.monatlich2 || 0;
                                 // Primär: Gesamtkosten aus Seite 1 (digital)
                                 const gesamtkostenRaw = textData.Gesamtkosten || '';
                                 const gesamtkostenVal = parseCost(gesamtkostenRaw.replace(/[^0-9.,]/g, ''));
-                                // Fallback: Kosten-ist-Block (mobile + landline + tv)
+                                // Fallback: Kosten-ist-Block (mobile + landline + tv) OHNE TV-Paket
                                 const current = gesamtkostenVal > 0 ? gesamtkostenVal : totalCost;
                                 const saving = (current > 0 && monthly > 0) ? current - monthly : 0;
+                                const saving2 = (current > 0 && monthly2 > 0) ? current - monthly2 : null;
                                 const savingYear = saving * 12;
-                                const hasSaving = saving > 0.005 && offerLayoutMode !== 'step';
+                                const hasPotentialSaving = monthly > 0 && current > 0;
+                                // Nur anzeigen wenn User explizit "Ja" geklickt hat
+                                const hasSaving = saving > 0.005 && offerLayoutMode !== 'step' && showSavingsBlock;
                                 const hasFusion = techUebernommen.length > 0 || wlanSnapshot || tvSnapshot;
-                                if (!hasSaving && !hasFusion) return null;
+                                if (!hasPotentialSaving && !hasFusion) return null;
                                 return (
+                                    <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+
+                                    {/* ── Kleiner Hinweis wenn monatlich ausgefüllt aber Ersparnisse noch nicht bestätigt ── */}
+                                    {hasPotentialSaving && !showSavingsBlock && !dismissSavingsHint && saving > 0.005 && offerLayoutMode !== 'step' && (
+                                        <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'7px 12px',background:'#f0fdf4',border:'1px solid #86efac',borderRadius:'10px',flexShrink:0}}>
+                                            <span style={{fontSize:'14px'}}>💡</span>
+                                            <span style={{fontSize:'11px',fontWeight:700,color:'#15803d',flex:1}}>
+                                                Mögliche Ersparnis: <strong>{saving.toFixed(2).replace('.',',')} €/Monat</strong> — Anzeigen?
+                                            </span>
+                                            <button onClick={()=>setShowSavingsBlock(true)} style={{padding:'4px 12px',borderRadius:7,background:'#16a34a',border:'none',color:'white',fontWeight:800,fontSize:11,cursor:'pointer'}}>Ja</button>
+                                            <button onClick={()=>setDismissSavingsHint(true)} style={{padding:'4px 10px',borderRadius:7,background:'transparent',border:'1px solid #86efac',color:'#64748b',fontWeight:700,fontSize:11,cursor:'pointer'}}>Nein</button>
+                                        </div>
+                                    )}
+
                                     <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px'}}>
 
                                         {/* ── LINKS: Ersparnis ── */}
@@ -10503,6 +10578,13 @@ const handlePDFShare = async () => {
                                                         <span style={{fontSize:'34px',fontWeight:900,color:'#ffffff',letterSpacing:'-0.03em',lineHeight:1.05,textShadow:'0 2px 8px rgba(0,0,0,0.3)'}}>{saving.toFixed(2).replace('.',',')}€</span>
                                                         <span style={{fontSize:'12px',fontWeight:700,color:'#ffffff',lineHeight:1,opacity:0.95}}>/ Monat</span>
                                                         <span style={{fontSize:'11px',fontWeight:800,color:'#ffffff',lineHeight:1,marginTop:'3px',opacity:0.9}}>= {savingYear.toFixed(0)} € / Jahr</span>
+                                                        {saving2 !== null && Math.abs(saving2 - saving) > 0.005 && (
+                                                            <span style={{fontSize:'9px',fontWeight:700,color:'rgba(255,255,255,0.8)',lineHeight:1,marginTop:'4px',padding:'2px 6px',background:'rgba(0,0,0,0.2)',borderRadius:'999px'}}>
+                                                                {saving2 > 0
+                                                                    ? `2. Jahr: ${saving2.toFixed(2).replace('.',',')} €/Mo`
+                                                                    : `2. Jahr: +${Math.abs(saving2).toFixed(2).replace('.',',')} € teurer`}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -10740,6 +10822,7 @@ const handlePDFShare = async () => {
                                 )}
 
                                     </div>
+                                    </div>
                                 );
                             })()}
 
@@ -10804,7 +10887,7 @@ const handlePDFShare = async () => {
                     {/* ── SEITE 3: Portal nach document.body — entkommt overflow:hidden des App-Wrappers ── */}
                     {(wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot)
                         ? ReactDOM.createPortal(
-                            <div className="print-netzwerk-anlage" dangerouslySetInnerHTML={{__html: buildPage3Html()}} />,
+                            <div className="print-netzwerk-anlage" dangerouslySetInnerHTML={{__html: buildPage3Html(true)}} />,
                             document.body
                           )
                         : null
@@ -11220,14 +11303,40 @@ const handlePDFShare = async () => {
                 });
 
                 // ── Fusion-Box (Empfehlung Seite 2) per Inline-Style explizit ausblenden ──
-                // Sicherheitsnetz: React setzt display:'flex' inline → überschreibt in manchen
-                // Browsern den @media print CSS-Block trotz !important. Hier wird per JS
-                // zusätzlich display:none gesetzt, damit die Empfehlung NICHT auf Seite 2
-                // erscheint, sondern ausschließlich auf der exklusiven Seite 3.
                 document.querySelectorAll('.print-hide-fusion').forEach((el, i) => {
                     _printCardOrig.set('__fusion_' + i, el.style.display);
                     el.style.setProperty('display', 'none', 'important');
                 });
+
+                // ── PRINT HEIGHT FIX: JS überschreibt CSS (höchste Priorität) ──
+                // ensurePrintHeaders fügt Header als Geschwister VOR dem Wrapper ein.
+                // Header (~54px) + 210mm = 227mm > A4 → 3. Seite. Fix: Höhe messen & abziehen.
+                (() => {
+                    const sitW = document.querySelector('.situation-view-wrapper');
+                    if (sitW) {
+                        const hdr = sitW.previousElementSibling;
+                        let hdrPx = 54;
+                        if (hdr && hdr.classList.contains('print-page-header')) {
+                            const r = hdr.getBoundingClientRect();
+                            const mb = parseFloat(getComputedStyle(hdr).marginBottom || '0');
+                            hdrPx = Math.round(r.height + mb) || 54;
+                        }
+                        sitW.style.setProperty('height',     'calc(210mm - ' + hdrPx + 'px)', 'important');
+                        sitW.style.setProperty('max-height', 'calc(210mm - ' + hdrPx + 'px)', 'important');
+                        sitW.style.setProperty('min-height', '0', 'important');
+                        sitW.style.setProperty('overflow',   'hidden', 'important');
+                    }
+                    const ofW = document.querySelector('.print-offer-view');
+                    if (ofW) {
+                        ofW.style.setProperty('width',      '297mm', 'important');
+                        ofW.style.setProperty('max-width',  '297mm', 'important');
+                        ofW.style.setProperty('min-width',  '0',     'important');
+                        ofW.style.setProperty('height',     '210mm', 'important');
+                        ofW.style.setProperty('max-height', '210mm', 'important');
+                        ofW.style.setProperty('overflow',   'hidden', 'important');
+                        ofW.style.setProperty('zoom',       '1',      'important');
+                    }
+                })();
 
                 // ── SEITE 3: Wird jetzt als statisches React-Element gerendert (kein DOM-Inject nötig) ──
             });
@@ -11239,6 +11348,8 @@ const handlePDFShare = async () => {
                     // ── 1. Situation-View ──
                     const sitWrapper = document.querySelector('.situation-view-wrapper');
                     if (sitWrapper) {
+                        // Print-Height-Fix Inline-Styles entfernen
+                        ['height','max-height','min-height','overflow'].forEach(p => sitWrapper.style.removeProperty(p));
                         sitWrapper.style.display = _printCardOrig.get('__sit_display') || '';
                         if (_printCardOrig.get('__sit_cls_hidden')) sitWrapper.classList.add('hidden');
                         sitWrapper.querySelectorAll('.overflow-hidden, .overflow-y-auto').forEach((el, i) => {
