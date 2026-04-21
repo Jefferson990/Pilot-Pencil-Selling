@@ -3013,7 +3013,7 @@ html.device-android-tablet .sit-aside-panel {
         const ACT_SIT_MIN_CHARS   = 3;    // Seite 1 Kachel: mind. 3 Zeichen → "Angefragt"
         const ACT_SIT_MIN_STROKES = 2;    // Seite 1 Kachel Pen: mind. 2 Strokes
         const ACT_SIT_MIN_INKPX   = 40;   // Seite 1 Kachel Pen: mind. 40px Tintenlänge
-        const ACT_OFFER_MIN_CHARS = 12;   // Seite 2 Bereiche: mind. 12 Zeichen → "Angeboten"
+        const ACT_OFFER_MIN_CHARS = 1;   // Seite 2 Bereiche: mind. 1 Zeichen → "Angeboten"
         const ACT_OFFER_MIN_STROKES = 2;  // Seite 2 Bereiche Pen: mind. 2 Strokes
         const ACT_OFFER_MIN_INKPX = 300;  // Seite 2 Bereiche Pen: mind. 300px Tintenlänge
 
@@ -6317,7 +6317,7 @@ const resolveUserName = (raw) => {
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
-</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}>{htmlOverlay ? (<div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '990px', margin: '0 auto', boxSizing: 'border-box', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+</div>{hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button type="button" onClick={(e) => { e.stopPropagation(); (onClearOverlay||onClearImage)?.(); }} className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md hover:bg-red-700" title="Entfernen">✕</button>)}<div className="canvas-lines"></div>{hasOverlay && (<div className="absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}>{htmlOverlay ? (<div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} />) : (<img src={image} alt={`Eingefügtes Bild für ${label}`} className="canvas-image" style={{ transform: `scale(${scale}) rotate(${rotation}deg)`, transition: 'none', pointerEvents: 'none', opacity: 1 }}/>)}</div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
             </div></div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
@@ -11276,11 +11276,29 @@ const handlePDFShare = async () => {
                             }
                         }
                     });
-                    // Offer-Canvas-Container: Styles per data-Attribut sichern (robust gegen React Re-render)
+                    // Canvas-Container: Styles per data-Attribut sichern (robust gegen React Re-render)
                     offerWrapper.querySelectorAll('.offer-canvas-container').forEach((el) => {
                         el.setAttribute('data-pre-print-mh',   el.style.minHeight || '');
                         el.setAttribute('data-pre-print-h',    el.style.height    || '');
                         el.setAttribute('data-pre-print-flex', el.style.flex      || '');
+
+                        // FIX: Bild-Overlay proportional positionieren (translate px → % des Containers)
+                        const imgOverlayParent = el.querySelector('div[style*="translate"]');
+                        if (imgOverlayParent && !imgOverlayParent.querySelector('.offer-html-overlay-wrap')) {
+                            const containerRect = el.getBoundingClientRect();
+                            const style = imgOverlayParent.getAttribute('style') || '';
+                            const match = style.match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+                            if (match && containerRect.width > 0 && containerRect.height > 0) {
+                                const xPct = (parseFloat(match[1]) / containerRect.width * 100).toFixed(2);
+                                const yPct = (parseFloat(match[2]) / containerRect.height * 100).toFixed(2);
+                                imgOverlayParent.setAttribute('data-orig-translate-style', style);
+                                const newStyle = style.replace(
+                                    /translate\([^)]+\)/,
+                                    `translate(${xPct}%, ${yPct}%)`
+                                );
+                                imgOverlayParent.setAttribute('style', newStyle);
+                            }
+                        }
                     });
                     // flex-1 Kinder: ebenfalls per data sichern
                     offerWrapper.querySelectorAll('.flex-1, .offer-print-grid, .offer-print-grid > div').forEach(el => {
@@ -11383,7 +11401,9 @@ const handlePDFShare = async () => {
                             if (!col) return false;
                             const hasDomImg  = !!col.querySelector('img.canvas-image');
                             const hasDomHtml = !!col.querySelector('.offer-html-overlay-wrap');
-                            return contentMap[key] || hasDomImg || hasDomHtml;
+                            const ta = col.querySelector('textarea');
+                            const hasTextarea = ta && (ta.value || '').trim().length > 0;
+                            return contentMap[key] || hasDomImg || hasDomHtml || hasTextarea;
                         });
 
                         const filledCount = realHasContent.filter(Boolean).length;
@@ -11577,6 +11597,11 @@ const handlePDFShare = async () => {
                                 const origP = parent.getAttribute('data-orig-parent-style');
                                 if (origP !== null) { parent.setAttribute('style', origP); parent.removeAttribute('data-orig-parent-style'); }
                             }
+                        });
+                        // Bild-Overlay: originalen translate wiederherstellen
+                        offerWrapper.querySelectorAll('[data-orig-translate-style]').forEach(el => {
+                            el.setAttribute('style', el.getAttribute('data-orig-translate-style'));
+                            el.removeAttribute('data-orig-translate-style');
                         });
                         // cost-overview-print margin wiederherstellen
                         offerWrapper.querySelectorAll('.cost-overview-print').forEach(el => {
