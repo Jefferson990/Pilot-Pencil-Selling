@@ -249,11 +249,12 @@
             /* Seite 3: Netzwerk-Empfehlung */
             .print-netzwerk-anlage {
                 display: block !important;
-                page-break-before: auto !important;
-                break-before: auto !important;
-                margin-top: 8px !important;
+                page-break-before: always !important;
+                break-before: page !important;
+                margin-top: 0 !important;
                 zoom: 0.80 !important;
                 transform-origin: top left !important;
+                break-inside: avoid !important;
             }
         }
         /* Seite 3 auf Bildschirm komplett verstecken — @media screen damit @media print gewinnt */
@@ -693,9 +694,10 @@ html, body {
 
         transform: none !important;
 
-        height: auto !important;
+        height: 210mm !important;
+        max-height: 210mm !important;
         min-height: 0 !important;
-        overflow: visible !important;
+        overflow: hidden !important;
 
         break-after: page !important;
         page-break-after: always !important;
@@ -769,6 +771,15 @@ html, body {
     }
 
     /* Rechte Sidebar = fest 28% (mehr Platz auf iPad), kein Schrumpfen, kein Umbrechen */
+    /* Hide offer sidebar (outside situation-view-wrapper) — prevents blank page 2 in print */
+    .sit-aside-panel {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Re-show the SITUATION aside (inside situation-view-wrapper) — higher specificity wins */
     .situation-view-wrapper > aside,
     .situation-view-wrapper > aside.hidden,
     .situation-view-wrapper > aside.sit-aside-panel {
@@ -777,6 +788,9 @@ html, body {
         opacity: 1 !important;
         flex: 0 0 28% !important;
         width: 28% !important;
+        max-height: 210mm !important;
+        height: 210mm !important;
+        overflow: hidden !important;
         max-width: 28% !important;
         min-width: 0 !important;
         height: auto !important;
@@ -885,6 +899,28 @@ html, body {
     }
 
     /* -------- Seite 2: Angebot (voll sichtbar) -------- */
+
+    /* KRITISCH: Offer-Aside (linke Seitenleiste) im Druck ausblenden — verursacht sonst Leerseite */
+    .print-offer-view > aside,
+    .print-offer-view > aside.hidden,
+    .print-offer-view > aside[class*="w-"],
+    .print-offer-view + aside,
+    .offer-scroll-area ~ aside,
+    div[class*="offer"] > aside {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+    }
+
+    /* Offer-Aside wrapper div (the container before print-offer-view): collapse it */
+    .print-offer-view {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
     .print-offer-view {
         display: block !important;
         visibility: visible !important;
@@ -909,10 +945,15 @@ html, body {
 
     .print-offer-view .overflow-hidden,
     .print-offer-view .h-full,
-    .print-offer-view .min-h-0,
-    .print-offer-view .offer-inner-wrapper {
+    .print-offer-view .min-h-0 {
         overflow: visible !important;
         height: auto !important;
+        min-height: 0 !important;
+    }
+    .print-offer-view .offer-inner-wrapper {
+        overflow: hidden !important;
+        height: 210mm !important;
+        max-height: 210mm !important;
         min-height: 0 !important;
     }
 
@@ -2931,6 +2972,206 @@ html.device-android-tablet .sit-aside-panel {
     })();
     </script>
     <!-- ============================= -->
+
+
+<!-- === FINAL PAPER PRINT FIX v51: Seite 2 komplett inkl. monatliche Kosten === -->
+<style id="final-paper-print-seite2-kosten-fix-v51">
+@media print {
+  @page { size: A4 landscape !important; margin: 0 !important; }
+
+  /* Seite 2 muss als EINE echte A4-Seite behandelt werden */
+  .print-offer-view {
+    width: 297mm !important;
+    max-width: 297mm !important;
+    min-width: 0 !important;
+    height: 210mm !important;
+    max-height: 210mm !important;
+    min-height: 210mm !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    padding: 4mm 6mm 3mm 6mm !important;
+    margin: 0 !important;
+    zoom: 1 !important;
+    transform: none !important;
+    background: #eff6ff !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-offer-view .offer-inner-wrapper {
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-offer-view .print-page-header {
+    flex: 0 0 9mm !important;
+    min-height: 8mm !important;
+    max-height: 9mm !important;
+    margin: 0 0 2mm 0 !important;
+    padding: 1mm 3mm !important;
+  }
+  .print-offer-view .print-page-header .title { font-size: 16px !important; }
+
+  /* 3 Angebotsfelder bleiben oben sichtbar, aber nicht so hoch, dass Kosten auf Seite 3 rutschen */
+  .print-offer-view .offer-print-grid {
+    flex: 0 0 102mm !important;
+    height: 102mm !important;
+    max-height: 102mm !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 5mm !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .print-offer-view .offer-print-grid > div {
+    height: 102mm !important;
+    max-height: 102mm !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  .print-offer-view .offer-canvas-container {
+    height: 102mm !important;
+    max-height: 102mm !important;
+    min-height: 0 !important;
+    flex: 0 0 102mm !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    border-width: 3px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Header der einzelnen Karten kompakter */
+  .print-offer-view .offer-canvas-container > div:first-child {
+    padding: 4mm 4mm 2mm 4mm !important;
+    flex: 0 0 auto !important;
+  }
+  .print-offer-view .offer-canvas-container h2,
+  .print-offer-view .offer-canvas-container h3,
+  .print-offer-view .offer-canvas-container .font-black {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Text in den 3 Karten kleiner und ohne sichtbare Scrollbalken im Papierdruck */
+  .print-offer-view .offer-canvas-container textarea,
+  .print-offer-view .offer-canvas-textarea {
+    font-size: 17px !important;
+    line-height: 1.35 !important;
+    padding: 4mm !important;
+    overflow: hidden !important;
+    resize: none !important;
+  }
+  .print-offer-view textarea::-webkit-scrollbar,
+  .print-offer-view .offer-canvas-container ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  .print-offer-view textarea { scrollbar-width: none !important; }
+
+  /* Empfehlungen-Banner gehört auf Seite 2, nicht als extra leere Seite */
+  .print-offer-view .offer-print-grid + div,
+  .print-offer-view .offer-print-grid ~ div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .print-offer-view [style*="Empfehlungen"] {
+    flex-shrink: 0 !important;
+  }
+
+  /* Kostenübersicht sichtbar unter den 3 Karten */
+  .print-offer-view .cost-overview-print {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex: 0 0 auto !important;
+    max-height: 72mm !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 3mm 4mm !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .print-offer-view .cost-overview-print h3 {
+    font-size: 13px !important;
+    line-height: 1.1 !important;
+    margin: 0 0 2mm 0 !important;
+  }
+  .print-offer-view .cost-grid-years {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 3mm !important;
+    margin: 0 !important;
+  }
+  .print-offer-view .cost-overview-print label {
+    font-size: 8px !important;
+    line-height: 1 !important;
+    margin-bottom: 1mm !important;
+  }
+  .print-offer-view .cost-overview-print .h-12,
+  .print-offer-view .cost-overview-print input,
+  .print-offer-view .cost-overview-print select,
+  .print-offer-view .cost-overview-print textarea {
+    height: 9mm !important;
+    min-height: 9mm !important;
+    max-height: 9mm !important;
+    font-size: 11px !important;
+    line-height: 9mm !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .print-offer-view .cost-overview-print .mt-3,
+  .print-offer-view .cost-overview-print .mt-4,
+  .print-offer-view .cost-overview-print .pt-4 {
+    margin-top: 2mm !important;
+    padding-top: 2mm !important;
+  }
+  .print-offer-view .cost-overview-print button {
+    display: none !important;
+  }
+  .print-offer-view .cost-overview-print .grid.grid-cols-1,
+  .print-offer-view .cost-overview-print .md\:grid-cols-5 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 2fr !important;
+    gap: 3mm !important;
+    align-items: end !important;
+  }
+  .print-offer-view .cost-overview-print p,
+  .print-offer-view .cost-overview-print .text-\[10px\] {
+    font-size: 6px !important;
+    line-height: 1.05 !important;
+  }
+
+  /* Diese Screen-Zusatzboxen dürfen die Kosten nicht nach unten drücken */
+  .print-offer-view .print-hide-kosten,
+  .print-offer-view .print-hide-fusion {
+    display: none !important;
+  }
+}
+</style>
+
 </head>
 <body>
     <div id="root"></div>
@@ -6430,7 +6671,7 @@ const resolveUserName = (raw) => {
         const OfferValidityModal = ({ isOpen, value, onValueChange, onCancel, onConfirm }) => {
             if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+                <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
                         <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -7668,6 +7909,37 @@ const handleFinishOfferClick = () => {
                     _arc.push({id:'ps_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),ts:Date.now(),offerNr:_nr,user:_slug||(textData&&textData.AgentName)||LINK_EMPLOYEE||'–',result:computedResult,beratungsId:beratungsId||'',customerName:(textData&&textData.Kundenname)||'',fields:{Agent:(textData&&textData.AgentName)||LINK_EMPLOYEE||'',Datum:(textData&&textData.DateValue)||'',Kundenname:(textData&&textData.Kundenname)||''}});
                     localStorage.setItem('ps_admin_archive',JSON.stringify(_arc));
                 } catch(e) {}
+
+                // Papier-Unterschrift: Angebotsgültigkeit VOR dem Freunde-werben-Popup abfragen,
+                // damit der Papierdruck direkt startet und nicht erst nach "Vorgang ohne Reset beenden".
+                if (!isRealDigitalSig) {
+                    const needsValidityBeforeReferral = (() => {
+                        try {
+                            const keys = ['offer1','offer2','offer3'];
+                            const nonEmpty = keys.filter(k => {
+                                const hasText = !!String(getDisplayText(k) || '').trim();
+                                const hasInk = !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length);
+                                const hasImg = !!(canvasImages && canvasImages[k]);
+                                const hasHtml = !!(k === 'offer1' ? window.__canvasHtmlOffer1 : k === 'offer2' ? window.__canvasHtmlOffer2 : window.__canvasHtmlOffer3);
+                                return hasText || hasInk || hasImg || hasHtml;
+                            });
+                            const hasOpen = nonEmpty.some(k => (canvasStatus && canvasStatus[k]) === 'open');
+                            const hasValidityText = !!String(getDisplayText('OfferValidUntil') || '').trim();
+                            const hasValidityInk = !!(drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
+                            return hasOpen && !hasValidityText && !hasValidityInk;
+                        } catch(e) { return false; }
+                    })();
+
+                    if (needsValidityBeforeReferral) {
+                        pendingPrintRef.current = () => {
+                            try { ensurePrintHeaders(); } catch(e) {}
+                            try { safePrint(); } catch(e) { try { window.print(); } catch(_e) {} }
+                            setTimeout(() => setShowReferralModal(true), 700);
+                        };
+                        setTimeout(() => setShowValidityModal(true), 300);
+                        return;
+                    }
+                }
 
                 setTimeout(() => setShowReferralModal(true), 300);
             };
