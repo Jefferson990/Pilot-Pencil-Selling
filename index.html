@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pencil Tool">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Vertriebs-Dashboard – Telekom Edition</title>
+    <title>Vertriebs-Dashboard – o2 Edition</title>
     
     <!-- ===== DEVICE DETECTION ===== -->
     <script>
@@ -34,19 +34,28 @@
     </script>
 
     <!-- 1. Tailwind CSS -->
+    <!-- Performance: CDN preconnect + preload critical scripts -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://www.gstatic.com">
+    <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin>
+    <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin>
+    <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Firebase für Aktionsmappe-Verknüpfung -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js" defer></script>
     
     <!-- 2. React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
     
     <!-- 3. Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js" defer></script>
 
 <style>
         /* Global Visual Boost */
@@ -201,10 +210,16 @@
             min-height: 100px !important;
         }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+        /* Seite 2: größerer Scrollbar auf offer-Containern */
+        .offer-scroll-area::-webkit-scrollbar { width: 14px !important; height: 14px !important; }
+        .offer-scroll-area::-webkit-scrollbar-track { background: #e2e8f0 !important; border-radius: 7px !important; }
+        .offer-scroll-area::-webkit-scrollbar-thumb { background-color: #64748b !important; border-radius: 7px !important; border: 3px solid #e2e8f0 !important; min-height: 60px; }
+        .offer-scroll-area::-webkit-scrollbar-thumb:hover { background-color: #334155 !important; }
+        .offer-scroll-area { scrollbar-width: auto !important; scrollbar-color: #64748b #e2e8f0 !important; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 5px; border: 2px solid #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #64748b; }
         
         /* === SIT-ASIDE-PANEL: auf kleinen Screens ausblenden, ab md (768px) anzeigen, im Print IMMER sichtbar === */
         .sit-aside-panel {
@@ -295,8 +310,10 @@ html, body, #root{
         scrollbar-width: thin !important;
         scrollbar-color: #cbd5e1 transparent !important;
     }
-    .sit-aside-panel::-webkit-scrollbar { width: 3px !important; }
-    .sit-aside-panel::-webkit-scrollbar-thumb { background: #cbd5e1 !important; border-radius: 99px !important; }
+    .sit-aside-panel::-webkit-scrollbar { width: 8px !important; }
+    .sit-aside-panel::-webkit-scrollbar-track { background: #f1f5f9 !important; border-radius: 4px !important; }
+    .sit-aside-panel::-webkit-scrollbar-thumb { background: #94a3b8 !important; border-radius: 4px !important; border: 2px solid #f1f5f9 !important; }
+    .sit-aside-panel::-webkit-scrollbar-thumb:hover { background: #64748b !important; }
 }
 
 /* === FULLSCREEN/ROTATE: prevent canvas distortion === */
@@ -1647,23 +1664,23 @@ body.pdf-share-mode .share-page:last-child{
   min-height:200px;
   border-radius:22px;
   padding:28px;
-  background: linear-gradient(135deg,#0b1e42 0%,#1e3a5f 60%,#0369a1 100%);
+  background: linear-gradient(135deg,#1e40af 0%,#2563eb 55%,#3b82f6 100%);
   color:#fff;
   overflow:hidden;
 }
 .share-cover-inner{max-width:980px;margin:0 auto;text-align:center;}
 .share-cover-badge{font-weight:900;font-size:11px;letter-spacing:0.45em;color:rgba(255,255,255,0.70);margin-top:10px;}
 .share-cover-title{font-weight:1000;font-size:78px;line-height:0.92;letter-spacing:-0.04em;margin-top:18px;}
-.share-cover-title-accent{color:#E20074;}
+.share-cover-title-accent{color:#ffffff;}
 .share-cover-date{margin-top:14px;font-weight:900;letter-spacing:0.25em;font-size:13px;color:rgba(255,255,255,0.80);}
 .share-cover-card{margin:34px auto 0 auto;max-width:760px;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:28px;padding:26px;position:relative;}
-.share-cover-chip{position:absolute;left:50%;top:-14px;transform:translateX(-50%);background:#E20074;color:#fff;padding:6px 16px;border-radius:999px;font-weight:900;font-size:10px;letter-spacing:0.18em;}
+.share-cover-chip{position:absolute;left:50%;top:-14px;transform:translateX(-50%);background:#003CA6;color:#fff;padding:6px 16px;border-radius:999px;font-weight:900;font-size:10px;letter-spacing:0.18em;}
 .share-cover-shop-name{font-size:26px;font-weight:1000;letter-spacing:-0.02em;}
 .share-cover-shop-addr{margin-top:6px;color:rgba(255,255,255,0.82);font-weight:600;font-size:13px;}
 
 .share-outro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1060px;margin:0 auto;}
 .share-outro-card{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:14px;text-align:center;}
-.share-outro-card-focus{border-color:rgba(226,0,116,0.55);background:rgba(255,255,255,0.12);transform:scale(1.02);}
+.share-outro-card-focus{border-color:rgba(0,60,166,0.55);background:rgba(255,255,255,0.12);transform:scale(1.02);}
 .share-outro-icon{width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 14px auto;font-weight:1000;}
 .share-outro-h{font-size:18px;font-weight:1000;letter-spacing:-0.02em;}
 .share-outro-p{margin-top:8px;font-size:11px;color:rgba(255,255,255,0.80);line-height:1.35;}
@@ -1671,7 +1688,7 @@ body.pdf-share-mode .share-page:last-child{
 .share-outro-qr{margin:8px auto 6px auto;width:110px;height:110px;background:#fff;border-radius:14px;padding:8px;box-shadow:0 8px 20px rgba(0,0,0,0.25);}
 .share-outro-qr img{width:100%;height:100%;object-fit:contain;display:block;}
 .share-outro-link{font-size:9px;word-break:break-all;color:rgba(255,255,255,0.65);margin-top:6px;font-weight:800;}
-.share-outro-amount{margin-top:6px;font-size:44px;font-weight:1000;color:#E20074;}
+.share-outro-amount{margin-top:6px;font-size:44px;font-weight:1000;color:#ffffff;}
 .share-outro-voucher{margin-top:10px;padding:12px 10px;border:2px dashed rgba(255,255,255,0.35);border-radius:18px;font-family:monospace;font-size:16px;font-weight:1000;background:rgba(0,0,0,0.18);letter-spacing:0.12em;}
 /* ===== MANUELLER SHARE OFFSET (FINAL) ===== */
 :root{
@@ -2917,6 +2934,29 @@ html.device-android-tablet .sit-aside-panel {
 </head>
 <body>
     <div id="root"></div>
+    <div id="app-loading" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f8fafc;gap:16px;font-family:system-ui,sans-serif;">
+        <div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        <span style="font-size:13px;font-weight:700;color:#64748b;letter-spacing:0.04em">Wird geladen…</span>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>
+    <script>
+        // Hide loading screen once React has rendered
+        (function() {
+            var attempts = 0;
+            function tryHide() {
+                var root = document.getElementById('root');
+                var loader = document.getElementById('app-loading');
+                if (loader && root && root.children.length > 0) {
+                    loader.style.opacity = '0';
+                    loader.style.transition = 'opacity 0.3s';
+                    setTimeout(function(){ if(loader) loader.remove(); }, 350);
+                } else if (attempts++ < 100) {
+                    setTimeout(tryHide, 100);
+                }
+            }
+            tryHide();
+        })();
+    </script>
 
     <script type="text/babel">
         // === LOGO: global setzen VOR React ===
@@ -3794,7 +3834,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
           const toggleTier=(i)=>{const newT=[...tiers];newT[i].on=!newT[i].on;setTiers(newT);};
           const updateAct=(k,delta)=>{setActivities(prev=>prev.map(a=>a.k===k?{...a,n:Math.max(0,a.n+delta)}:a));};
           const addCustomTier=()=>{const val=parseInt(customDl);if(!isNaN(val)&&val>0){const newTier={dl:val,ul:Math.round(val/5),on:true};if(!tiers.find(t=>t.dl===val))setTiers(prev=>[...prev,newTier].sort((a,b)=>a.dl-b.dl));setCustomDl('');}};
-          const handleCopy=()=>{const recText=`${rec?.dl}/${rec?.ul} MBit/s`;copyToClipboard(`Empfehlung: ${recText}`);if(typeof onRecommendation==='function'){onRecommendation(recText);}triggerToast('Speed-Empfehlung kopiert!');};
+          const handleCopy=()=>{const recText=`${rec?.dl}/${rec?.ul} MBit/s`;copyToClipboard(`Empfehlung: ${recText}`);if(typeof onRecommendation==='function'){onRecommendation(recText);}triggerToast('Speed-Empfehlung kopiert!');if(typeof onClose==='function'){onClose();}};
           const speedPct=Math.max(0,Math.min(100,gaugePct));
           const totalAct=activities.reduce((s,a)=>s+a.n,0);
           if(!isOpen)return null;
@@ -5676,10 +5716,10 @@ const highResHTML = buildHighResBundleHTML(d);
         const StatsModal = ({ isOpen, onClose }) => {
 const resolveUserName = (raw) => {
                 const s = (raw == null) ? '' : String(raw).trim();
-                if (!s) return 'D. Da Silva';
+                if (!s) return 'Birsen Özcan';
                 const low = s.toLowerCase();
                 
-                if (s === 'Max Mustermann' || low === 'unknown') return 'D. Da Silva';
+                if (s === 'Max Mustermann' || low === 'unknown') return 'Birsen Özcan';
                 return s;
             };
 
@@ -6450,7 +6490,7 @@ function App() {
                 try { return decodeURIComponent(String(__mRaw).replace(/\+/g, ' ')).trim(); } catch(e) { return String(__mRaw).trim(); }
             })();
             // Sanitizer (nur "harmlos" erlauben)
-            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || 'D. Da Silva';
+            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || 'Birsen Özcan';
             // Optional: global sichtbar (für Debug/Exports)
             try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
             // PATCH (Stylus Year-2 Costs): When the 2nd-year cost field becomes visible, force a DPR-correct resize
@@ -6715,7 +6755,7 @@ const handleOpenStats = () => { setShowStats(true); };
             const [textSize, setTextSize] = useState('medium'); 
             const [textStyle, setTextStyle] = useState({ bold: false, italic: false });
             const [textData, setTextData] = useState({ 
-                AgentName: (LINK_EMPLOYEE || 'D. Da Silva'), 
+                AgentName: (LINK_EMPLOYEE || 'Birsen Özcan'), 
                 DateValue: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
                 OfferValidUntil: '', 
                 offer1: '', 
@@ -6725,6 +6765,8 @@ const handleOpenStats = () => { setShowStats(true); };
             const [emailText, setEmailText] = useState('');
             const [emailMode, setEmailMode] = useState('keyboard'); 
             const [beratungsIdMode, setBeratungsIdMode] = useState('keyboard');
+            const [showNumpad, setShowNumpad] = useState(false);
+            const [scrollMode, setScrollMode] = useState(false);
             const [notesMode, setNotesMode] = useState('keyboard');
 
             const [showWlanModal, setShowWlanModal] = useState(false);
@@ -6893,8 +6935,8 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
 
             
             const [customerSignature, setCustomerSignature] = useState(null);
-            const SHOP_STAMP_TEXT = "Telekom Shop Crailsheim";
-            const SHOP_STAMP_QR = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('https://telekom-partner-crailsheim.de/')}&color=000000&bgcolor=ffffff&margin=1`;
+            const SHOP_STAMP_TEXT = "o2 Shop Aalen";
+            const SHOP_STAMP_QR = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('https://www.google.com/search?hl=de-DE&gl=de&q=o2+Shop,+N%C3%B6rdlicher+Stadtgraben+6,+73430+Aalen&ludocid=4324091216711915803&lsig=AB86z5X0AwWKxq2sT1xY0AQEbR3v#lrd=0x47991b873100b771:0x3c02420d3480191b,3')}&color=003CA6&bgcolor=ffffff&margin=1`;
  
             
             const [imageTransform, setImageTransform] = useState({ 
@@ -7264,11 +7306,22 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             // Swipe-down-Erkennung für Apple (iPad/iPhone) → Fullscreen beenden
             useEffect(() => {
                 let touchStartY = 0;
-                const onTouchStart = (e) => { touchStartY = e.touches[0].clientY; };
+                let touchStartFingers = 0;
+                const onTouchStart = (e) => {
+                    touchStartFingers = e.touches.length;
+                    // Nur Einzelfinger-Geste und nur wenn Start am oberen Rand (< 40px)
+                    if (e.touches.length === 1) {
+                        touchStartY = e.touches[0].clientY;
+                    } else {
+                        touchStartY = -9999; // Multi-Touch → nie triggern
+                    }
+                };
                 const onTouchEnd = (e) => {
+                    // Mehrere Finger (z.B. 2-Finger-Scrollen) → NIEMALS Fullscreen beenden
+                    if (touchStartFingers > 1 || e.changedTouches.length > 1) return;
                     const dy = e.changedTouches[0].clientY - touchStartY;
-                    // Swipe nach unten > 80px → Fullscreen beenden
-                    if (dy > 80 && document.fullscreenElement) {
+                    // Nur Swipe nach unten > 80px UND Start war am oberen Bildschirmrand → Fullscreen beenden
+                    if (dy > 80 && touchStartY < 60 && document.fullscreenElement) {
                         userExitingFullscreenRef.current = true;
                         (document.exitFullscreen || document.webkitExitFullscreen || (()=>{})).call(document);
                     }
@@ -7470,9 +7523,9 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             
             const getAgentDisplayNameForUpload = () => {
                 const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                if (!raw) return 'D. Da Silva';
+                if (!raw) return 'Birsen Özcan';
                 
-                if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
+                if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Birsen Özcan';
                 return raw;
             };
             const getDslFlagForUpload = () => {
@@ -7537,8 +7590,8 @@ const handleFinishOfferClick = () => {
                         ts: new Date().toISOString(),
                         user: (() => {
                             const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                            if (!raw) return 'D. Da Silva';
-                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
+                            if (!raw) return 'Birsen Özcan';
+                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Birsen Özcan';
                             return raw;
                         })(),
                         shop: 'Telekom',
@@ -7598,8 +7651,8 @@ const handleFinishOfferClick = () => {
                         ts: new Date().toISOString(),
                         user: (() => {
                             const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                            if (!raw) return 'D. Da Silva';
-                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'D. Da Silva';
+                            if (!raw) return 'Birsen Özcan';
+                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Birsen Özcan';
                             return raw;
                         })(),
                         shop: 'Telekom',
@@ -8212,10 +8265,11 @@ const renderPenToolButtons = () => (
     <div className="relative pen-tool-picker-host">
       <button
         onClick={handlePenButtonClick}
-        className={`p-2 rounded-md ${isPenMode(tool) ? getPenBtnStyle() : 'text-slate-400 hover:bg-slate-50'}`}
+        className={`px-1.5 py-1 rounded-md flex flex-col items-center gap-0 min-w-[34px] transition-colors ${isPenMode(tool) ? getPenBtnStyle() : 'text-slate-400 hover:bg-slate-50'}`}
         title="Stift (Doppeltipp = Auswahl)"
       >
-        <Icon d={tool === 'fountain' ? ICONS.Fountain : tool === 'ballpen' ? ICONS.Ballpen : ICONS.Pen} size={16} />
+        <Icon d={tool === 'fountain' ? ICONS.Fountain : tool === 'ballpen' ? ICONS.Ballpen : ICONS.Pen} size={14} />
+        <span style={{fontSize:'7px',fontWeight:800,lineHeight:1,marginTop:'1px'}}>{tool==='fountain'?'Füller':tool==='ballpen'?'Kugel':'Stift'}</span>
       </button>
       {showPenToolPicker && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-3 gap-2 w-[220px] z-[120]">
@@ -8235,11 +8289,11 @@ const renderPenToolButtons = () => (
     <div className="relative">
       <button
         onClick={() => setShowStrokePicker(v => !v)}
-        className={`p-2 rounded-md flex flex-col items-center gap-0.5 transition-colors ${showStrokePicker ? 'bg-slate-100' : 'text-slate-400 hover:bg-slate-50'}`}
+        className={`px-1.5 py-1 rounded-md flex flex-col items-center gap-0 min-w-[34px] transition-colors ${showStrokePicker ? 'bg-slate-100' : 'text-slate-400 hover:bg-slate-50'}`}
         title="Stiftdicke wählen"
       >
-        <div style={{width: strokeWidth === 2 ? 2 : strokeWidth === 4 ? 4 : 7, height: strokeWidth === 2 ? 2 : strokeWidth === 4 ? 4 : 7, background:'currentColor', borderRadius:'50%', margin:'3px auto'}}/>
-        <span style={{fontSize:'8px',fontWeight:800,color:'inherit'}}>{strokeWidth===2?'D':strokeWidth===4?'M':'G'}</span>
+        <div style={{width: strokeWidth === 2 ? 8 : strokeWidth === 4 ? 12 : 14, height: strokeWidth === 2 ? 2 : strokeWidth === 4 ? 3 : 4, background:'currentColor', borderRadius:'2px', margin:'3px auto'}}/>
+        <span style={{fontSize:'7px',fontWeight:800,lineHeight:1,marginTop:'2px'}}>{strokeWidth===2?'Dünn':strokeWidth===4?'Mittel':'Dick'}</span>
       </button>
       {showStrokePicker && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 z-[120]" style={{width:'160px'}}>
@@ -8259,8 +8313,9 @@ const renderPenToolButtons = () => (
 
     {otherTools.map(t => (
       <button key={t.id} onClick={() => { setTool(t.id); setShowPenToolPicker(false); setShowStrokePicker(false); }}
-        className={`p-2 rounded-md ${tool === t.id ? t.c : 'text-slate-400 hover:bg-slate-50'}`} title={t.title}>
-        <Icon d={t.Icon} size={16} />
+        className={`px-1.5 py-1 rounded-md flex flex-col items-center gap-0 min-w-[34px] transition-colors ${tool === t.id ? t.c : 'text-slate-400 hover:bg-slate-50'}`} title={t.title}>
+        <Icon d={t.Icon} size={14} />
+        <span style={{fontSize:'7px',fontWeight:800,lineHeight:1,marginTop:'1px',whiteSpace:'nowrap'}}>{t.id==='highlighter'?'Marker':'Radierer'}</span>
       </button>
     ))}
   </>
@@ -8797,10 +8852,10 @@ const yy = String(now.getFullYear()).slice(-2);
 const mm = pad2(now.getMonth()+1);
 const dd = pad2(now.getDate());
 const shareDateDisplay = now.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
-const voucherCode = `CRA-TK-${yy}/${mm}/${dd}`;
+const voucherCode = `AAL-O2-${yy}/${mm}/${dd}`;
 
 // Simple QR (remote) – falls offline/blocked, bleibt das Feld leer, Textlink bleibt sichtbar
-const qrUrl = (data, color='E20074') => `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(data)}&color=${color}&bgcolor=ffffff&margin=1`;
+const qrUrl = (data, color='003CA6') => `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(data)}&color=${color}&bgcolor=ffffff&margin=1`;
 
 const makeCoverContent = () => {
     const wrap = doc.createElement('div');
@@ -8815,10 +8870,10 @@ const makeCoverContent = () => {
         <div class="share-cover-date">VOM ${shareDateDisplay}</div>
 
         <div class="share-cover-card">
-          <div class="share-cover-chip">CRAILSHEIM</div>
+          <div class="share-cover-chip">AALEN</div>
           <div class="share-cover-shop">
-            <div class="share-cover-shop-name">Telekom Shop Crailsheim</div>
-            <div class="share-cover-shop-addr">Schillerstr. 6, 74564 Crailsheim</div>
+            <div class="share-cover-shop-name">o2 Shop Aalen</div>
+            <div class="share-cover-shop-addr">Nördlicher Stadtgraben 6, 73430 Aalen</div>
           </div>
         </div>
       </div>
@@ -8829,8 +8884,8 @@ const makeCoverContent = () => {
 const makeOutroContent = () => {
     const wrap = doc.createElement('div');
     wrap.className = 'share-outro';
-    const googleReviewUrl = (window.GOOGLE_REVIEW_URL || 'https://telekom-partner-crailsheim.de/');
-    const instagramUrl = (window.INSTAGRAM_URL || 'https://www.instagram.com/telekom_shop_crailsheim/');
+    const googleReviewUrl = (window.GOOGLE_REVIEW_URL || 'https://www.google.com/search?hl=de-DE&gl=de&q=o2+Shop,+N%C3%B6rdlicher+Stadtgraben+6,+73430+Aalen&ludocid=4324091216711915803&lsig=AB86z5X0AwWKxq2sT1xY0AQEbR3v#lrd=0x47991b873100b771:0x3c02420d3480191b,3');
+    const instagramUrl = (window.INSTAGRAM_URL || 'https://www.instagram.com/o2shop_aalen/');
     wrap.innerHTML = `
       <div class="share-outro-grid">
         <div class="share-outro-card">
@@ -8838,7 +8893,7 @@ const makeOutroContent = () => {
           <div class="share-outro-h">Kurzes Feedback?</div>
           <div class="share-outro-p">Zufrieden mit der Beratung?<br/>Wir freuen uns über 5 Sterne!</div>
           <div class="share-outro-qr">
-            <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${qrUrl(googleReviewUrl,'E20074')}" alt="QR Google" />
+            <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${qrUrl(googleReviewUrl,'003CA6')}" alt="QR Google" />
           </div>
           <div class="share-outro-link">${googleReviewUrl}</div>
         </div>
@@ -8855,11 +8910,11 @@ const makeOutroContent = () => {
         <div class="share-outro-card">
           <div class="share-outro-icon">⌁</div>
           <div class="share-outro-h">Folgen & Sparen</div>
-          <div class="share-outro-p">News, Aktionen und Deals<br/>direkt aus Crailsheim.</div>
+          <div class="share-outro-p">News, Aktionen und Deals<br/>direkt aus Aalen.</div>
           <div class="share-outro-qr">
             <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${qrUrl(instagramUrl,'bc1888')}" alt="QR Insta" />
           </div>
-          <div class="share-outro-link">@telekom_shop_crailsheim</div>
+          <div class="share-outro-link">@o2shop_aalen</div>
           <div class="share-outro-link">${instagramUrl}</div>
         </div>
       </div>
@@ -9186,7 +9241,7 @@ try {
 
 const opt = {
         margin: 0,
-        filename: `Angebot_Telekom_${new Date().toISOString().split('T')[0]}.pdf`,
+        filename: `Angebot_o2_${new Date().toISOString().split('T')[0]}.pdf`,
         pagebreak: { mode: ['css', 'legacy'] },
         image: { type: 'jpeg', quality: 0.82 },
         html2canvas: {
@@ -9385,8 +9440,8 @@ const opt = {
                         /* Cover/Outro Gradient als "echte" Fläche erzwingen */
                         body.pdf-share-mode .share-cover,
                         body.pdf-share-mode .share-outro{
-                            background: linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 60%,#3a3a3a 100%) !important;
-                            background-color:#1a1a1a !important;
+                            background: linear-gradient(135deg,#1e40af 0%,#2563eb 55%,#3b82f6 100%) !important;
+                            background-color:#1e40af !important;
                         }
                     `;
                     clonedDoc.head.appendChild(style);
@@ -9680,7 +9735,7 @@ const handlePDFShare = async () => {
                 await navigator.share({
                     files: [file],
                     title: filename,
-                    text: 'Ihr persönliches Angebot vom Telekom Shop Crailsheim'
+                    text: 'Ihr persönliches Angebot vom o2 Shop Aalen'
                 });
                 // Nutzer hat geteilt – fertig, nichts weiter nötig.
             } catch (shareErr) {
@@ -10012,17 +10067,61 @@ const handlePDFShare = async () => {
                     {view === 'offer' && (
                         <div style={{display:'flex',alignItems:'center',gap:'5px',flexShrink:0,marginRight:'4px'}}>
                             <span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Beratungs-ID</span>
-                            <div style={{position:'relative',height:'32px',width:beratungsIdMode==='pen'?'220px':'150px',border:`1.5px solid ${beratungsIdMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'width 0.2s ease'}}>
-                                {beratungsIdMode==='keyboard'
-                                    ?<input type="text" inputMode="numeric" maxLength={15} value={beratungsId} onChange={e=>setBeratungsId(e.target.value.replace(/\D/g,'').slice(0,15))} placeholder="000000000000000" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 10px',fontSize:'11px',fontWeight:700,fontFamily:'monospace',letterSpacing:'0.08em',color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>
-                                    :<canvas ref={beratungsIdCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={e=>startDrawing(e,beratungsIdCanvasRef,'beratungs_id')} onPointerMove={e=>draw(e,beratungsIdCanvasRef,'beratungs_id')} onPointerUp={e=>stopDrawing(e,beratungsIdCanvasRef)} onPointerLeave={e=>stopDrawing(e,beratungsIdCanvasRef)}/>
-                                }
+                            <div
+                                onClick={()=>setShowNumpad(true)}
+                                style={{position:'relative',height:'32px',width:'160px',border:`1.5px solid ${beratungsId?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',cursor:'pointer',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
+                                <span style={{fontFamily:'monospace',fontSize:'11px',fontWeight:700,letterSpacing:'0.08em',color:beratungsId?'#1e293b':'#cbd5e1'}}>
+                                    {beratungsId||'– – – – –'}
+                                </span>
+                                {beratungsId && (
+                                    <button
+                                        onClick={e=>{e.stopPropagation();setBeratungsId('');}}
+                                        style={{position:'absolute',right:'4px',top:'50%',transform:'translateY(-50%)',width:'18px',height:'18px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#64748b',lineHeight:1}}>✕</button>
+                                )}
                             </div>
-                            <div style={{display:'flex',gap:'2px'}}>
-                                {[['keyboard','⌨'],['pen','✏']].map(([m,ic])=>(
-                                    <button key={m} onClick={()=>setBeratungsIdMode(m)} style={{width:'24px',height:'32px',borderRadius:'6px',fontSize:'11px',border:`1.5px solid ${beratungsIdMode===m?'#3b82f6':'#e2e8f0'}`,background:beratungsIdMode===m?'#eff6ff':'#f8fafc',color:beratungsIdMode===m?'#2563eb':'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>{ic}</button>
-                                ))}
-                                {beratungsIdMode==='pen'&&<button onClick={()=>{const c=beratungsIdCanvasRef.current;if(c){c.getContext('2d').clearRect(0,0,c.width,c.height);}setDrawnStrokes(p=>({...p,beratungs_id:[]}));}} style={{width:'24px',height:'32px',borderRadius:'6px',fontSize:'11px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>}
+                        </div>
+                    )}
+                    {/* Numpad für Beratungs-ID — hell, zentriert, mit safe-area */}
+                    {showNumpad && (
+                        <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.35)',padding:'16px'}} onClick={()=>setShowNumpad(false)}>
+                            <div onClick={e=>e.stopPropagation()} style={{background:'#f8fafc',border:'1.5px solid #e2e8f0',borderRadius:'20px',padding:'20px',width:'100%',maxWidth:'320px',boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+                                {/* Header */}
+                                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'14px'}}>
+                                    <span style={{fontSize:'12px',fontWeight:800,color:'#1e293b',letterSpacing:'0.04em'}}>Beratungs-ID</span>
+                                    <button onClick={()=>setShowNumpad(false)} style={{width:'26px',height:'26px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',fontSize:'13px',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900}}>✕</button>
+                                </div>
+                                {/* Display */}
+                                <div style={{background:'#fff',border:'1.5px solid #e2e8f0',borderRadius:'12px',padding:'10px 14px',marginBottom:'14px',textAlign:'center',minHeight:'44px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                    <span style={{fontFamily:'monospace',fontSize:'22px',fontWeight:800,color:beratungsId?'#1e293b':'#cbd5e1',letterSpacing:'0.12em'}}>
+                                        {beratungsId||'– – –'}
+                                    </span>
+                                </div>
+                                {/* Numpad Grid */}
+                                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'8px'}}>
+                                    {['1','2','3','4','5','6','7','8','9','⌫','0','✓'].map(k=>(
+                                        <button key={k} onClick={()=>{
+                                            if(k==='✓'){setShowNumpad(false);}
+                                            else if(k==='⌫'){setBeratungsId(p=>p.slice(0,-1));}
+                                            else if(beratungsId.length<15){setBeratungsId(p=>p+k);}
+                                        }} style={{
+                                            padding:'14px 0',
+                                            borderRadius:'12px',
+                                            fontSize:'20px',
+                                            fontWeight:800,
+                                            border:'1.5px solid',
+                                            cursor:'pointer',
+                                            transition:'all 0.1s',
+                                            WebkitTapHighlightColor:'transparent',
+                                            background: k==='✓'?'#22c55e': k==='⌫'?'#fef2f2':'#ffffff',
+                                            borderColor: k==='✓'?'#16a34a': k==='⌫'?'#fecaca':'#e2e8f0',
+                                            color: k==='✓'?'#ffffff': k==='⌫'?'#ef4444':'#1e293b',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+                                        }}
+                                        onPointerDown={e=>{e.currentTarget.style.transform='scale(0.92)';e.currentTarget.style.background=k==='✓'?'#16a34a':k==='⌫'?'#fee2e2':'#f1f5f9';}}
+                                        onPointerUp={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.background=k==='✓'?'#22c55e':k==='⌫'?'#fef2f2':'#ffffff';}}
+                                        >{k}</button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -10073,7 +10172,7 @@ const handlePDFShare = async () => {
                                         return (<div className="sit-progress-bar" style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}><div style={{flex:1,height:'8px',background:'#e2e8f0',borderRadius:'999px',overflow:'hidden',minWidth:80}}><div style={{width:pct+'%',height:'100%',background:pct===100?'#16a34a':'#2563eb',borderRadius:'999px',transition:'width 0.5s ease'}}/></div><span style={{fontSize:'11px',fontWeight:800,color:pct===100?'#16a34a':'#94a3b8',flexShrink:0}}>{pct===100?'✓ Vollständig':filled+'/'+SITUATION_ITEMS.length+' Felder'}</span></div>);
                                     })()}
                                     {/* Grid — IMMER im DOM (auch für Druck wenn Step aktiv) */}
-                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'start',gridTemplateRows:'repeat(5, minmax(200px, 1fr))',overflowY:'auto',visibility:sitLayoutMode==='step'?'hidden':'visible',pointerEvents:sitLayoutMode==='step'?'none':'auto',paddingBottom:'64px'}}>
+                                    <div className="custom-scrollbar sit-card-grid" style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',alignContent:'start',gridTemplateRows:'repeat(5, minmax(200px, 1fr))',overflowY:'auto',visibility:sitLayoutMode==='step'?'hidden':'visible',pointerEvents:sitLayoutMode==='step'?'none':'auto',paddingBottom:'64px',touchAction:scrollMode?'pan-y':'none'}}>
                                         {SITUATION_ITEMS.map((item) => {
                                             const sitKey = `sit_${item.id.replace(/\s+/g,'')}`;
                                             const sitRefMap = {Kundenname:sitCanvasRef_Kundenname,Rufnummer:sitCanvasRef_Rufnummer,Anbieter:sitCanvasRef_Anbieter,Hardware:sitCanvasRef_Hardware,Nutzung:sitCanvasRef_Nutzung,Haushalt:sitCanvasRef_Haushalt,'Weitere Produkte':sitCanvasRef_WeitereProdukte,Fernsehen:sitCanvasRef_Fernsehen,WiFi:sitCanvasRef_WiFi,Gesamtkosten:sitCanvasRef_Gesamtkosten};
@@ -10116,7 +10215,7 @@ const handlePDFShare = async () => {
     }
   }}
   style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'24px':textSize==='large'?'44px':'32px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} placeholder="" readOnly={inputMode==='pen'}/>
-                                                        <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen')?'auto':'none',touchAction:'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
+                                                        <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen'&&!scrollMode)?'auto':'none',touchAction:scrollMode?'pan-y':'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
                                                     </div>
                                                 </div>
                                             );
@@ -10422,8 +10521,8 @@ const handlePDFShare = async () => {
                                 </div>
                                 <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'4px'}}>
                                     {[
-                                        {label:'Roaming Check',icon:ICONS.Globe,accentCol:'#8b5cf6',onClick:()=>setShowRoamingModal(true)},
                                         {label:'TV Kalkulation',icon:ICONS.Tv,accentCol:'#ec4899',onClick:()=>setShowTvModal(true)},
+                                        {label:'Roaming Check',icon:ICONS.Globe,accentCol:'#8b5cf6',onClick:()=>setShowRoamingModal(true)},
                                     ].map(btn=>(
                                         <button key={btn.label} onClick={btn.onClick}
                                             style={{width:'100%',display:'flex',alignItems:'center',gap:'9px',padding:'7px 10px',borderRadius:'9px',border:'1.5px solid #f1f5f9',background:'#fafafa',cursor:'pointer',transition:'all 0.15s',textAlign:'left'}}
@@ -10511,7 +10610,7 @@ const handlePDFShare = async () => {
                         </aside>
                     </div>
 
-                    <div className={`flex-1 w-full relative bg-[#f0f6ff] ${view === 'offer' ? 'flex overflow-y-auto' : 'hidden'} print-offer-view`}>
+                    <div className={`flex-1 w-full relative bg-[#f0f6ff] offer-scroll-area ${view === 'offer' ? 'flex overflow-y-auto' : 'hidden'} print-offer-view`}>
                         <div className="w-full offer-inner-wrapper flex flex-col space-y-6 p-4 md:p-8">
 
                             {/* Offer Schritt-Modus Tabs */}
@@ -10850,6 +10949,20 @@ const handlePDFShare = async () => {
                             })()}
 
 
+                            {/* Empfehlungen-Banner auf Seite 2 */}
+                            {(wlanRecommendation || speedRecommendation) && (
+                                <div style={{display:'flex',gap:'8px',flexWrap:'wrap',padding:'8px 12px',background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:'12px',marginBottom:'8px',alignItems:'center',flexShrink:0}}>
+                                    <span style={{fontSize:'10px',fontWeight:800,color:'#166534',textTransform:'uppercase',letterSpacing:'0.06em',flexShrink:0}}>✓ Empfehlungen:</span>
+                                    {wlanRecommendation && <span style={{display:'inline-flex',alignItems:'center',gap:'4px',padding:'3px 10px',background:'#dcfce7',border:'1px solid #86efac',borderRadius:'999px',fontSize:'11px',fontWeight:700,color:'#15803d'}}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                                        {wlanRecommendation}
+                                    </span>}
+                                    {speedRecommendation && <span style={{display:'inline-flex',alignItems:'center',gap:'4px',padding:'3px 10px',background:'#dcfce7',border:'1px solid #86efac',borderRadius:'999px',fontSize:'11px',fontWeight:700,color:'#15803d'}}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                        {speedRecommendation}
+                                    </span>}
+                                </div>
+                            )}
                             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl shrink-0 cost-overview-print"
                                 style={offerLayoutMode==='step' && currentOfferStep!==3 ? {display:'none'} : {}}>
                                 <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Icon d={ICONS.Calculator} size={20} className="text-blue-600"/> {getStaticLabel('CostHeader')}</h3>
@@ -10881,6 +10994,12 @@ const handlePDFShare = async () => {
                                         </span>
                                     </button>
                                 </div>
+                                {beratungsId && (
+                                    <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'6px 12px',background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:'10px',marginBottom:'8px',flexWrap:'wrap'}}>
+                                        <span style={{fontSize:'9px',fontWeight:800,color:'#1d4ed8',textTransform:'uppercase',letterSpacing:'0.08em',flexShrink:0}}>Beratungs-ID</span>
+                                        <span style={{fontFamily:'monospace',fontSize:'14px',fontWeight:900,color:'#1e293b',letterSpacing:'0.12em'}}>{beratungsId}</span>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">{renderOfferInput('agent', 'AgentLabel', 'text')}{renderOfferInput('datum', 'DateLabel', 'text')}{renderOfferInput('gueltig', 'ValidUntilLabel', 'date')}<div className="col-span-2">
   <div className="h-12 w-full bg-white border border-slate-300 rounded-lg overflow-hidden flex items-stretch">
     {/* Shop-Stempel (fix links) */}
@@ -11108,7 +11227,7 @@ const handlePDFShare = async () => {
 
 
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 justify-between shadow-sm footer-bar" style={{position:"fixed",bottom:0,left:0,right:0,width:"100%",zIndex:9000,boxSizing:"border-box"}}>
-                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
+                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => { setScrollMode(v=>!v); setInputMode('pen'); }} className={`p-2 rounded-md transition-colors flex flex-col items-center gap-0 ${scrollMode ? 'bg-amber-100 text-amber-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Scroll-Modus (Scrollen mit Finger)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9v7a3 3 0 0 0 6 0v-4.58l1.5 1.5 1.5-1.5V16a3 3 0 0 0 6 0V9c0-3.87-3.13-7-7-7z"/></svg><span style={{fontSize:'7px',fontWeight:800,lineHeight:1,marginTop:'1px'}}>{scrollMode?'AN':'AUS'}</span></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && !scrollMode && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => setShowSkipReasonModal(true)} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
                             <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
                         </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'highlighter') && (<div className="flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="w-px h-6 bg-slate-200 mx-1"></div><div className="relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
