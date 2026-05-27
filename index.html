@@ -1312,15 +1312,17 @@ html, body {
     /* ===== Share-PDF: Cover & Feedback vollflächig ===== */
     body.pdf-share-mode .share-cover,
     body.pdf-share-mode .share-outro{
-        width:1122px !important;
-        height:794px !important;
-        min-width:1122px !important;
-        max-width:1122px !important;
-        min-height:794px !important;
-        max-height:794px !important;
+        width:100% !important;
+        height:100% !important;
+        min-width:unset !important;
+        max-width:unset !important;
+        min-height:unset !important;
+        max-height:unset !important;
         margin:0 !important;
         page-break-after:always !important;
         overflow:hidden !important;
+        display:flex !important;
+        flex-direction:column !important;
     }
 
 
@@ -1719,8 +1721,8 @@ body.pdf-share-mode .share-page:last-child{
 .share-cover-shop-name{font-size:26px;font-weight:1000;letter-spacing:-0.02em;}
 .share-cover-shop-addr{margin-top:6px;color:rgba(255,255,255,0.82);font-weight:600;font-size:13px;}
 
-.share-outro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1060px;margin:0 auto;}
-.share-outro-card{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:14px;text-align:center;}
+.share-outro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1060px;margin:0 auto;flex:1 1 auto;min-height:0;align-content:stretch;}
+.share-outro-card{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:center;}
 .share-outro-card-focus{border-color:rgba(0,60,166,0.55);background:rgba(255,255,255,0.12);transform:scale(1.02);}
 .share-outro-icon{width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 14px auto;font-weight:1000;}
 .share-outro-h{font-size:18px;font-weight:1000;letter-spacing:-0.02em;}
@@ -2163,6 +2165,92 @@ body.pdf-share-mode .offer-toolbar-icons{ display:none !important; }
   .kosten-block, .kostenuebersicht, .kostenabschluss {
     margin-top: -200px !important;
   }
+}
+
+
+
+/* ===== FINAL PATCH Diego: Seite 2 Kosten breiter + Seite 3 Empfehlungen + TV aktiv grün ===== */
+.cost-overview-print .cost-grid-years{
+    grid-template-columns: 1.15fr 1.15fr 1.35fr !important;
+    gap: 10px !important;
+}
+.cost-overview-print .cost-grid-years > div{
+    min-width: 0 !important;
+}
+.cost-overview-print .cost-grid-years input,
+.cost-overview-print .cost-grid-years textarea{
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+}
+@media print{
+  .print-offer-view .cost-overview-print{
+      max-height: none !important;
+      padding: 2.4mm 3mm !important;
+  }
+  .print-offer-view .cost-grid-years{
+      grid-template-columns: 1.15fr 1.15fr 1.35fr !important;
+      gap: 2mm !important;
+  }
+  .print-offer-view .cost-overview-print input,
+  .print-offer-view .cost-overview-print textarea,
+  .print-offer-view .cost-overview-print select{
+      font-size: 14px !important;
+      height: 36px !important;
+      min-height: 36px !important;
+      line-height: 36px !important;
+  }
+  .print-offer-view .cost-overview-print label{
+      font-size: 7px !important;
+      white-space: nowrap !important;
+  }
+  .print-netzwerk-anlage .page3-rec-banner{
+      display:flex !important;
+  }
+}
+
+
+
+/* =====================================================
+   DIEGO FINAL PRINT LOGIK
+   AUS: klassische 2 Seiten. AN: Seite 2 nur Angebote,
+   Seite 3 Kostenübersicht + Empfehlungen/Netzwerk.
+   ===================================================== */
+@media print {
+  body:not(.print-recs-enabled) .print-netzwerk-anlage { display:none !important; }
+  body.print-recs-enabled .print-offer-view .cost-overview-print { display:none !important; }
+  body.print-recs-enabled .print-offer-view .page2-rec-banner { display:none !important; }
+  body.print-recs-enabled .print-offer-view .offer-canvas-container { min-height:650px !important; }
+  body.print-recs-enabled .print-offer-view .offer-inner-wrapper { height:210mm !important; max-height:210mm !important; overflow:hidden !important; }
+  body.print-recs-enabled .print-netzwerk-anlage {
+    display:block !important;
+    page-break-before:always !important;
+    break-before:page !important;
+    width:297mm !important;
+    min-height:210mm !important;
+    background:#f0f6ff !important;
+  }
+  body.print-recs-enabled .print-netzwerk-anlage .page3-cost-clone{
+    display:block !important;
+    margin:0 24px 12px !important;
+    padding:14px 18px !important;
+    box-shadow:none !important;
+    border-radius:14px !important;
+    background:#ffffff !important;
+    border:1px solid #e2e8f0 !important;
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+  body.print-recs-enabled .print-netzwerk-anlage .page3-cost-clone h3{ font-size:16px !important; margin-bottom:8px !important; }
+  body.print-recs-enabled .print-netzwerk-anlage .page3-cost-clone input,
+  body.print-recs-enabled .print-netzwerk-anlage .page3-cost-clone textarea,
+  body.print-recs-enabled .print-netzwerk-anlage .page3-cost-clone select{
+    height:32px !important; min-height:32px !important; font-size:12px !important; padding-top:4px !important; padding-bottom:4px !important;
+  }
+  body.print-recs-enabled .print-netzwerk-anlage .page3-cost-clone button{ display:none !important; }
+}
+@media screen {
+  .print-recs-toggle-btn{ box-shadow:0 10px 30px rgba(15,23,42,.18); }
 }
 
 </style>
@@ -3533,6 +3621,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 </svg>`;
         const HIDA_LOGO_DATA_URI = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(HIDA_LOGO_SVG);
         window.__HIDA_LOGO_DATA_URI = HIDA_LOGO_DATA_URI; // global für Print-Header
+        window.__HIDA_LOGO_SVG = HIDA_LOGO_SVG; // rohes SVG für direktes Einbetten im PDF-Iframe
 
 
         // --- 1. DATA CONFIG ---
@@ -3548,7 +3637,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             'Offer1Title': '1. Hardware, Anbieter & Nutzung', 
             'Offer2Title': '2. Haushalt und weitere Produkte', 
             'Offer3Title': '3. Fernsehen & Wi-Fi', 
-            'CostHeader': 'Kostenübersicht & Abschluss', 'CostEinmalig': 'EINMALIG (€)', 'CostMonatlich1': 'MONATLICH IM 1. JAHR (€)', 'CostMonatlich': 'MONATLICH (€)', 'CostMonatlich2': 'MONATLICH IM 2. JAHR (€)', 'AgentLabel': 'PERSÖNLICHER AGENT', 'DateLabel': 'DATUM', 'ValidUntilLabel': 'ANGEBOT GÜLTIG BIS', 'Kundenname_Label': 'Kundenname', 'Rufnummer_Label': 'Rufnummer', 'Anbieter_Label': 'Anbieter', 'Hardware_Label': 'Hardware', 'Nutzung_Label': 'Nutzung', 'Haushalt_Label': 'Haushalt', 'Weitere Produkte_Label': 'Weitere Produkte', 
+            'CostHeader': 'Kostenübersicht & Abschluss', 'CostEinmalig': 'EINMALIG (€)', 'CostMonatlich1': 'MONATLICH IM 1. JAHR (€)', 'CostMonatlich': 'MONATLICH (€)', 'CostMonatlich2': 'MONATLICH IM 2. JAHR (€)', 'CostSmartphone': 'SMARTPHONE FINANZIERUNG (€/MTL)', 'AgentLabel': 'PERSÖNLICHER AGENT', 'DateLabel': 'DATUM', 'ValidUntilLabel': 'ANGEBOT GÜLTIG BIS', 'Kundenname_Label': 'Kundenname', 'Rufnummer_Label': 'Rufnummer', 'Anbieter_Label': 'Anbieter', 'Hardware_Label': 'Hardware', 'Nutzung_Label': 'Nutzung', 'Haushalt_Label': 'Haushalt', 'Weitere Produkte_Label': 'Weitere Produkte', 
             'Fernsehen_Label': 'Fernsehen', 'WiFi_Label': 'WiFi', 'Gesamtkosten_Label': 'Gesamtkosten', 'StatusOpen': 'Offen', 'StatusClosed': 'Abgeschlossen', 'StatusNeutral': 'Neutral'
         };
         
@@ -3562,7 +3651,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Household & Other Products',
                 Offer3Title: '3. TV & Wi-Fi',
                 CostHeader: 'Cost Overview & Conclusion',
-                CostEinmalig: 'ONE-TIME (€)', CostMonatlich1: 'MONTHLY 1ST YEAR (€)', CostMonatlich: 'MONTHLY (€)', CostMonatlich2: 'MONTHLY 2ND YEAR (€)',
+                CostEinmalig: 'ONE-TIME (€)', CostMonatlich1: 'MONTHLY 1ST YEAR (€)', CostMonatlich: 'MONTHLY (€)', CostMonatlich2: 'MONTHLY 2ND YEAR (€)', CostSmartphone: 'SMARTPHONE FINANCING (€/MO)',
                 AgentLabel: 'PERSONAL AGENT', DateLabel: 'DATE', ValidUntilLabel: 'OFFER VALID UNTIL',
                 Kundenname_Label: 'Customer Name', Rufnummer_Label: 'Phone Number', Anbieter_Label: 'Provider',
                 Hardware_Label: 'Hardware', Nutzung_Label: 'Usage', Haushalt_Label: 'Household',
@@ -3574,7 +3663,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. المنزل والمنتجات الأخرى',
                 Offer3Title: '3. التلفزيون والواي فاي',
                 CostHeader: 'نظرة عامة على التكاليف والإغلاق',
-                CostEinmalig: 'مرة واحدة (€)', CostMonatlich1: 'شهريًا السنة الأولى (€)', CostMonatlich: 'شهريًا (€)', CostMonatlich2: 'شهريًا السنة الثانية (€)',
+                CostEinmalig: 'مرة واحدة (€)', CostMonatlich1: 'شهريًا السنة الأولى (€)', CostMonatlich: 'شهريًا (€)', CostMonatlich2: 'شهريًا السنة الثانية (€)', CostSmartphone: 'تمويل الهاتف (€/شهر)',
                 AgentLabel: 'الوكيل الشخصي', DateLabel: 'التاريخ', ValidUntilLabel: 'العرض ساري حتى',
                 Kundenname_Label: 'اسم العميل', Rufnummer_Label: 'رقم الهاتف', Anbieter_Label: 'المزوّد',
                 Hardware_Label: 'الأجهزة', Nutzung_Label: 'الاستخدام', Haushalt_Label: 'المنزل',
@@ -3586,7 +3675,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Νοικοκυριό & Άλλα Προϊόντα',
                 Offer3Title: '3. Τηλεόραση & Wi-Fi',
                 CostHeader: 'Επισκόπηση Κόστους & Σύναψη',
-                CostEinmalig: 'ΕΦΑΠΑΞ (€)', CostMonatlich1: 'ΜΗΝΙΑΙΑ 1ο ΕΤΟΣ (€)', CostMonatlich: 'ΜΗΝΙΑΙΑ (€)', CostMonatlich2: 'ΜΗΝΙΑΙΑ 2ο ΕΤΟΣ (€)',
+                CostEinmalig: 'ΕΦΑΠΑΞ (€)', CostMonatlich1: 'ΜΗΝΙΑΙΑ 1ο ΕΤΟΣ (€)', CostMonatlich: 'ΜΗΝΙΑΙΑ (€)', CostMonatlich2: 'ΜΗΝΙΑΙΑ 2ο ΕΤΟΣ (€)', CostSmartphone: 'ΧΡΗΜΑΤΟΔΟΤΗΣΗ SMARTPHONE (€/ΜΗΝ)',
                 AgentLabel: 'ΠΡΟΣΩΠΙΚΟΣ ΑΝΤΙΠΡΟΣΩΠΟΣ', DateLabel: 'ΗΜΕΡΟΜΗΝΙΑ', ValidUntilLabel: 'ΠΡΟΣΦΟΡΑ ΙΣΧΥΕΙ ΩΣ',
                 Kundenname_Label: 'Όνομα Πελάτη', Rufnummer_Label: 'Αριθμός Τηλεφώνου', Anbieter_Label: 'Πάροχος',
                 Hardware_Label: 'Υλικό', Nutzung_Label: 'Χρήση', Haushalt_Label: 'Νοικοκυριό',
@@ -3598,7 +3687,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Casa e altri prodotti',
                 Offer3Title: '3. Televisione & Wi-Fi',
                 CostHeader: 'Riepilogo costi & Conclusione',
-                CostEinmalig: 'UNA TANTUM (€)', CostMonatlich1: 'MENSILE 1° ANNO (€)', CostMonatlich: 'MENSILE (€)', CostMonatlich2: 'MENSILE 2° ANNO (€)',
+                CostEinmalig: 'UNA TANTUM (€)', CostMonatlich1: 'MENSILE 1° ANNO (€)', CostMonatlich: 'MENSILE (€)', CostMonatlich2: 'MENSILE 2° ANNO (€)', CostSmartphone: 'FINANZIAMENTO SMARTPHONE (€/MESE)',
                 AgentLabel: 'AGENTE PERSONALE', DateLabel: 'DATA', ValidUntilLabel: 'OFFERTA VALIDA FINO AL',
                 Kundenname_Label: 'Nome Cliente', Rufnummer_Label: 'Numero di Telefono', Anbieter_Label: 'Fornitore',
                 Hardware_Label: 'Hardware', Nutzung_Label: 'Utilizzo', Haushalt_Label: 'Casa',
@@ -3610,7 +3699,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Gospodarstwo domowe i inne produkty',
                 Offer3Title: '3. Telewizja & Wi-Fi',
                 CostHeader: 'Przegląd kosztów & Zakończenie',
-                CostEinmalig: 'JEDNORAZOWO (€)', CostMonatlich1: 'MIESIĘCZNIE 1. ROK (€)', CostMonatlich: 'MIESIĘCZNIE (€)', CostMonatlich2: 'MIESIĘCZNIE 2. ROK (€)',
+                CostEinmalig: 'JEDNORAZOWO (€)', CostMonatlich1: 'MIESIĘCZNIE 1. ROK (€)', CostMonatlich: 'MIESIĘCZNIE (€)', CostMonatlich2: 'MIESIĘCZNIE 2. ROK (€)', CostSmartphone: 'FINANSOWANIE SMARTFONA (€/MIES)',
                 AgentLabel: 'OSOBISTY AGENT', DateLabel: 'DATA', ValidUntilLabel: 'OFERTA WAŻNA DO',
                 Kundenname_Label: 'Imię Klienta', Rufnummer_Label: 'Numer Telefonu', Anbieter_Label: 'Dostawca',
                 Hardware_Label: 'Sprzęt', Nutzung_Label: 'Użytkowanie', Haushalt_Label: 'Gospodarstwo domowe',
@@ -3622,7 +3711,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Domicílio e outros produtos',
                 Offer3Title: '3. Televisão & Wi-Fi',
                 CostHeader: 'Visão geral de custos & Conclusão',
-                CostEinmalig: 'UMA VEZ (€)', CostMonatlich1: 'MENSAL 1.º ANO (€)', CostMonatlich: 'MENSAL (€)', CostMonatlich2: 'MENSAL 2.º ANO (€)',
+                CostEinmalig: 'UMA VEZ (€)', CostMonatlich1: 'MENSAL 1.º ANO (€)', CostMonatlich: 'MENSAL (€)', CostMonatlich2: 'MENSAL 2.º ANO (€)', CostSmartphone: 'FINANCIAMENTO SMARTPHONE (€/MÊS)',
                 AgentLabel: 'AGENTE PESSOAL', DateLabel: 'DATA', ValidUntilLabel: 'OFERTA VÁLIDA ATÉ',
                 Kundenname_Label: 'Nome do Cliente', Rufnummer_Label: 'Número de Telefone', Anbieter_Label: 'Fornecedor',
                 Hardware_Label: 'Hardware', Nutzung_Label: 'Utilização', Haushalt_Label: 'Domicílio',
@@ -3634,7 +3723,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Gospodărie și alte produse',
                 Offer3Title: '3. Televizor & Wi-Fi',
                 CostHeader: 'Prezentare costuri & Finalizare',
-                CostEinmalig: 'O SINGURĂ DATĂ (€)', CostMonatlich1: 'LUNAR PRIMUL AN (€)', CostMonatlich: 'LUNAR (€)', CostMonatlich2: 'LUNAR AL DOILEA AN (€)',
+                CostEinmalig: 'O SINGURĂ DATĂ (€)', CostMonatlich1: 'LUNAR PRIMUL AN (€)', CostMonatlich: 'LUNAR (€)', CostMonatlich2: 'LUNAR AL DOILEA AN (€)', CostSmartphone: 'FINANȚARE SMARTPHONE (€/LUNĂ)',
                 AgentLabel: 'AGENT PERSONAL', DateLabel: 'DATA', ValidUntilLabel: 'OFERTĂ VALABILĂ PÂNĂ LA',
                 Kundenname_Label: 'Numele Clientului', Rufnummer_Label: 'Număr de Telefon', Anbieter_Label: 'Furnizor',
                 Hardware_Label: 'Hardware', Nutzung_Label: 'Utilizare', Haushalt_Label: 'Gospodărie',
@@ -3646,7 +3735,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Hogar y otros productos',
                 Offer3Title: '3. Televisión & Wi-Fi',
                 CostHeader: 'Resumen de costes & Conclusión',
-                CostEinmalig: 'ÚNICO (€)', CostMonatlich1: 'MENSUAL 1.er AÑO (€)', CostMonatlich: 'MENSUAL (€)', CostMonatlich2: 'MENSUAL 2.º AÑO (€)',
+                CostEinmalig: 'ÚNICO (€)', CostMonatlich1: 'MENSUAL 1.er AÑO (€)', CostMonatlich: 'MENSUAL (€)', CostMonatlich2: 'MENSUAL 2.º AÑO (€)', CostSmartphone: 'FINANCIACIÓN SMARTPHONE (€/MES)',
                 AgentLabel: 'AGENTE PERSONAL', DateLabel: 'FECHA', ValidUntilLabel: 'OFERTA VÁLIDA HASTA',
                 Kundenname_Label: 'Nombre del Cliente', Rufnummer_Label: 'Número de Teléfono', Anbieter_Label: 'Proveedor',
                 Hardware_Label: 'Hardware', Nutzung_Label: 'Uso', Haushalt_Label: 'Hogar',
@@ -3658,7 +3747,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 Offer2Title: '2. Ev ve diğer ürünler',
                 Offer3Title: '3. Televizyon & Wi-Fi',
                 CostHeader: 'Maliyet Özeti & Sonuç',
-                CostEinmalig: 'BİR KERE (€)', CostMonatlich1: '1. YIL AYLIK (€)', CostMonatlich: 'AYLIK (€)', CostMonatlich2: '2. YIL AYLIK (€)',
+                CostEinmalig: 'BİR KERE (€)', CostMonatlich1: '1. YIL AYLIK (€)', CostMonatlich: 'AYLIK (€)', CostMonatlich2: '2. YIL AYLIK (€)', CostSmartphone: 'SMARTPHONE FİNANSMANI (€/AY)',
                 AgentLabel: 'KİŞİSEL AJAN', DateLabel: 'TARİH', ValidUntilLabel: 'TEKLİF GEÇERLİLİK TARİHİ',
                 Kundenname_Label: 'Müşteri Adı', Rufnummer_Label: 'Telefon Numarası', Anbieter_Label: 'Sağlayıcı',
                 Hardware_Label: 'Donanım', Nutzung_Label: 'Kullanım', Haushalt_Label: 'Ev',
@@ -3761,8 +3850,15 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 </div><div className="flex justify-between items-center mt-4"><button onClick={clearCanvas} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2" disabled={!hasSigned}><Icon d={ICONS.Trash} size={16}/> Löschen</button><div className="flex gap-2"><button onClick={() => onClose(true)} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className={`px-6 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 ${hasSigned ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} disabled={!hasSigned}>Übernehmen <Icon d={ICONS.CheckCircle} size={16}/></button></div></div></div></div>);
         };
 
-        const FinishTypeModal = ({ isOpen, onClose, onSelect, onShare }) => {
+        const FinishTypeModal = ({ isOpen, onClose, onSelect, onShare, onPdfPrint }) => {
             if (!isOpen) return null;
+            const [pdfBusy, setPdfBusy] = React.useState(false);
+            const handlePdfPrint = async () => {
+                if (pdfBusy) return;
+                setPdfBusy(true);
+                try { await onPdfPrint(); } catch(e) {}
+                setPdfBusy(false);
+            };
             return (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/75 backdrop-blur-md p-4 animate-in fade-in">
                     <div style={{background:'#fff',width:'100%',maxWidth:'520px',borderRadius:'24px',boxShadow:'0 32px 80px rgba(0,0,0,0.28)',overflow:'hidden',position:'relative'}}>
@@ -3796,21 +3892,36 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                                 <div style={{flex:1,height:'1px',background:'#e2e8f0'}}/>
                             </div>
 
-                            {/* Drucken + Teilen nebeneinander */}
+                            {/* PDF-Druck (pixelgenau) – EMPFOHLEN */}
+                            <button onClick={handlePdfPrint} disabled={pdfBusy} style={{display:'flex',alignItems:'center',gap:'16px',padding:'16px 20px',borderRadius:'16px',border:'2px solid #fde68a',background:pdfBusy?'#fef9c3':'linear-gradient(135deg,#fffbeb,#fef3c7)',cursor:pdfBusy?'wait':'pointer',textAlign:'left',transition:'all 0.15s',width:'100%',opacity:pdfBusy?0.7:1}}
+                                onMouseEnter={e=>{if(!pdfBusy){e.currentTarget.style.borderColor='#f59e0b';e.currentTarget.style.transform='translateY(-1px)';}}}
+                                onMouseLeave={e=>{e.currentTarget.style.borderColor='#fde68a';e.currentTarget.style.transform='none';}}>
+                                <div style={{width:'48px',height:'48px',borderRadius:'14px',background:'linear-gradient(135deg,#f59e0b,#d97706)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'22px'}}>{pdfBusy ? '⏳' : '🖨️'}</div>
+                                <div style={{flex:1}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                        <div style={{fontSize:'16px',fontWeight:900,color:'#78350f'}}>{pdfBusy ? 'PDF wird erstellt…' : 'PDF drucken'}</div>
+                                        <span style={{fontSize:'9px',fontWeight:800,background:'#f59e0b',color:'#fff',padding:'2px 7px',borderRadius:'999px',textTransform:'uppercase',letterSpacing:'0.06em'}}>Empfohlen</span>
+                                    </div>
+                                    <div style={{fontSize:'12px',color:'#92400e',marginTop:'2px'}}>Exakt wie auf dem Bildschirm – kein Verziehen</div>
+                                </div>
+                                <div style={{marginLeft:'auto',fontSize:'18px',color:'#f59e0b'}}>→</div>
+                            </button>
+
+                            {/* Drucken + Teilen nebeneinander (klein) */}
                             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
-                                <button onClick={() => onSelect('quote')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',padding:'16px',borderRadius:'14px',border:'2px solid #e2e8f0',background:'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
+                                <button onClick={() => onSelect('quote')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'6px',padding:'12px',borderRadius:'14px',border:'2px solid #e2e8f0',background:'#f8fafc',cursor:'pointer',transition:'all 0.15s'}}
                                     onMouseEnter={e=>{e.currentTarget.style.borderColor='#64748b';e.currentTarget.style.background='#f1f5f9';}}
                                     onMouseLeave={e=>{e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.background='#f8fafc';}}>
-                                    <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'#1e293b',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px'}}>🖨️</div>
-                                    <div style={{fontWeight:800,fontSize:'14px',color:'#1e293b'}}>Papier drucken</div>
-                                    <div style={{fontSize:'10px',color:'#64748b',fontWeight:600}}>Physisch aushändigen</div>
+                                    <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px'}}>🖨️</div>
+                                    <div style={{fontWeight:800,fontSize:'12px',color:'#334155'}}>Browser-Druck</div>
+                                    <div style={{fontSize:'10px',color:'#94a3b8',fontWeight:600,textAlign:'center'}}>Klassisch (kann skalieren)</div>
                                 </button>
 
-                                <button onClick={onShare} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'8px',padding:'16px',borderRadius:'14px',border:'2px solid #bfdbfe',background:'#eff6ff',cursor:'pointer',transition:'all 0.15s'}}
+                                <button onClick={onShare} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'6px',padding:'12px',borderRadius:'14px',border:'2px solid #bfdbfe',background:'#eff6ff',cursor:'pointer',transition:'all 0.15s'}}
                                     onMouseEnter={e=>{e.currentTarget.style.borderColor='#3b82f6';e.currentTarget.style.background='#dbeafe';}}
                                     onMouseLeave={e=>{e.currentTarget.style.borderColor='#bfdbfe';e.currentTarget.style.background='#eff6ff';}}>
-                                    <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'linear-gradient(135deg,#2563eb,#1d4ed8)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px'}}>📤</div>
-                                    <div style={{fontWeight:800,fontSize:'14px',color:'#1e40af'}}>Angebot teilen</div>
+                                    <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'linear-gradient(135deg,#2563eb,#1d4ed8)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px'}}>📤</div>
+                                    <div style={{fontWeight:800,fontSize:'12px',color:'#1e40af'}}>Angebot teilen</div>
                                     <div style={{fontSize:'10px',color:'#3b82f6',fontWeight:600}}>Digital senden</div>
                                 </button>
                             </div>
@@ -3822,7 +3933,70 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         };
 
         
-        const ReferralModal = ({ isOpen, onClose, onPrint, onShare, onFinish }) => {
+
+        // ── FolgeterminModal: erscheint nach Unterschrift wenn ein Angebot "Offen" ist ──
+        const FolgeterminModal = ({ isOpen, onClose, onConfirm }) => {
+            if (!isOpen) return null;
+            const [date, setDate] = React.useState('');
+            const [time, setTime] = React.useState('');
+            const [noAppointment, setNoAppointment] = React.useState(false);
+            return (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in">
+                    <div style={{background:'#fff',width:'100%',maxWidth:'460px',borderRadius:'24px',boxShadow:'0 32px 80px rgba(0,0,0,0.3)',overflow:'hidden'}}>
+                        {/* Header */}
+                        <div style={{background:'linear-gradient(135deg,#1e3a6e 0%,#2563eb 100%)',padding:'24px 24px 20px',textAlign:'center'}}>
+                            <div style={{fontSize:'32px',marginBottom:'8px'}}>📅</div>
+                            <h3 style={{fontSize:'20px',fontWeight:900,color:'#fff',margin:0,letterSpacing:'-0.02em'}}>Folgetermin vereinbaren</h3>
+                            <p style={{fontSize:'12px',color:'rgba(255,255,255,0.65)',marginTop:'5px',marginBottom:0}}>Ein Angebot ist noch offen – wann soll nachgefasst werden?</p>
+                        </div>
+                        {/* Body */}
+                        <div style={{padding:'24px',display:'flex',flexDirection:'column',gap:'14px'}}>
+                            {!noAppointment && (<>
+                                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+                                    <div>
+                                        <label style={{fontSize:'10px',fontWeight:800,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',display:'block',marginBottom:'6px'}}>Datum</label>
+                                        <input type="date" value={date} onChange={e=>setDate(e.target.value)}
+                                            style={{width:'100%',padding:'10px 12px',borderRadius:'10px',border:'1.5px solid #e2e8f0',fontSize:'14px',fontWeight:700,color:'#0f172a',background:'#f8fafc',boxSizing:'border-box',outline:'none'}}
+                                            onFocus={e=>e.target.style.borderColor='#3b82f6'}
+                                            onBlur={e=>e.target.style.borderColor='#e2e8f0'} />
+                                    </div>
+                                    <div>
+                                        <label style={{fontSize:'10px',fontWeight:800,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',display:'block',marginBottom:'6px'}}>Uhrzeit</label>
+                                        <input type="time" value={time} onChange={e=>setTime(e.target.value)}
+                                            style={{width:'100%',padding:'10px 12px',borderRadius:'10px',border:'1.5px solid #e2e8f0',fontSize:'14px',fontWeight:700,color:'#0f172a',background:'#f8fafc',boxSizing:'border-box',outline:'none'}}
+                                            onFocus={e=>e.target.style.borderColor='#3b82f6'}
+                                            onBlur={e=>e.target.style.borderColor='#e2e8f0'} />
+                                    </div>
+                                </div>
+                            </>)}
+                            {/* Kein Folgetermin Toggle */}
+                            <button onClick={()=>setNoAppointment(p=>!p)}
+                                style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderRadius:'12px',border:`2px solid ${noAppointment?'#f59e0b':'#e2e8f0'}`,background:noAppointment?'#fffbeb':'#f8fafc',cursor:'pointer',textAlign:'left',transition:'all 0.15s',width:'100%'}}>
+                                <div style={{width:'22px',height:'22px',borderRadius:'6px',border:`2px solid ${noAppointment?'#f59e0b':'#cbd5e1'}`,background:noAppointment?'#f59e0b':'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'13px',transition:'all 0.15s'}}>
+                                    {noAppointment ? '✓' : ''}
+                                </div>
+                                <div>
+                                    <div style={{fontSize:'14px',fontWeight:800,color:noAppointment?'#92400e':'#475569'}}>Kein Folgetermin ausgemacht</div>
+                                    <div style={{fontSize:'11px',color:noAppointment?'#b45309':'#94a3b8',marginTop:'1px'}}>Kunde hat keinen Termin vereinbart</div>
+                                </div>
+                            </button>
+                            {/* Bestätigen */}
+                            <button onClick={()=>onConfirm({date, time, noAppointment})}
+                                disabled={!noAppointment && !date}
+                                style={{width:'100%',padding:'14px',borderRadius:'14px',background:(!noAppointment&&!date)?'#e2e8f0':'linear-gradient(135deg,#2563eb,#1d4ed8)',color:(!noAppointment&&!date)?'#94a3b8':'#fff',fontWeight:900,fontSize:'15px',cursor:(!noAppointment&&!date)?'not-allowed':'pointer',border:'none',transition:'all 0.15s',letterSpacing:'-0.01em'}}>
+                                {noAppointment ? '✅ Ohne Folgetermin fortfahren' : (date ? '📅 Folgetermin bestätigen' : 'Bitte Datum auswählen')}
+                            </button>
+                            <button onClick={onClose} style={{background:'none',border:'none',color:'#94a3b8',fontSize:'12px',fontWeight:700,cursor:'pointer',textAlign:'center',padding:'4px'}}>
+                                Überspringen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ReferralModal = ({ isOpen, onClose, onPrint, onShare, onFinish, onPdfPrint }) => {
+            const [pdfBusyReferral, setPdfBusyReferral] = React.useState(false);
             if (!isOpen) return null;
 
             const handlePrintAction = () => {
@@ -3844,6 +4018,29 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                                 {/* Bereich: Angebot Teilen */}
                                 <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
                                     <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">Angebot Teilen</div>
+                                    {/* PDF drucken / Empfohlen – exakt derselbe Button wie im FinishTypeModal */}
+                                    <button
+                                                disabled={pdfBusyReferral}
+                                                onClick={async () => {
+                                                    if (pdfBusyReferral) return;
+                                                    setPdfBusyReferral(true);
+                                                    try { await onPdfPrint(); } catch(e) {}
+                                                    setPdfBusyReferral(false);
+                                                }}
+                                                style={{display:'flex',alignItems:'center',gap:'16px',padding:'16px 20px',borderRadius:'16px',border:'2px solid #fde68a',background:pdfBusyReferral?'#fef9c3':'linear-gradient(135deg,#fffbeb,#fef3c7)',cursor:pdfBusyReferral?'wait':'pointer',textAlign:'left',transition:'all 0.15s',width:'100%',opacity:pdfBusyReferral?0.7:1,marginBottom:'10px'}}
+                                                onMouseEnter={e=>{if(!pdfBusyReferral){e.currentTarget.style.borderColor='#f59e0b';e.currentTarget.style.transform='translateY(-1px)';}}}
+                                                onMouseLeave={e=>{e.currentTarget.style.borderColor='#fde68a';e.currentTarget.style.transform='none';}}
+                                            >
+                                                <div style={{width:'48px',height:'48px',borderRadius:'14px',background:'linear-gradient(135deg,#f59e0b,#d97706)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'22px'}}>{pdfBusyReferral ? '⏳' : '🖨️'}</div>
+                                                <div style={{flex:1}}>
+                                                    <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                                        <div style={{fontSize:'16px',fontWeight:900,color:'#78350f'}}>{pdfBusyReferral ? 'PDF wird erstellt…' : 'PDF drucken'}</div>
+                                                        <span style={{fontSize:'9px',fontWeight:800,background:'#f59e0b',color:'#fff',padding:'2px 7px',borderRadius:'999px',textTransform:'uppercase',letterSpacing:'0.06em'}}>Empfohlen</span>
+                                                    </div>
+                                                    <div style={{fontSize:'12px',color:'#92400e',marginTop:'2px'}}>Exakt wie auf dem Bildschirm – kein Verziehen</div>
+                                                </div>
+                                                <div style={{marginLeft:'auto',fontSize:'18px',color:'#f59e0b'}}>→</div>
+                                    </button>
                                     <button onClick={onShare} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
                                         <Icon d={ICONS.Share} size={18} /> Digital senden
                                     </button>
@@ -6717,6 +6914,8 @@ function App() {
             }, [darkMode]);
             
             const [showSecondYear, setShowSecondYear] = useState(false);
+            // Druck-Option: AUS = klassische 2 Seiten, AN = Seite 3 mit Kosten + Empfehlungen
+            const [printRecommendationsEnabled, setPrintRecommendationsEnabled] = useState(false);
             const [showGutschriftRechner, setShowGutschriftRechner] = useState(false);
             const [gutschriftBetrag, setGutschriftBetrag] = useState('240');
             const [beratungsId, setBeratungsId] = useState('');
@@ -6751,6 +6950,7 @@ function App() {
                     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                     // Redraw existing strokes if any
                     try { redrawCanvas(canvas, drawnStrokes['cost_monatlich2'], 1, 'cost_monatlich2'); } catch (e) {}
+                    try { redrawCanvas(canvas, drawnStrokes['cost_smartphone'], 1, 'cost_smartphone'); } catch (e) {}
                 });
                 return () => cancelAnimationFrame(raf);
             }, [showSecondYear, drawnStrokes]);
@@ -6795,7 +6995,7 @@ function App() {
 
                 // Angebot / Kosten
                 offer1: [], offer2: [], offer3: [],
-                cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: []
+                cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], cost_smartphone: [], agent_name: [], date_field: [], offer_valid_until: []
             });
 
             const isDrawingRef = useRef(false);
@@ -7005,6 +7205,7 @@ const handleOpenStats = () => { setShowStats(true); };
             }); 
             const [emailText, setEmailText] = useState('');
             const [emailMode, setEmailMode] = useState('keyboard'); 
+            const [showEmailKeyboard, setShowEmailKeyboard] = useState(false);
             const [beratungsIdMode, setBeratungsIdMode] = useState('keyboard');
             const [showNumpad, setShowNumpad] = useState(false);
             const [scrollMode, setScrollMode] = useState(false);
@@ -7031,6 +7232,24 @@ const handleOpenStats = () => { setShowStats(true); };
             const [wlanSnapshot, setWlanSnapshot] = useState(null); // { floors, router, needs:[...], availableFloors:[...], floorKeys:[...], rec }
             const [netBundleMatched, setNetBundleMatched] = useState(null);
             const [tvSnapshot, setTvSnapshot] = useState(null); // { price, provider, providerLabel, packageLabel, packageSub, color }
+
+            // Body-Klasse für Print/PDF: Automatisch AN wenn Empfehlungen vorhanden.
+            React.useEffect(() => {
+                const hasRecs = !!(wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot);
+                try {
+                    setPrintRecommendationsEnabled(hasRecs);
+                } catch(e) {}
+            }, [wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot]);
+
+            React.useEffect(() => {
+                try {
+                    document.body.classList.toggle('print-recs-enabled', !!printRecommendationsEnabled);
+                    window.__printRecommendationsEnabled = !!printRecommendationsEnabled;
+                } catch(e) {}
+                return () => {
+                    try { document.body.classList.remove('print-recs-enabled'); } catch(e) {}
+                };
+            }, [printRecommendationsEnabled]);
 
             // ── Firebase Config (gleich wie Aktionsmappe) ──
             const AM_FB_CONFIG = {
@@ -7141,6 +7360,8 @@ const handleOpenStats = () => { setShowStats(true); };
             const [showFinishTypeModal, setShowFinishTypeModal] = useState(false); // NEW MODAL STATE
             
             const [showReferralModal, setShowReferralModal] = useState(false);
+            const [showFolgeterminModal, setShowFolgeterminModal] = useState(false);
+            const pendingPostSignature = React.useRef(null); // Funktion die nach Folgetermin läuft
             const [showValidityModal, setShowValidityModal] = useState(false);
             const pendingPrintRef = useRef(null);
 const [showSkipReasonModal, setShowSkipReasonModal] = useState(false); 
@@ -7164,7 +7385,7 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             const parseCost = (val) => { if (!val) return 0; return parseFloat(val.replace(',', '.')) || 0; };
             const totalCost = parseCost(costState.mobile) + parseCost(costState.landline) + parseCost(costState.tv);
             
-            const initialOfferData = { einmalig: 0, monatlich1: 0, monatlich2: 0, einmaligRaw: '', monatlich1Raw: '', monatlich2Raw: '' };
+            const initialOfferData = { einmalig: 0, monatlich1: 0, monatlich2: 0, smartphone: 0, einmaligRaw: '', monatlich1Raw: '', monatlich2Raw: '', smartphoneRaw: '' };
             const [showSavingsBlock, setShowSavingsBlock] = React.useState(false);
             const [dismissSavingsHint, setDismissSavingsHint] = React.useState(false);
             const [offerData, setOfferData] = useState(initialOfferData);
@@ -7209,6 +7430,7 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             const offerCost1Ref = useRef(null);
             const offerCost2Ref = useRef(null);
             const offerCost3Ref = useRef(null);
+            const offerCostSmartphoneRef = useRef(null);
             const offerAgentRef = useRef(null);
             const offerDateRef = useRef(null);
             const offerValidUntilRef = useRef(null);
@@ -7236,6 +7458,11 @@ const fileInputRef = useRef(null);
                 window.__canvasHtmlOffer2 = canvasHtml.offer2 || null;
                 window.__canvasHtmlOffer3 = canvasHtml.offer3 || null;
             }, [canvasHtml.offer1, canvasHtml.offer2, canvasHtml.offer3]);
+
+            // Brücke: Beratungs-ID für PDF-Export
+            React.useEffect(() => {
+                window.__beratungsId = beratungsId || '';
+            }, [beratungsId]);
 
             // Brücke: Angebots-Inhalt-Status für beforeprint (inkl. Bilder)
             React.useEffect(() => {
@@ -7804,10 +8031,36 @@ const handleFinishOfferClick = () => {
 
                 const openKeys = nonEmptyKeys.filter(k => canvasStatus[k] === 'open');
 
-                // Wenn Kunde unterschrieben hat: direkt drucken/hochladen
+                // Wenn Kunde unterschrieben hat: PDF-Export (Empfohlen) + danach ReferralModal
                 if (customerSignature) {
                     backgroundAutoUpload({ type: 'abschluss', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
-                    handlePrint();
+                    // Exakt dieselbe Logik wie der "PDF drucken / Empfohlen"-Button im FinishTypeModal
+                    (async () => {
+                        triggerToast('PDF wird erstellt… einen Moment.');
+                        const pdfWin = window.open('', '_blank');
+                        injectPdfLoadingPage(pdfWin);
+                        try {
+                            await new Promise(r => setTimeout(r, 200));
+                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
+                            const url = URL.createObjectURL(blob);
+                            if (pdfWin && !pdfWin.closed) {
+                                pdfWin.location.href = url;
+                            } else {
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'Angebot.pdf';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                            }
+                            setTimeout(() => URL.revokeObjectURL(url), 60000);
+                            triggerToast('✅ PDF bereit – Druckdialog öffnen oder speichern.');
+                        } catch(e) {
+                            if (pdfWin && !pdfWin.closed) pdfWin.close();
+                            triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
+                        }
+                        setTimeout(() => setShowReferralModal(true), 400);
+                    })();
                     return;
                 }
 
@@ -7941,12 +8194,27 @@ const handleFinishOfferClick = () => {
                     }
                 }
 
-                setTimeout(() => setShowReferralModal(true), 300);
+                // Prüfen ob ein Angebot noch offen ist → Folgetermin-Dialog zeigen
+                const _hasOpenOffer = (() => {
+                    try {
+                        const keys = ['offer1','offer2','offer3'];
+                        return keys.some(k => {
+                            const hasContent = !!String(getDisplayText(k)||'').trim() || !!(drawnStrokes&&drawnStrokes[k]&&drawnStrokes[k].length) || !!(canvasImages&&canvasImages[k]) || !!(k==='offer1'?window.__canvasHtmlOffer1:k==='offer2'?window.__canvasHtmlOffer2:window.__canvasHtmlOffer3);
+                            return hasContent && (canvasStatus&&canvasStatus[k]) === 'open';
+                        });
+                    } catch(e) { return false; }
+                })();
+                if (_hasOpenOffer) {
+                    // Erst Folgetermin, dann ReferralModal
+                    setTimeout(() => setShowFolgeterminModal(true), 300);
+                } else {
+                    setTimeout(() => setShowReferralModal(true), 300);
+                }
             };
             
             const handleSkipToOffer = (reasonData) => { setSkipReason(reasonData); setShowSkipReasonModal(false); setView('offer'); setViewOfferCounter(c => c + 1); triggerToast(`Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`); };
 
-            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
+            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], cost_smartphone: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
 
             const Toast = ({ message }) => { if (!message) return null; return (<div className="print-hide-toast fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg border border-slate-700 animate-in fade-in duration-300"><div className="flex items-center gap-2"><Icon d={ICONS.Clipboard} size={16} className="text-green-400"/><span className="text-sm font-medium">{message}</span></div></div>); };
 
@@ -7964,7 +8232,7 @@ const handleFinishOfferClick = () => {
                             'Nutzung': 'sit_Nutzung', 'Haushalt': 'sit_Haushalt', 'Weitere Produkte': 'sit_WeitereProdukte', 'WeitereProdukte': 'sit_WeitereProdukte',
                             'Fernsehen': 'sit_Fernsehen', 'WiFi': 'sit_WiFi', 'Gesamtkosten': 'sit_Gesamtkosten',
                             'offer1': 'offer1', 'offer2': 'offer2', 'offer3': 'offer3',
-                            'cost_einmalig': 'cost_einmalig', 'cost_monatlich1': 'cost_monatlich1', 'cost_monatlich2': 'cost_monatlich2',
+                            'cost_einmalig': 'cost_einmalig', 'cost_monatlich1': 'cost_monatlich1', 'cost_monatlich2': 'cost_monatlich2', 'cost_smartphone': 'cost_smartphone',
                             'AgentName': 'agent_name', 'DateValue': 'date_field', 'OfferValidUntil': 'offer_valid_until',
                             'skip_reason': 'skip_reason'
                         };
@@ -8073,6 +8341,7 @@ const handleFinishOfferClick = () => {
                     { ref: offerCost1Ref, key: 'cost_einmalig', mode: inputMode, condition: true }, 
                     { ref: offerCost2Ref, key: 'cost_monatlich1', mode: inputMode, condition: true }, 
                     { ref: offerCost3Ref, key: 'cost_monatlich2', mode: inputMode, condition: true }, 
+                    { ref: offerCostSmartphoneRef, key: 'cost_smartphone', mode: inputMode, condition: true },
                     { ref: offerAgentRef, key: 'agent_name', mode: inputMode, condition: true }, 
                     { ref: offerDateRef, key: 'date_field', mode: inputMode, condition: true } 
                 ]; 
@@ -8464,6 +8733,7 @@ const handleFinishOfferClick = () => {
                     else if (ref === offerCost1Ref) key = 'cost_einmalig';
                     else if (ref === offerCost2Ref) key = 'cost_monatlich1';
                     else if (ref === offerCost3Ref) key = 'cost_monatlich2';
+                    else if (ref === offerCostSmartphoneRef) key = 'cost_smartphone';
                     else if (ref === offerAgentRef) key = 'agent_name';
                     else if (ref === offerDateRef) key = 'date_field';
                     else if (ref === offerValidUntilRef || ref === offerValidUntilModalRef) key = 'offer_valid_until';
@@ -8600,7 +8870,7 @@ const renderPenToolButtons = () => (
                 const rawKey = `${key}Raw`;
                 setOfferData(prev => ({ ...prev, [rawKey]: value, [key]: isNaN(val) || value.trim() === '' ? 0 : val }));
             };
-            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : offerCost3Ref); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg transition-all`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
+            const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2' || key === 'smartphone') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : key === 'monatlich2' ? offerCost3Ref : offerCostSmartphoneRef); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig' || key === 'smartphone'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg transition-all`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
             
             const translateBatch = null; // No API needed — all translations are local
 
@@ -8664,6 +8934,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
 
     // Share-PDF: eigener Modus im Iframe
     try { doc.body.classList.add('pdf-share-mode');
+            if (window.__printRecommendationsEnabled) doc.body.classList.add('print-recs-enabled');
 
                     // ULTRA SHARP v37: avoid blur from CSS transforms/filters during rasterization
                     try{
@@ -8802,6 +9073,55 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
          .pdf-share-mode .share-page-content{flex:1 1 auto; min-height:0; height:calc(210mm - 16mm); overflow:hidden; box-sizing:border-box;}
          .pdf-share-mode .share-cover,.pdf-share-mode .share-outro{height:100% !important; min-height:100% !important; max-height:100% !important; box-sizing:border-box;}
 
+         /* ── Outro-Innenlayout: Danke-Grid skaliert auf verfügbare Höhe ── */
+         .pdf-share-mode .share-outro{
+           display:flex !important;
+           flex-direction:column !important;
+           overflow:hidden !important;
+           padding:10px 14px 8px !important;
+           box-sizing:border-box !important;
+         }
+         .pdf-share-mode .share-outro-grid{
+           flex:1 1 auto !important;
+           min-height:0 !important;
+           gap:10px !important;
+           align-items:stretch !important;
+           align-content:stretch !important;
+         }
+         .pdf-share-mode .share-outro-card{
+           flex:1 1 0 !important;
+           min-height:0 !important;
+           overflow:hidden !important;
+           padding:10px !important;
+           justify-content:flex-start !important;
+         }
+         .pdf-share-mode .share-outro-qr{
+           width:80px !important;
+           height:80px !important;
+           margin:4px auto !important;
+         }
+         .pdf-share-mode .share-outro-amount{
+           font-size:34px !important;
+           margin-top:2px !important;
+         }
+         .pdf-share-mode .share-outro-icon{
+           width:42px !important;
+           height:42px !important;
+           margin-bottom:6px !important;
+         }
+         .pdf-share-mode .share-outro-h{
+           font-size:15px !important;
+         }
+         .pdf-share-mode .share-outro-p{
+           font-size:10px !important;
+           margin-top:4px !important;
+         }
+         .pdf-share-mode .share-outro-voucher{
+           font-size:13px !important;
+           padding:7px 8px !important;
+           margin-top:6px !important;
+         }
+
          .pdf-share-mode .share-page:last-child{break-after:auto !important; page-break-after:auto !important;}
          .pdf-share-mode .situation-view-wrapper{padding-left: 0px !important; padding-top:0 !important; margin-left:0 !important;}
          .pdf-share-mode .print-offer-view{padding-left:0 !important; padding-top:0 !important; margin-left:0 !important;}
@@ -8932,8 +9252,7 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
            padding:3px 8px !important;
            line-height:1 !important;
          }
-
-         object-fit:contain;}`;
+         `;
 
 
 
@@ -8965,7 +9284,8 @@ container.appendChild(stage);
     // Inhalt klonen
 
     // --- Share: Seiten-Wrapping + Header im Iframe (robust für html2pdf) ---
-const makeShareHeader = (titleText) => {
+const makeShareHeader = (titleText, opts2) => {
+    const showBid = !(opts2 && opts2.hideBid);
     const h = doc.createElement('div');
     h.setAttribute('data-share-header', '1');
     h.style.display = 'flex';
@@ -8981,6 +9301,12 @@ const makeShareHeader = (titleText) => {
     h.style.boxSizing = 'border-box';
     h.style.width = '100%';
     h.style.overflow = 'hidden';
+    // LEFT: Titel + ggf. Beratungs-ID
+    const left = doc.createElement('div');
+    left.style.display = 'flex';
+    left.style.flexDirection = 'column';
+    left.style.justifyContent = 'center';
+    left.style.overflow = 'hidden';
     const t = doc.createElement('div');
     t.setAttribute('data-share-title', '1');
     t.style.fontSize = '22px';
@@ -8990,19 +9316,59 @@ const makeShareHeader = (titleText) => {
     t.style.fontFamily = 'Arial,Helvetica,sans-serif';
     t.style.whiteSpace = 'nowrap';
     t.textContent = titleText;
+    left.appendChild(t);
+    // Beratungs-ID: nur auf Situations- und Angebotsseiten (nicht Kosten/Danke)
+    if (showBid) {
+        let bid = window.__beratungsId || '';
+        if (!bid) {
+            try {
+                const bidInput = document.querySelector('input[inputMode="numeric"][maxLength="15"]');
+                if (bidInput) bid = (bidInput.value || '').trim();
+            } catch(e) {}
+        }
+        if (bid) {
+            const bidEl = doc.createElement('div');
+            bidEl.style.cssText = 'font-family:monospace;font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:0.08em;margin-top:1px;white-space:nowrap;';
+            bidEl.textContent = 'Beratungs-ID: ' + bid;
+            left.appendChild(bidEl);
+        }
+    }
+    // RIGHT: Firmenlogo — als natives SVG direkt eingebettet (html2canvas-sicher)
     const right = doc.createElement('div');
     right.style.display = 'flex';
     right.style.alignItems = 'center';
     right.style.flexShrink = '0';
-    const img = doc.createElement('img');
-    img.src = window.__HIDA_LOGO_DATA_URI || '';
-    img.className = 'hida-logo-print';
-    img.alt = 'Telekom';
-    img.style.height = '34px';
-    img.style.width = 'auto';
-    img.style.objectFit = 'contain';
-    right.appendChild(img);
-    h.appendChild(t);
+    right.style.marginLeft = '16px';
+    const rawSvg = window.__HIDA_LOGO_SVG || '';
+    if (rawSvg) {
+        // SVG direkt als innerHTML einfügen — zuverlässiger als <img src="data:image/svg+xml">
+        const logoWrap = doc.createElement('div');
+        logoWrap.className = 'hida-logo-print';
+        logoWrap.style.cssText = 'height:34px;width:auto;max-width:180px;display:flex;align-items:center;overflow:hidden;';
+        logoWrap.innerHTML = rawSvg;
+        const svgEl = logoWrap.querySelector('svg');
+        if (svgEl) {
+            svgEl.style.height = '34px';
+            svgEl.style.width = 'auto';
+            svgEl.style.maxWidth = '180px';
+            svgEl.style.display = 'block';
+            svgEl.setAttribute('height', '34');
+            svgEl.removeAttribute('width');
+        }
+        right.appendChild(logoWrap);
+    } else {
+        // Fallback: img mit Data-URI
+        const logoSrc = window.__HIDA_LOGO_DATA_URI || '';
+        if (logoSrc) {
+            const img = doc.createElement('img');
+            img.src = logoSrc;
+            img.className = 'hida-logo-print';
+            img.alt = 'Logo';
+            img.style.cssText = 'height:34px;width:auto;max-width:180px;object-fit:contain;display:block;';
+            right.appendChild(img);
+        }
+    }
+    h.appendChild(left);
     h.appendChild(right);
     return h;
 };
@@ -9430,40 +9796,157 @@ try {
         : null;
 } catch(e){}
 
-// Seiten 3+: nur Angebote MIT Inhalt
-const offerPageTitles = [
-    offerTitles[0] || '1. Hardware, Anbieter & Nutzung',
-    offerTitles[1] || '2. Haushalt und weitere Produkte',
-    offerTitles[2] || '3. Fernsehen & Wi-Fi',
-];
+// ===== SEITE 2: Alle 3 Angebotskarten nebeneinander (1:1 wie Bildschirm) + Kostenübersicht =====
+// Aufbau: Header (52px) | Karten-Reihe (flex-1) | Kostenübersicht (auto)
+// Entspricht exakt dem A4-Querformat-Display-Layout.
 
-let offerPageCount = 0;
-for (let i = 0; i < 3; i++) {
-    if (isOfferEmpty(sourceOffer, i)) continue; // Leeres Angebot überspringen
-    const offerContent = makeOfferPage(sourceOffer, i, offerPageTitles);
-    const offerPage = wrapSharePage(offerPageTitles[i], offerContent);
-    stage.appendChild(offerPage);
-    offerPageCount++;
-}
+const makeAllOffersPage = () => {
+    // --- Canvas-Bitmaps einbrennen ---
+    const tmpClone = sourceOffer.cloneNode(true);
+    bakeCanvasesIntoClone(sourceOffer, tmpClone);
 
-// Letzte Seite: Kostenübersicht & Dankeschön
+    // --- Wrapper: volle Seite, blau ---
+    const wrapper = doc.createElement('div');
+    wrapper.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;box-sizing:border-box;background:#eff6ff;overflow:hidden;padding:8px 12px 6px 12px;gap:6px;';
+
+    // --- 3 Karten nebeneinander – nehmen ~72% der Höhe ---
+    const cardsRow = doc.createElement('div');
+    cardsRow.style.cssText = 'flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;overflow:hidden;';
+
+    const grid = tmpClone.querySelector('.offer-print-grid');
+    const cols = grid ? Array.from(grid.children) : [];
+
+    for (let i = 0; i < 3; i++) {
+        const col = cols[i];
+        const card = doc.createElement('div');
+        card.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;box-sizing:border-box;';
+
+        if (col) {
+            // Buttons verstecken
+            col.querySelectorAll('button:not([data-print-keep="1"])').forEach(b => b.style.display = 'none');
+            // Container (die Karte mit Rahmen)
+            const container = col.querySelector('.offer-canvas-container') || col;
+            container.style.cssText = [
+                'width:100%', 'height:100%', 'flex:1 1 auto',
+                'display:flex', 'flex-direction:column', 'overflow:hidden',
+                'border-width:3px', 'border-style:solid', 'border-radius:14px',
+                'background:#ffffff', 'box-sizing:border-box',
+            ].join(';') + ';';
+            // Rahmenfarbe
+            container.style.borderColor = container.classList.contains('border-green-500') ? '#22c55e'
+                : container.classList.contains('border-red-500') ? '#ef4444' : '#cbd5e1';
+            // Canvas snapshot → img
+            const cvs = container.querySelector('canvas');
+            if (cvs) {
+                try {
+                    const srcCvs = Array.from(sourceOffer.querySelectorAll('canvas'))[i];
+                    if (srcCvs) {
+                        const snap = document.createElement('img');
+                        snap.src = srcCvs.toDataURL('image/png');
+                        snap.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:10;image-rendering:crisp-edges;';
+                        snap.setAttribute('data-canvas-snapshot', '1');
+                        cvs.parentNode.replaceChild(snap, cvs);
+                    }
+                } catch(e) {}
+            }
+            // Textarea
+            const ta = container.querySelector('textarea');
+            if (ta) {
+                ta.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;padding:12px;font-size:inherit;line-height:1.7;overflow:hidden;resize:none;border:none;outline:none;background:transparent;white-space:pre-wrap;word-wrap:break-word;z-index:20;';
+            }
+            col.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;';
+            card.appendChild(col);
+        } else {
+            card.style.borderRadius = '14px';
+            card.style.border = '3px solid #cbd5e1';
+            card.style.background = '#fff';
+        }
+        cardsRow.appendChild(card);
+    }
+    wrapper.appendChild(cardsRow);
+
+    // Kostenübersicht kommt auf Seite 3 — hier nur die Karten, volle Höhe
+    return wrapper;
+};
+
+const allOffersPage = wrapSharePage('Ihr Persönliches Angebot', makeAllOffersPage());
+stage.appendChild(allOffersPage);
+let offerPageCount = 1; // Alle Angebote = 1 Seite
+
+// Letzte Seite: Kostenübersicht OBEN (kompakt) + Danke & Bonus darunter
+// Ziel: Kosten nimmt ~42% der Höhe, Danke ~58% — beide vollständig sichtbar
 const outroContentWrap = doc.createElement('div');
-outroContentWrap.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;overflow:hidden;';
+outroContentWrap.style.cssText = [
+    'width:100%',
+    'height:210mm',
+    'max-height:210mm',
+    'display:flex',
+    'flex-direction:column',
+    'gap:6px',
+    'box-sizing:border-box',
+    'overflow:hidden',
+    'padding:6px 6px 4px 6px',
+    'background:#f8fafc',
+].join(';');
 
+// ── Kostenübersicht oben – scale(0.76) für kompakten Fit ──
 if (costBlock) {
-    costBlock.style.display = 'block';
-    costBlock.style.breakInside = 'avoid';
-    costBlock.style.pageBreakInside = 'avoid';
-    costBlock.style.margin = '0';
-    costBlock.querySelectorAll('button:not([data-print-keep="1"])').forEach(b => { b.style.display = 'none'; });
-    outroContentWrap.appendChild(costBlock);
+    const COST_SCALE = 0.76;
+    const costWrap = doc.createElement('div');
+    // Feste Höhe = skalierter Inhalt; overflow:hidden schneidet nichts ab
+    costWrap.style.cssText = [
+        'flex:0 0 auto',
+        'background:#ffffff',
+        'border-radius:10px',
+        'border:1.5px solid #e2e8f0',
+        'padding:0',
+        'box-sizing:border-box',
+        'overflow:hidden',
+        'position:relative',
+    ].join(';');
+    const costClone = costBlock.cloneNode(true);
+    // Breite kompensiert scale-Verkleinerung damit keine Lücken entstehen
+    costClone.style.cssText = [
+        'display:block',
+        'margin:0',
+        `transform:scale(${COST_SCALE})`,
+        'transform-origin:top left',
+        `width:${Math.round(100 / COST_SCALE)}%`,
+        'padding:8px 14px 4px 14px',
+        'box-sizing:border-box',
+    ].join(';');
+    costClone.querySelectorAll('button:not([data-print-keep="1"])').forEach(b => b.style.display = 'none');
+    costClone.querySelectorAll('[class*="mt-3"],[class*="mt-4"],[class*="mt-5"],[class*="mt-6"]').forEach(el => el.style.marginTop = '3px');
+    costClone.querySelectorAll('input,textarea').forEach(el => {
+        el.style.cssText = 'border:1.5px solid #cbd5e1;border-radius:5px;padding:2px 7px;font-size:13px;font-weight:700;background:#f8fafc;width:100%;height:28px;box-sizing:border-box;';
+    });
+    costClone.querySelectorAll('label,[class*="text-[10px]"],[class*="uppercase"]').forEach(el => {
+        el.style.fontSize = '8px'; el.style.marginBottom = '1px'; el.style.display = 'block';
+    });
+    // Wrapper-Höhe = skalierte Inhalt-Höhe (damit kein Whitespace entsteht)
+    costWrap.appendChild(costClone);
+    // Höhe via inline-style nach appendChild schätzen (~180px skaliert = ~137px)
+    costWrap.style.height = `${Math.round(185 * COST_SCALE)}px`;
+    costWrap.style.maxHeight = `${Math.round(185 * COST_SCALE)}px`;
+    outroContentWrap.appendChild(costWrap);
 }
 
-outroContentWrap.appendChild(makeOutroContent());
-
-// Kosten + Dankeschön-Seite — overflow:hidden verhindert Abschneiden
-outroContentWrap.style.overflow = 'hidden';
-outroContentWrap.style.maxHeight = '210mm';
+// ── Danke & Bonus darunter – nimmt exakt den Restplatz ──
+const outroInner = doc.createElement('div');
+outroInner.style.cssText = [
+    'flex:1 1 auto',
+    'min-height:0',
+    'overflow:hidden',
+    'display:flex',
+    'flex-direction:column',
+    'border-radius:10px',
+].join(';');
+const outroNode = makeOutroContent();
+// Volle Höhe + overflow:hidden damit Danke-Karten nicht abgeschnitten werden
+outroNode.style.cssText = (outroNode.style.cssText || '').replace(/height:[^;]+;?/g, '') +
+    ';flex:1 1 auto;min-height:0;height:100%;max-height:100%;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box;';
+outroInner.appendChild(outroNode);
+outroContentWrap.appendChild(outroInner);
 
 // Kosten + Dankeschön-Seite ZUERST (vor Anlage)
 const outroPage = wrapSharePage('Danke & Bonus', outroContentWrap, { includeHeader: false });
@@ -9515,10 +9998,10 @@ const opt = {
         margin: 0,
         filename: `Angebot_o2_${new Date().toISOString().split('T')[0]}.pdf`,
         pagebreak: { mode: ['css', 'legacy'] },
-        image: { type: 'jpeg', quality: 0.82 },
+        image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
-            scale: 2,
-            dpi: 150,
+            scale: 3,
+            dpi: 192,
             letterRendering: true,
             useCORS: true,
             allowTaint: true,
@@ -9621,6 +10104,46 @@ const opt = {
                         c.style.padding = '0';
                         c.style.overflow = 'hidden';
                     }
+
+                    // =========================================================
+                    // HANDSCHRIFT-FIX: Canvas-Elemente als Bild-Snapshots in den
+                    // Klon übertragen – html2canvas kann leere Klon-Canvas nicht
+                    // lesen, aber <img> rendert es pixelgenau.
+                    // =========================================================
+                    try {
+                        const liveCanvases = document.querySelectorAll('canvas');
+                        const cloneCanvases = clonedDoc.querySelectorAll('canvas');
+                        liveCanvases.forEach((liveCanvas, idx) => {
+                            try {
+                                // Nur nicht-leere Canvas übertragen
+                                const ctx = liveCanvas.getContext('2d');
+                                if (!ctx) return;
+                                const w = liveCanvas.width, h = liveCanvas.height;
+                                if (!w || !h) return;
+                                // Snapshot als PNG DataURL
+                                const dataUrl = liveCanvas.toDataURL('image/png');
+                                if (!dataUrl || dataUrl === 'data:,') return;
+                                // Clone-Canvas durch <img> ersetzen damit html2canvas es sieht
+                                const cloneCanvas = cloneCanvases[idx];
+                                if (!cloneCanvas) return;
+                                const img = clonedDoc.createElement('img');
+                                img.src = dataUrl;
+                                img.style.cssText = [
+                                    'position:absolute',
+                                    'top:0', 'left:0',
+                                    'width:100%', 'height:100%',
+                                    'pointer-events:none',
+                                    'z-index:' + (cloneCanvas.style.zIndex || 10),
+                                    'image-rendering:crisp-edges',
+                                    'display:block',
+                                    'transform:none',
+                                    'filter:none',
+                                ].join(';');
+                                img.setAttribute('data-canvas-snapshot', '1');
+                                cloneCanvas.parentNode.replaceChild(img, cloneCanvas);
+                            } catch(e) {}
+                        });
+                    } catch(e) {}
 
                     // =========================================================
                     // PDF-SHARE COLORS + FULL-BACKGROUNDS (nur html2pdf-Clone)
@@ -9859,6 +10382,37 @@ const opt = {
     }
 };
 
+
+// ===== PDF-FENSTER LADESEITE =====
+// Schreibt sofort eine Ladeanzeige in den neuen Tab – verhindert den weißen Leertab während html2pdf läuft.
+function injectPdfLoadingPage(win) {
+    if (!win || win.closed) return;
+    try {
+        win.document.open();
+        win.document.write(`<!doctype html><html lang="de"><head><meta charset="utf-8">
+<title>PDF wird erstellt…</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:#f0f6ff;font-family:ui-sans-serif,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;}
+  .card{background:#fff;border-radius:24px;box-shadow:0 8px 40px rgba(0,0,0,.10);padding:48px 56px;text-align:center;max-width:440px;width:90%;}
+  .spinner{width:64px;height:64px;border:5px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 28px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  h1{font-size:20px;font-weight:900;color:#0f172a;margin-bottom:8px;}
+  p{font-size:14px;color:#64748b;line-height:1.5;}
+  .dots span{animation:blink 1.4s infinite;opacity:0;}
+  .dots span:nth-child(2){animation-delay:.2s;}
+  .dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
+</style></head><body>
+<div class="card">
+  <div class="spinner"></div>
+  <h1>PDF wird erstellt<span class="dots"><span>.</span><span>.</span><span>.</span></span></h1>
+  <p>Bitte diesen Tab nicht schließen.<br>Das dauert normalerweise 30–90 Sekunden.</p>
+</div>
+</body></html>`);
+        win.document.close();
+    } catch(e) { /* cross-origin guard – ignore */ }
+}
 
 const blobToBase64 = (blob) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -10199,6 +10753,11 @@ const handlePDFShare = async () => {
                       </div>`;
                 }
 
+                const recItemsHtml = [
+                    wlanRecommendation ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:999px;font-size:11px;font-weight:800;color:#15803d">📶 ${wlanRecommendation}</span>` : '',
+                    speedRecommendation ? `<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#dcfce7;border:1px solid #86efac;border-radius:999px;font-size:11px;font-weight:800;color:#15803d">⚡ ${speedRecommendation}</span>` : ''
+                ].filter(Boolean).join('');
+                const recBannerHtml = recItemsHtml ? `<div class="page3-rec-banner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:10px 24px 0;padding:8px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:10px;font-weight:900;color:#166534;text-transform:uppercase;letter-spacing:0.08em">✓ Empfehlungen:</span>${recItemsHtml}</div>` : '';
                 const cards = [wlanCardHtml, techCardHtml, nbCardHtml, tvCardHtml].filter(Boolean);
                 const gridCols = cards.length === 4 ? '1fr 1fr 1fr 1fr' : cards.length === 3 ? '1fr 1fr 1fr' : cards.length === 2 ? '1fr 1fr' : '1fr';
                 const z = cards.length >= 4 ? 0.68 : cards.length === 3 ? 0.78 : cards.length === 2 ? 0.88 : 1.0;
@@ -10212,6 +10771,7 @@ const handlePDFShare = async () => {
                     <div style="flex:1;height:1px;background:rgba(255,255,255,0.2)"></div>
                     <div style="font-size:9px;font-weight:700;color:rgba(147,197,253,0.8);text-transform:uppercase;letter-spacing:0.12em">Auf Basis Ihrer Angaben</div>
                   </div>
+                  ${recBannerHtml}
                   <div style="padding:12px 24px;display:grid;grid-template-columns:${gridCols};gap:14px;align-items:start">${cards.join('')}</div>
                   <div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0 24px 12px;padding:8px 16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
                     <span style="font-size:9px;font-weight:600;color:#64748b">Alle Angaben ohne Gewähr · Preise können abweichen · Stand: ${new Date().toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</span>
@@ -10257,6 +10817,8 @@ const handlePDFShare = async () => {
                     <div style="flex:1;height:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:linear-gradient(90deg,transparent,#dbeafe)"></div>
                   </div>
 
+                  ${recBannerHtml.replace('margin:10px 24px 0','margin:14px 40px 0')}
+
                   <!-- Cards Grid -->
                   <div style="padding:16px 40px 24px;display:grid;grid-template-columns:${gridCols};gap:18px;align-items:start">
                     ${cards.join('')}
@@ -10297,8 +10859,58 @@ const handlePDFShare = async () => {
                             try { setTextData(prev => ({ ...prev, OfferValidUntil: '' })); } catch(e) {}
                             try { setDrawnStrokes(prev => ({ ...prev, offer_valid_until: [] })); } catch(e) {}
                         }
-                    }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
-                    <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} />
+                    }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onPdfPrint={async () => {
+                        triggerToast('PDF wird erstellt… einen Moment.');
+                        // Fenster VOR dem await öffnen — sonst blockiert der Browser als Popup
+                        const pdfWin = window.open('', '_blank');
+                        injectPdfLoadingPage(pdfWin);
+                        try {
+                            await new Promise(r => setTimeout(r, 200));
+                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
+                            const url = URL.createObjectURL(blob);
+                            if (pdfWin && !pdfWin.closed) {
+                                pdfWin.location.href = url;
+                            } else {
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'Angebot.pdf';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                            }
+                            setTimeout(() => URL.revokeObjectURL(url), 60000);
+                            triggerToast('✅ PDF bereit – Druckdialog öffnen oder speichern.');
+                        } catch(e) {
+                            if (pdfWin && !pdfWin.closed) pdfWin.close();
+                            triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
+                        }
+                    }} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
+                    <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} onPdfPrint={async () => {
+                        setShowFinishTypeModal(false);
+                        triggerToast('PDF wird erstellt… einen Moment.');
+                        const pdfWin = window.open('', '_blank');
+                        injectPdfLoadingPage(pdfWin);
+                        try {
+                            await new Promise(r => setTimeout(r, 200));
+                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
+                            const url = URL.createObjectURL(blob);
+                            if (pdfWin && !pdfWin.closed) {
+                                pdfWin.location.href = url;
+                            } else {
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'Angebot.pdf';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                            }
+                            setTimeout(() => URL.revokeObjectURL(url), 60000);
+                            triggerToast('✅ PDF bereit – Druckdialog öffnen oder speichern.');
+                        } catch(e) {
+                            if (pdfWin && !pdfWin.closed) pdfWin.close();
+                            triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
+                        }
+                    }} />
 
 
                     <OfferValidityModal
@@ -10327,6 +10939,17 @@ const handlePDFShare = async () => {
                     
                     <ImagePlacementModal isOpen={isImageSelectModalOpen} onClose={() => setIsImageSelectModalOpen(false)} onPlace={handleImagePlacement} imageName={currentImagePayload?.name || 'Datei'} />
                     <SignatureModal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} onSign={handleSignatureSave} />
+                    <FolgeterminModal isOpen={showFolgeterminModal} onClose={() => { setShowFolgeterminModal(false); setTimeout(() => setShowReferralModal(true), 200); }} onConfirm={(result) => {
+                        setShowFolgeterminModal(false);
+                        if (result.noAppointment) {
+                            triggerToast('Kein Folgetermin – Vorgang wird abgeschlossen.');
+                        } else if (result.date) {
+                            const d = new Date(result.date + (result.time ? 'T' + result.time : ''));
+                            const fmt = d.toLocaleDateString('de-DE', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' }) + (result.time ? ' um ' + result.time + ' Uhr' : '');
+                            triggerToast('📅 Folgetermin: ' + fmt);
+                        }
+                        setTimeout(() => setShowReferralModal(true), 300);
+                    }} />
 
                     <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik (passwortgeschützt)"><Icon d={ICONS.Lock} size={18}/></button><button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
@@ -10697,11 +11320,19 @@ const handlePDFShare = async () => {
                                     {/* E-Mail */}
                                     <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
                                         <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
-                                            <div style={{flex:1,position:'relative',height:emailMode==='pen'?'52px':'30px',border:`1.5px solid ${emailMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'height 0.2s ease'}}>
+                                            {/* E-Mail Display / Trigger */}
+                                            <div
+                                                onClick={()=>emailMode==='keyboard'&&setShowEmailKeyboard(true)}
+                                                style={{flex:1,position:'relative',height:emailMode==='pen'?'52px':'30px',border:`1.5px solid ${emailText?'#3b82f6':emailMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'height 0.2s ease',cursor:emailMode==='keyboard'?'pointer':'default',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
                                                 {emailMode==='keyboard'
-                                                    ?<input type="email" value={emailText} onChange={e=>setEmailText(e.target.value)} placeholder="E-Mail" style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'0 10px',fontSize:'11px',fontWeight:500,color:'#1e293b',background:'transparent',border:'none',outline:'none',boxSizing:'border-box'}}/>
+                                                    ?<span style={{fontSize:'11px',fontWeight:500,color:emailText?'#1e293b':'#cbd5e1',pointerEvents:'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>
+                                                        {emailText||'E-Mail eingeben…'}
+                                                    </span>
                                                     :<canvas ref={emailCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={e=>startDrawing(e,emailCanvasRef,'email')} onPointerMove={e=>draw(e,emailCanvasRef,'email')} onPointerUp={e=>stopDrawing(e,emailCanvasRef)} onPointerLeave={e=>stopDrawing(e,emailCanvasRef)}/>
                                                 }
+                                                {emailText && emailMode==='keyboard' && (
+                                                    <button onClick={e=>{e.stopPropagation();setEmailText('');}} style={{position:'absolute',right:'4px',top:'50%',transform:'translateY(-50%)',width:'18px',height:'18px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#64748b',zIndex:20}}>✕</button>
+                                                )}
                                             </div>
                                             <div style={{display:'flex',gap:'2px',flexShrink:0,alignSelf:'flex-start'}}>
                                                 {[['keyboard','⌨'],['pen','✏']].map(([m,ic])=>(
@@ -10711,6 +11342,81 @@ const handlePDFShare = async () => {
                                             </div>
                                         </div>
                                     </div>
+                                    {/* ── VIRTUELLE E-MAIL TASTATUR ── */}
+                                    {showEmailKeyboard && ReactDOM.createPortal(
+                                        <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'flex-end',justifyContent:'center',background:'rgba(0,0,0,0.45)',padding:'0'}} onClick={()=>setShowEmailKeyboard(false)}>
+                                            <div onClick={e=>e.stopPropagation()} style={{background:'#f8fafc',borderRadius:'22px 22px 0 0',width:'100%',maxWidth:'560px',boxShadow:'0 -6px 40px rgba(0,0,0,0.22)',paddingBottom:'env(safe-area-inset-bottom,12px)',overflow:'hidden'}}>
+                                                {/* Header */}
+                                                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px 10px',borderBottom:'1.5px solid #e2e8f0',background:'#fff'}}>
+                                                    <span style={{fontSize:'13px',fontWeight:800,color:'#1e293b',letterSpacing:'0.03em'}}>✉️ E-Mail eingeben</span>
+                                                    <button onClick={()=>setShowEmailKeyboard(false)} style={{width:'28px',height:'28px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',fontSize:'14px',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900}}>✕</button>
+                                                </div>
+                                                {/* Display */}
+                                                <div style={{background:'#fff',border:'1.5px solid #bfdbfe',borderRadius:'12px',margin:'12px 16px 6px',padding:'10px 14px',minHeight:'44px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px'}}>
+                                                    <span style={{fontFamily:'monospace',fontSize:'16px',fontWeight:700,color:emailText?'#1e293b':'#cbd5e1',letterSpacing:'0.03em',flex:1,wordBreak:'break-all'}}>
+                                                        {emailText||'—'}
+                                                    </span>
+                                                    {emailText&&<button onClick={()=>setEmailText(p=>p.slice(0,-1))} style={{width:'32px',height:'32px',borderRadius:'10px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',fontSize:'16px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>⌫</button>}
+                                                </div>
+                                                {/* Domain Quick-Buttons */}
+                                                <div style={{display:'flex',gap:'6px',padding:'6px 16px',overflowX:'auto',flexWrap:'nowrap'}}>
+                                                    {['@gmail.com','@icloud.com','@t-online.de','@web.de','@gmx.de','@outlook.com','@yahoo.de','@hotmail.de','@freenet.de'].map(d=>(
+                                                        <button key={d} onClick={()=>{
+                                                            const base=emailText.includes('@')?emailText.split('@')[0]:emailText;
+                                                            setEmailText(base+d);
+                                                        }} style={{padding:'6px 12px',borderRadius:'999px',border:'1.5px solid #bfdbfe',background:'#eff6ff',color:'#2563eb',fontSize:'12px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,WebkitTapHighlightColor:'transparent'}}>
+                                                            {d}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                {/* Keyboard Rows */}
+                                                {(() => {
+                                                    const rows=[['q','w','e','r','t','z','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['y','x','c','v','b','n','m','-','_','.']];
+                                                    const btnBase={height:'44px',borderRadius:'10px',fontSize:'17px',fontWeight:700,border:'none',cursor:'pointer',background:'#ffffff',color:'#1e293b',boxShadow:'0 1px 3px rgba(0,0,0,0.1)',WebkitTapHighlightColor:'transparent',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.08s'};
+                                                    return (
+                                                        <div style={{padding:'4px 8px 6px',display:'flex',flexDirection:'column',gap:'5px'}}>
+                                                            {rows.map((row,ri)=>(
+                                                                <div key={ri} style={{display:'grid',gridTemplateColumns:`repeat(${row.length},1fr)`,gap:'4px'}}>
+                                                                    {row.map(k=>(
+                                                                        <button key={k}
+                                                                            onPointerDown={e=>{e.currentTarget.style.transform='scale(0.9)';e.currentTarget.style.background='#dbeafe';}}
+                                                                            onPointerUp={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.background='#ffffff';setEmailText(p=>p+k);}}
+                                                                            style={btnBase}>{k}</button>
+                                                                    ))}
+                                                                </div>
+                                                            ))}
+                                                            {/* Bottom row: @, 0-9, space, backspace */}
+                                                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',gap:'4px'}}>
+                                                                {['1','2','3','4','5','6','7','8','9','0'].map(k=>(
+                                                                    <button key={k}
+                                                                        onPointerDown={e=>{e.currentTarget.style.transform='scale(0.9)';e.currentTarget.style.background='#e2e8f0';}}
+                                                                        onPointerUp={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.background='#f1f5f9';setEmailText(p=>p+k);}}
+                                                                        style={{...btnBase,background:'#f1f5f9',fontSize:'15px'}}>
+                                                                        {k}
+                                                                    </button>
+                                                                ))}
+                                                                <button
+                                                                    onPointerDown={e=>{e.currentTarget.style.background='#bfdbfe';}}
+                                                                    onPointerUp={e=>{e.currentTarget.style.background='#eff6ff';setEmailText(p=>p+'@');}}
+                                                                    style={{...btnBase,background:'#eff6ff',color:'#2563eb',fontSize:'18px',fontWeight:900}}>@</button>
+                                                                <button
+                                                                    onPointerDown={e=>{e.currentTarget.style.background='#fee2e2';}}
+                                                                    onPointerUp={e=>{e.currentTarget.style.background='#fef2f2';setEmailText(p=>p.slice(0,-1));}}
+                                                                    style={{...btnBase,background:'#fef2f2',color:'#ef4444',fontSize:'18px'}}>⌫</button>
+                                                            </div>
+                                                            {/* Confirm */}
+                                                            <button
+                                                                onClick={()=>setShowEmailKeyboard(false)}
+                                                                style={{width:'100%',height:'48px',borderRadius:'14px',border:'none',fontSize:'15px',fontWeight:800,cursor:'pointer',background:emailText?'#2563eb':'#cbd5e1',color:'#fff',marginTop:'2px',boxShadow:emailText?'0 3px 12px rgba(37,99,235,0.35)':'none',transition:'all 0.15s'}}>
+                                                                ✓ Übernehmen
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>,
+                                        document.body
+                                    )}
                                 </div>
                             </div>
 
@@ -10793,17 +11499,17 @@ const handlePDFShare = async () => {
                                 </div>
                                 <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'4px'}}>
                                     {[
-                                        {label:'TV Kalkulation',icon:ICONS.Tv,accentCol:'#ec4899',onClick:()=>setShowTvModal(true)},
-                                        {label:'Roaming Check',icon:ICONS.Globe,accentCol:'#8b5cf6',onClick:()=>setShowRoamingModal(true)},
+                                        {label:tvSnapshot?'TV Kalkulation ✓':'TV Kalkulation',icon:ICONS.Tv,accentCol:'#ec4899',active:!!tvSnapshot,onClick:()=>setShowTvModal(true)},
+                                        {label:'Roaming Check',icon:ICONS.Globe,accentCol:'#8b5cf6',active:false,onClick:()=>setShowRoamingModal(true)},
                                     ].map(btn=>(
                                         <button key={btn.label} onClick={btn.onClick}
-                                            style={{width:'100%',display:'flex',alignItems:'center',gap:'9px',padding:'7px 10px',borderRadius:'9px',border:'1.5px solid #f1f5f9',background:'#fafafa',cursor:'pointer',transition:'all 0.15s',textAlign:'left'}}
-                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.accentCol;e.currentTarget.style.background=btn.accentCol+'10';}}
-                                            onMouseLeave={e=>{e.currentTarget.style.borderColor='#f1f5f9';e.currentTarget.style.background='#fafafa';}}>
-                                            <div style={{width:'20px',height:'20px',borderRadius:'6px',background:btn.accentCol+'15',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                                                <Icon d={btn.icon} size={11} style={{color:btn.accentCol}}/>
+                                            style={{width:'100%',display:'flex',alignItems:'center',gap:'9px',padding:'7px 10px',borderRadius:'9px',border:`1.5px solid ${btn.active?'#86efac':'#f1f5f9'}`,background:btn.active?'#f0fdf4':'#fafafa',cursor:'pointer',transition:'all 0.15s',textAlign:'left'}}
+                                            onMouseEnter={e=>{e.currentTarget.style.borderColor=btn.active?'#22c55e':btn.accentCol;e.currentTarget.style.background=btn.active?'#dcfce7':btn.accentCol+'10';}}
+                                            onMouseLeave={e=>{e.currentTarget.style.borderColor=btn.active?'#86efac':'#f1f5f9';e.currentTarget.style.background=btn.active?'#f0fdf4':'#fafafa';}}>
+                                            <div style={{width:'20px',height:'20px',borderRadius:'6px',background:btn.active?'#22c55e':btn.accentCol+'15',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                                <Icon d={btn.icon} size={11} style={{color:btn.active?'#fff':btn.accentCol}}/>
                                             </div>
-                                            <span style={{fontSize:'11px',fontWeight:700,color:'#374151'}}>{btn.label}</span>
+                                            <span style={{fontSize:'11px',fontWeight:700,color:btn.active?'#166534':'#374151'}}>{btn.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -11223,7 +11929,7 @@ const handlePDFShare = async () => {
 
                             {/* Empfehlungen-Banner auf Seite 2 */}
                             {(wlanRecommendation || speedRecommendation) && (
-                                <div style={{display:'flex',gap:'8px',flexWrap:'wrap',padding:'8px 12px',background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:'12px',marginBottom:'8px',alignItems:'center',flexShrink:0}}>
+                                <div className="page2-rec-banner" style={{display:'flex',gap:'8px',flexWrap:'wrap',padding:'8px 12px',background:'#f0fdf4',border:'1.5px solid #86efac',borderRadius:'12px',marginBottom:'8px',alignItems:'center',flexShrink:0}}>
                                     <span style={{fontSize:'10px',fontWeight:800,color:'#166534',textTransform:'uppercase',letterSpacing:'0.06em',flexShrink:0}}>✓ Empfehlungen:</span>
                                     {wlanRecommendation && <span style={{display:'inline-flex',alignItems:'center',gap:'4px',padding:'3px 10px',background:'#dcfce7',border:'1px solid #86efac',borderRadius:'999px',fontSize:'11px',fontWeight:700,color:'#15803d'}}>
                                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
@@ -11248,6 +11954,17 @@ const handlePDFShare = async () => {
                                     {/* 3) Monatlich im 2. Jahr: bleibt IMMER im DOM (kein Reflow), nur unsichtbar wenn aus */}
                                     <div className={`year-2-container ${!showSecondYear ? 'hidden-layer' : ''}`}>
                                         {renderOfferInput('monatlich2', 'CostMonatlich2', 'text')}
+                                    </div>
+                                </div>
+
+                                {/* 4) Smartphone Finanzierung – eigenes Feld */}
+                                <div className="grid grid-cols-1 gap-4 mt-3">
+                                    <div style={{position:'relative'}}>
+                                        {renderOfferInput('smartphone', 'CostSmartphone', 'text')}
+                                        <div style={{position:'absolute',top:'50%',right:'10px',transform:'translateY(-50%) translateY(10px)',display:'flex',alignItems:'center',gap:'4px',pointerEvents:'none'}}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                                            <span style={{fontSize:'10px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em'}}>mtl. Rate</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -11299,15 +12016,18 @@ const handlePDFShare = async () => {
                     </div>
 
                     {/* ── SEITE 3: Portal nach document.body — entkommt overflow:hidden des App-Wrappers ── */}
-                    {(wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot)
+                    {(printRecommendationsEnabled && (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot))
                         ? ReactDOM.createPortal(
                             <div className="print-netzwerk-anlage" dangerouslySetInnerHTML={{__html: buildPage3Html(true)}} />,
                             document.body
                           )
                         : null
                     }
-                    {/* Anlage-HTML direkt cachen — zuverlässiger als Closure-Bridge */}
-                    {(window.__anlageHtml = (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot) ? buildPage3Html() : '', null)}
+                    {/* Anlage-HTML direkt cachen — zuverlässiger als Closure-Bridge. AUS = keine Seite 3. */}
+                    {(window.__anlageHtml = (printRecommendationsEnabled && (wlanSnapshot || (techUebernommen && techUebernommen.length > 0) || netBundleMatched || tvSnapshot)) ? buildPage3Html() : '', null)}
+
+                    
+                    {/* Empfehlung-Toggle entfernt – wird automatisch erkannt */}
 
                     {/* ── MINI TASCHENRECHNER (Kosten IST, Stylus-Modus) ── */}
                     {calcOpen && ReactDOM.createPortal((()=>{
@@ -11531,6 +12251,7 @@ const handlePDFShare = async () => {
             const ensurePrintHeaders = () => {
     // Verhindert doppelte Header
     document.querySelectorAll('.print-page-header').forEach(el => el.remove());
+                document.querySelectorAll('.page3-cost-clone').forEach(el => el.remove());
 
     const mkHeader = (titleText) => {
         const h = document.createElement('div');
@@ -11557,12 +12278,41 @@ const handlePDFShare = async () => {
             'flex:0 0 100%',
             'order:-1',
         ].join(';');
-        h.innerHTML = `
-            <div style="flex:1 1 auto; min-width:0; font-size:20px; font-weight:900; color:#0b1e42; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; text-align:left;">${titleText}</div>
-            <div style="flex-shrink:0; display:flex; align-items:center;">
-                <img src="${window.__HIDA_LOGO_DATA_URI || ''}" class="hida-logo-print" style="height:26px; width:auto; max-width:160px; object-fit:contain; display:block;" />
-            </div>
-        `;
+        // Titel + Beratungs-ID links (nur Angebotsseite), Logo rechts
+        const _leftDiv = document.createElement('div');
+        _leftDiv.style.cssText = 'flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;';
+        const _titleDiv = document.createElement('div');
+        _titleDiv.style.cssText = 'font-size:20px;font-weight:900;color:#0b1e42;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;text-align:left;';
+        _titleDiv.textContent = titleText;
+        _leftDiv.appendChild(_titleDiv);
+        // Beratungs-ID nur wenn vorhanden (Papier-Druck: Angebot + Situation)
+        const _bid = (window.__beratungsId || (()=>{ try { const el=document.querySelector('input[inputMode="numeric"][maxLength="15"]'); return el?el.value.trim():''; } catch(e){return '';} })());
+        if (_bid) {
+            const _bidSpan = document.createElement('div');
+            _bidSpan.style.cssText = 'font-family:monospace;font-size:9px;font-weight:700;color:#3b82f6;letter-spacing:0.08em;margin-top:1px;white-space:nowrap;';
+            _bidSpan.textContent = 'Beratungs-ID: ' + _bid;
+            _leftDiv.appendChild(_bidSpan);
+        }
+        h.appendChild(_leftDiv);
+        const _logoDiv = document.createElement('div');
+        _logoDiv.style.cssText = 'flex-shrink:0;display:flex;align-items:center;';
+        const _rawSvg = window.__HIDA_LOGO_SVG || '';
+        if (_rawSvg) {
+            const _logoWrap = document.createElement('div');
+            _logoWrap.className = 'hida-logo-print';
+            _logoWrap.style.cssText = 'height:26px;width:auto;max-width:160px;display:flex;align-items:center;overflow:hidden;';
+            _logoWrap.innerHTML = _rawSvg;
+            const _svgEl = _logoWrap.querySelector('svg');
+            if (_svgEl) { _svgEl.style.height='26px'; _svgEl.style.width='auto'; _svgEl.style.maxWidth='160px'; _svgEl.style.display='block'; _svgEl.setAttribute('height','26'); _svgEl.removeAttribute('width'); }
+            _logoDiv.appendChild(_logoWrap);
+        } else {
+            const _img = document.createElement('img');
+            _img.src = window.__HIDA_LOGO_DATA_URI || '';
+            _img.className = 'hida-logo-print';
+            _img.style.cssText = 'height:26px;width:auto;max-width:160px;object-fit:contain;display:block;';
+            _logoDiv.appendChild(_img);
+        }
+        h.appendChild(_logoDiv);
         return h;
     };
 
@@ -11578,29 +12328,7 @@ const handlePDFShare = async () => {
     const off = document.querySelector('.print-offer-view');
     if (off) {
         off.prepend(mkHeader('Ihr Persönliches Angebot'));
-        // Beratungs-ID aus DOM lesen
-        const bidInput = document.querySelector('input[inputMode="numeric"][maxLength="15"]');
-        const bidVal = bidInput ? bidInput.value.trim() : '';
-        if (bidVal) {
-            const bid = document.createElement('div');
-            bid.style.cssText = [
-                'position:absolute',
-                'top:47px',
-                'right:12px',
-                'z-index:20',
-                'display:flex',
-                'align-items:center',
-                'gap:5px',
-                'background:#eff6ff',
-                'border:1px solid #bfdbfe',
-                'border-radius:7px',
-                'padding:3px 10px',
-                'pointer-events:none',
-            ].join(';');
-            bid.innerHTML = `<span style="font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;">Beratungs-ID</span><span style="font-family:monospace;font-size:12px;font-weight:800;color:#1e40af;letter-spacing:0.05em;">${bidVal}</span>`;
-            off.style.position = 'relative';
-            off.appendChild(bid);
-        }
+        // Beratungs-ID ist bereits im Seiten-Header (mkHeader) enthalten — kein Extra-Badge nötig
     }
 
     // Seite 3 hat bereits einen eingebauten Header in buildPage3Html — kein extra Header nötig
@@ -11739,6 +12467,23 @@ const handlePDFShare = async () => {
                     _printCardOrig.set('__fusion_' + i, el.style.display);
                     el.style.setProperty('display', 'none', 'important');
                 });
+
+                // ── SEITE 3 AKTIV: Kostenübersicht auf Seite 3 klonen und Original auf Seite 2 ausblenden ──
+                try {
+                    const enabled = document.body.classList.contains('print-recs-enabled') || !!window.__printRecommendationsEnabled;
+                    document.querySelectorAll('.page3-cost-clone').forEach(el => el.remove());
+                    if (enabled) {
+                        const anlage = document.querySelector('.print-netzwerk-anlage');
+                        const cost = document.querySelector('.print-offer-view .cost-overview-print');
+                        if (anlage && cost) {
+                            const clone = cost.cloneNode(true);
+                            clone.classList.add('page3-cost-clone');
+                            clone.removeAttribute('style');
+                            clone.querySelectorAll('button:not([data-print-keep="1"])').forEach(b => b.remove());
+                            anlage.insertBefore(clone, anlage.firstChild);
+                        }
+                    }
+                } catch(e) {}
 
                 // ── PRINT HEIGHT FIX: JS überschreibt CSS (höchste Priorität) ──
                 // ensurePrintHeaders fügt Header als Geschwister VOR dem Wrapper ein.
@@ -11901,6 +12646,7 @@ const handlePDFShare = async () => {
             });
             window.addEventListener('afterprint', () => {
                 document.querySelectorAll('.print-page-header').forEach(el => el.remove());
+                document.querySelectorAll('.page3-cost-clone').forEach(el => el.remove());
                 // print-netzwerk-anlage wird von React verwaltet → kein Remove nötig
 
                 // ── Marketing-Fallback-Karten entfernen + Canvases wiederherstellen ──
