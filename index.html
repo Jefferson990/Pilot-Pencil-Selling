@@ -7584,7 +7584,7 @@ const fileInputRef = useRef(null);
                     if (snap.textData) setTextData(snap.textData);
                     if (snap.drawnStrokes) setDrawnStrokes(snap.drawnStrokes);
                     if (snap.customerType !== undefined) setCustomerType(snap.customerType);
-                    if (snap.segment !== undefined) setSegment(snap.segment);
+                    if (snap.segment !== undefined) { setSegment(snap.segment); if (snap.segment) setSegmentTouched(true); }
                     if (snap.providerSelect !== undefined) setProviderSelect(snap.providerSelect);
                     if (snap.costState) setCostState(snap.costState);
                     if (snap.offerData) setOfferData(snap.offerData);
@@ -8037,26 +8037,23 @@ const handleFinishOfferClick = () => {
                     // Exakt dieselbe Logik wie der "PDF drucken / Empfohlen"-Button im FinishTypeModal
                     (async () => {
                         triggerToast('PDF wird erstellt… einen Moment.');
-                        const pdfWin = window.open('', '_blank');
-                        injectPdfLoadingPage(pdfWin);
                         try {
-                            await new Promise(r => setTimeout(r, 200));
                             const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
                             const url = URL.createObjectURL(blob);
-                            if (pdfWin && !pdfWin.closed) {
-                                pdfWin.location.href = url;
-                            } else {
+                            // PDF im neuen Tab öffnen (direkt drucken/teilen möglich)
+                            const pdfTab = window.open(url, '_blank');
+                            if (!pdfTab) {
+                                // Popup blockiert → Fallback: Download
                                 const a = document.createElement('a');
                                 a.href = url;
-                                a.download = 'Angebot.pdf';
+                                a.download = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
                             }
-                            setTimeout(() => URL.revokeObjectURL(url), 60000);
-                            triggerToast('✅ PDF bereit – Druckdialog öffnen oder speichern.');
+                            setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            triggerToast('✅ PDF geöffnet – drucken oder teilen.');
                         } catch(e) {
-                            if (pdfWin && !pdfWin.closed) pdfWin.close();
                             triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                         }
                         setTimeout(() => setShowReferralModal(true), 400);
@@ -9071,7 +9068,8 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
          .pdf-share-mode .share-page{break-after:page; page-break-after:always; width:297mm; max-width:297mm; height:210mm; min-height:210mm; max-height:210mm; display:flex; flex-direction:column; box-sizing:border-box; overflow:hidden;}
          .pdf-share-mode .share-page-header{flex:0 0 16mm; height:16mm; min-height:16mm; max-height:16mm; box-sizing:border-box;}
          .pdf-share-mode .share-page-content{flex:1 1 auto; min-height:0; height:calc(210mm - 16mm); overflow:hidden; box-sizing:border-box;}
-         .pdf-share-mode .share-cover,.pdf-share-mode .share-outro{height:100% !important; min-height:100% !important; max-height:100% !important; box-sizing:border-box;}
+         .pdf-share-mode .share-cover{height:100% !important; min-height:100% !important; max-height:100% !important; box-sizing:border-box;}
+         .pdf-share-mode .share-outro{box-sizing:border-box !important;}
 
          /* ── Outro-Innenlayout: Danke-Grid skaliert auf verfügbare Höhe ── */
          .pdf-share-mode .share-outro{
@@ -9200,16 +9198,18 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
   gap:6px !important;
 }
 
-/* Seite 4: Full-Bleed Outro (ohne Header) */
+/* Seite 4: Outro-Wrapper (outroContentWrap enthält Kosten + blauen Kasten) */
 .pdf-share-mode .share-outro{
-  width:297mm !important;
-  height:210mm !important;
-  padding:0 !important;
+  padding:10px 14px !important;
   margin:0 !important;
   display:flex !important;
   flex-direction:column !important;
-  justify-content:center !important;
+  justify-content:flex-start !important;
   overflow:hidden !important;
+  width:100% !important;
+  height:100% !important;
+  box-sizing:border-box !important;
+  border-radius:18px !important;
 }
 .pdf-share-mode .share-outro .print-page-header{ display:none !important; }
 
@@ -9926,25 +9926,36 @@ if (costBlock) {
     // Wrapper-Höhe = skalierte Inhalt-Höhe (damit kein Whitespace entsteht)
     costWrap.appendChild(costClone);
     // Höhe via inline-style nach appendChild schätzen (~180px skaliert = ~137px)
-    costWrap.style.height = `${Math.round(185 * COST_SCALE)}px`;
-    costWrap.style.maxHeight = `${Math.round(185 * COST_SCALE)}px`;
+    costWrap.style.height = `${Math.round(300 * COST_SCALE)}px`;
+    costWrap.style.maxHeight = `${Math.round(300 * COST_SCALE)}px`;
     outroContentWrap.appendChild(costWrap);
 }
 
-// ── Danke & Bonus darunter – nimmt exakt den Restplatz ──
+// ── Danke & Bonus darunter – feste Höhe ~60% des Restplatzes ──
+// 210mm≈794px minus costWrap~141px minus padding/gap~22px = ~631px Rest → 60%≈378px
+const OUTRO_MAX_H = 378;
 const outroInner = doc.createElement('div');
 outroInner.style.cssText = [
-    'flex:1 1 auto',
-    'min-height:0',
+    'flex:0 0 auto',
+    'margin-top:40px',
+    'height:' + OUTRO_MAX_H + 'px',
+    'max-height:' + OUTRO_MAX_H + 'px',
     'overflow:hidden',
     'display:flex',
     'flex-direction:column',
+    'align-items:stretch',
     'border-radius:10px',
+    'width:100%',
 ].join(';');
 const outroNode = makeOutroContent();
-// Volle Höhe + overflow:hidden damit Danke-Karten nicht abgeschnitten werden
-outroNode.style.cssText = (outroNode.style.cssText || '').replace(/height:[^;]+;?/g, '') +
-    ';flex:1 1 auto;min-height:0;height:100%;max-height:100%;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box;';
+outroNode.style.cssText = (outroNode.style.cssText || '')
+    .replace(/height:[^;]+;?/g, '')
+    .replace(/max-height:[^;]+;?/g, '')
+    .replace(/width:[^;]+;?/g, '')
+    .replace(/max-width:[^;]+;?/g, '')
+    .replace(/margin-left:[^;]+;?/g, '')
+    .replace(/margin-right:[^;]+;?/g, '') +
+    ';height:' + OUTRO_MAX_H + 'px;max-height:' + OUTRO_MAX_H + 'px;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box;width:100%;border-radius:18px;';
 outroInner.appendChild(outroNode);
 outroContentWrap.appendChild(outroInner);
 
@@ -10384,7 +10395,6 @@ const opt = {
 
 
 // ===== PDF-FENSTER LADESEITE =====
-// Schreibt sofort eine Ladeanzeige in den neuen Tab – verhindert den weißen Leertab während html2pdf läuft.
 function injectPdfLoadingPage(win) {
     if (!win || win.closed) return;
     try {
@@ -10411,7 +10421,7 @@ function injectPdfLoadingPage(win) {
 </div>
 </body></html>`);
         win.document.close();
-    } catch(e) { /* cross-origin guard – ignore */ }
+    } catch(e) {}
 }
 
 const blobToBase64 = (blob) => new Promise((resolve, reject) => {
@@ -10572,9 +10582,12 @@ const handlePDFShare = async () => {
                 try { triggerToast('Teilen fehlgeschlagen – PDF gespeichert.'); } catch(e){}
             }
         } else {
-            // Kein Web Share API (z.B. Firefox Desktop) → Download-Fallback
-            saveBlobToDownloads(blob);
-            try { triggerToast('PDF gespeichert – bitte manuell anhängen.'); } catch(e){}
+            // Kein Web Share API → Tab öffnen (drucken/speichern möglich)
+            const url = URL.createObjectURL(blob);
+            const pdfTab = window.open(url, '_blank');
+            if (!pdfTab) { saveBlobToDownloads(blob); }
+            setTimeout(() => URL.revokeObjectURL(url), 120000);
+            try { triggerToast('✅ PDF geöffnet – drucken oder teilen.'); } catch(e){}
         }
 } catch (err) {
         hideOverlay();
@@ -10861,53 +10874,46 @@ const handlePDFShare = async () => {
                         }
                     }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onPdfPrint={async () => {
                         triggerToast('PDF wird erstellt… einen Moment.');
-                        // Fenster VOR dem await öffnen — sonst blockiert der Browser als Popup
-                        const pdfWin = window.open('', '_blank');
-                        injectPdfLoadingPage(pdfWin);
                         try {
-                            await new Promise(r => setTimeout(r, 200));
                             const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
                             const url = URL.createObjectURL(blob);
-                            if (pdfWin && !pdfWin.closed) {
-                                pdfWin.location.href = url;
-                            } else {
+                            // PDF im neuen Tab öffnen (direkt drucken/teilen möglich)
+                            const pdfTab = window.open(url, '_blank');
+                            if (!pdfTab) {
+                                // Popup blockiert → Fallback: Download
                                 const a = document.createElement('a');
                                 a.href = url;
-                                a.download = 'Angebot.pdf';
+                                a.download = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
                             }
-                            setTimeout(() => URL.revokeObjectURL(url), 60000);
-                            triggerToast('✅ PDF bereit – Druckdialog öffnen oder speichern.');
+                            setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            triggerToast('✅ PDF geöffnet – drucken oder teilen.');
                         } catch(e) {
-                            if (pdfWin && !pdfWin.closed) pdfWin.close();
                             triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                         }
                     }} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
                     <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} onPdfPrint={async () => {
                         setShowFinishTypeModal(false);
                         triggerToast('PDF wird erstellt… einen Moment.');
-                        const pdfWin = window.open('', '_blank');
-                        injectPdfLoadingPage(pdfWin);
                         try {
-                            await new Promise(r => setTimeout(r, 200));
                             const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
                             const url = URL.createObjectURL(blob);
-                            if (pdfWin && !pdfWin.closed) {
-                                pdfWin.location.href = url;
-                            } else {
+                            // PDF im neuen Tab öffnen (direkt drucken/teilen möglich)
+                            const pdfTab = window.open(url, '_blank');
+                            if (!pdfTab) {
+                                // Popup blockiert → Fallback: Download
                                 const a = document.createElement('a');
                                 a.href = url;
-                                a.download = 'Angebot.pdf';
+                                a.download = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
                             }
-                            setTimeout(() => URL.revokeObjectURL(url), 60000);
-                            triggerToast('✅ PDF bereit – Druckdialog öffnen oder speichern.');
+                            setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            triggerToast('✅ PDF geöffnet – drucken oder teilen.');
                         } catch(e) {
-                            if (pdfWin && !pdfWin.closed) pdfWin.close();
                             triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                         }
                     }} />
@@ -11310,7 +11316,7 @@ const handlePDFShare = async () => {
                                         </div>
                                         <div style={{position:'relative'}}>
                                             <select value={segment} onChange={e=>{setSegment(e.target.value);setSegmentTouched(true);}}
-                                                style={{width:'100%',height:'30px',background:'#f8fafc',border:`1.5px solid ${segmentTouched?'#22c55e':'#f87171'}`,borderRadius:'8px',paddingLeft:'8px',paddingRight:'20px',fontSize:'10px',fontWeight:600,color:'#374151',outline:'none',appearance:'none',cursor:'pointer'}}>
+                                                style={{width:'100%',height:'30px',background:'#f8fafc',border:`1.5px solid ${segment?'#22c55e':'#f87171'}`,borderRadius:'8px',paddingLeft:'8px',paddingRight:'20px',fontSize:'10px',fontWeight:600,color:'#374151',outline:'none',appearance:'none',cursor:'pointer'}}>
                                                 <option value="" disabled hidden>Segment *</option>
                                                 <option>Neuvertrag</option><option>Vertragsverlängerung</option><option>Junge Leute</option><option>Bestes Alter</option>
                                             </select>
