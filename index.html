@@ -6508,6 +6508,8 @@ const resolveUserName = (raw) => {
             image, onClearImage, onClearOverlay,
             imageTransform, onUpdateImageTransform,
             onOpenBundleModal,
+            onSetPackagePrice,
+            packagePriceData,
             triggerToast,
             htmlOverlayProp,
             bundleInsertCount,
@@ -6783,7 +6785,7 @@ const resolveUserName = (raw) => {
             try { hardEndInteraction(); } catch(_) {}
         };
         const handleImageReset = () => { onUpdateImageTransform(statusKey, { x: 0, y: 0, scale: 0.8, rotation: 0 }); }; 
-        return (<div className={containerClasses} style={{transition: 'all 0.25s ease'}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-[60] shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2 offer-toolbar-icons">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{hasOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImageReset(); }} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}
+        return (<div className={containerClasses} style={{transition: 'all 0.25s ease'}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-[60] shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2 offer-toolbar-icons">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{typeof onSetPackagePrice === 'function' && (() => { const pd = packagePriceData||{}; const hp = pd.einmalig||pd.monatlich; return (<button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();onSetPackagePrice(statusKey);}} style={{padding:'6px',borderRadius:'50%',background:hp?'#dcfce7':'#f8fafc',color:hp?'#16a34a':'#94a3b8',border:hp?'1.5px solid #86efac':'1.5px solid #e2e8f0',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:'11px',width:'28px',height:'28px'}} title="Paket-Preis setzen">€</button>); })()}{hasOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImageReset(); }} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}
         {hasOverlay && (statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (
             <>
                 <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); toggleOverlayEdit(); }} className={`p-1.5 rounded-full transition-colors ${overlayEditEnabled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`} title={overlayEditEnabled ? 'Bearbeiten aktiv: Angebot kann bewegt/skaliert werden (Zeichnen ist dann gesperrt). Klick zum Sperren.' : 'Bearbeiten aus: Zeichnen ist frei. Klick um Angebot zu bewegen/skaliert zu bearbeiten.'}><Icon d={ICONS.Lock} size={16}/></button>
@@ -7386,6 +7388,31 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             const totalCost = parseCost(costState.mobile) + parseCost(costState.landline) + parseCost(costState.tv);
             
             const initialOfferData = { einmalig: 0, monatlich1: 0, monatlich2: 0, smartphone: 0, einmaligRaw: '', monatlich1Raw: '', monatlich2Raw: '', smartphoneRaw: '' };
+            // Paket-Preise: je Angebot ein einmaliger und monatlicher Preis
+            const [packagePrices, setPackagePrices] = useState({ offer1: { einmalig: '', monatlich: '' }, offer2: { einmalig: '', monatlich: '' }, offer3: { einmalig: '', monatlich: '' } });
+            const [showPriceModal, setShowPriceModal] = useState(false);
+            const [priceModalTarget, setPriceModalTarget] = useState('offer1');
+            const [priceModalDraft, setPriceModalDraft] = useState({ einmalig: '', monatlich: '' });
+            const openPriceModal = (key) => { setPriceModalTarget(key); setPriceModalDraft({ ...packagePrices[key] }); setShowPriceModal(true); };
+            const savePriceModal = () => {
+                const updated = { ...packagePrices, [priceModalTarget]: { ...priceModalDraft } };
+                setPackagePrices(updated);
+                // Automatisch in Kostenübersicht übertragen
+                const parse = v => parseFloat((v||'').replace(',','.')) || 0;
+                const allMonatlich = ['offer1','offer2','offer3'].map(k => parse(updated[k].monatlich));
+                const totalEinmalig = ['offer1','offer2','offer3'].reduce((s,k) => s + parse(updated[k].einmalig), 0);
+                const totalMonatlich = allMonatlich.reduce((s,v) => s+v, 0);
+                // monatlich1 = Paket 1, monatlich2 = Paket 2+3 Summe wenn mehrere
+                const m1 = allMonatlich[0]; const m2 = allMonatlich[1]; const m3 = allMonatlich[2];
+                setOfferData(prev => ({
+                    ...prev,
+                    einmalig: totalEinmalig, einmaligRaw: totalEinmalig > 0 ? totalEinmalig.toFixed(2).replace('.',',') : '',
+                    monatlich1: m1 || (m2||m3 ? 0 : prev.monatlich1), monatlich1Raw: m1 > 0 ? m1.toFixed(2).replace('.',',') : '',
+                    monatlich2: m2+m3 > 0 ? m2+m3 : prev.monatlich2, monatlich2Raw: m2+m3 > 0 ? (m2+m3).toFixed(2).replace('.',',') : prev.monatlich2Raw,
+                    smartphone: 0, smartphoneRaw: ''
+                }));
+                setShowPriceModal(false);
+            };
             const [showSavingsBlock, setShowSavingsBlock] = React.useState(false);
             const [dismissSavingsHint, setDismissSavingsHint] = React.useState(false);
             const [offerData, setOfferData] = useState(initialOfferData);
@@ -7506,7 +7533,7 @@ const fileInputRef = useRef(null);
 
             const saveToAutosave = React.useCallback(() => {
                 try {
-                    const snap = { ts: Date.now(), textData, drawnStrokes, customerType, segment,
+                    const snap = { ts: Date.now(), textData, drawnStrokes, customerType, segment, packagePrices,
                         providerSelect, costState, offerData, canvasStatus,
                         wlanRecommendation, speedRecommendation, emailText, beratungsId, skipReason,
                         customerSignature,   // Kundenunterschrift
@@ -7520,7 +7547,7 @@ const fileInputRef = useRef(null);
                     };
                     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(snap));
                 } catch(e) {}
-            }, [textData, drawnStrokes, customerType, segment, providerSelect, costState,
+            }, [textData, drawnStrokes, customerType, segment, packagePrices, providerSelect, costState,
                 offerData, canvasStatus, wlanRecommendation, speedRecommendation, emailText, beratungsId, skipReason,
                 customerSignature, canvasHtml, wlanSnapshot, techUebernommen, netBundleMatched, tvSnapshot, canvasImages, imageTransform]);
 
@@ -7586,6 +7613,7 @@ const fileInputRef = useRef(null);
                     if (snap.customerType !== undefined) setCustomerType(snap.customerType);
                     if (snap.segment !== undefined) { setSegment(snap.segment); if (snap.segment) setSegmentTouched(true); }
                     if (snap.providerSelect !== undefined) setProviderSelect(snap.providerSelect);
+                    if (snap.packagePrices !== undefined) setPackagePrices(snap.packagePrices);
                     if (snap.costState) setCostState(snap.costState);
                     if (snap.offerData) setOfferData(snap.offerData);
                     if (snap.canvasStatus) setCanvasStatus(snap.canvasStatus);
@@ -10938,7 +10966,55 @@ const handlePDFShare = async () => {
                     />
 
 
-                    <SkipReasonModal isOpen={showSkipReasonModal} onClose={() => setShowSkipReasonModal(false)} onConfirm={handleSkipToOffer} reason={skipReason} setReason={setSkipReason} reasonMode={skipReasonMode} setReasonMode={setSkipReasonMode} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} canvasRef={skipReasonCanvasRef} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} MIN_LENGTH={MIN_REASON_LENGTH} /> <BundleModal isOpen={showBundleModal} onClose={() => setShowBundleModal(false)} url={bundleModalUrl} onImportToCanvas={importBundleToCanvas} triggerToast={triggerToast} targetKey={bundleTargetKey} />
+                    <SkipReasonModal isOpen={showSkipReasonModal} onClose={() => setShowSkipReasonModal(false)} onConfirm={handleSkipToOffer} reason={skipReason} setReason={setSkipReason} reasonMode={skipReasonMode} setReasonMode={setSkipReasonMode} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} canvasRef={skipReasonCanvasRef} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} MIN_LENGTH={MIN_REASON_LENGTH} /> {showPriceModal && (() => {
+    const labels = { offer1: 'Paket 1', offer2: 'Paket 2', offer3: 'Paket 3' };
+    const parse = v => parseFloat((v||'').replace(',','.')) || 0;
+    const hasValue = priceModalDraft.einmalig || priceModalDraft.monatlich;
+    return (
+        <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(15,23,42,0.65)',backdropFilter:'blur(4px)'}}>
+            <div style={{background:'#fff',borderRadius:'20px',padding:'28px',width:'320px',boxShadow:'0 25px 60px rgba(0,0,0,0.3)',border:'1px solid #e2e8f0'}}>
+                <h3 style={{margin:'0 0 6px',fontSize:'18px',fontWeight:900,color:'#1e293b',display:'flex',alignItems:'center',gap:'8px'}}>
+                    <span style={{background:'#2563eb',color:'#fff',borderRadius:'8px',padding:'2px 8px',fontSize:'13px'}}>€</span>
+                    {labels[priceModalTarget] || priceModalTarget} – Preis
+                </h3>
+                <p style={{margin:'0 0 20px',fontSize:'12px',color:'#64748b'}}>Eingetragene Preise fließen automatisch in die Kostenübersicht.</p>
+                <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                    <div>
+                        <label style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'4px'}}>Einmalig (€)</label>
+                        <input type="text" inputMode="decimal" value={priceModalDraft.einmalig}
+                            onChange={e => setPriceModalDraft(p => ({...p, einmalig: e.target.value}))}
+                            placeholder="z.B. 1,00"
+                            style={{width:'100%',height:'44px',border:'1.5px solid #cbd5e1',borderRadius:'10px',padding:'0 12px',fontSize:'16px',fontWeight:700,color:'#1e293b',outline:'none',boxSizing:'border-box'}}
+                            autoFocus />
+                    </div>
+                    <div>
+                        <label style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:'4px'}}>Monatlich (€)</label>
+                        <input type="text" inputMode="decimal" value={priceModalDraft.monatlich}
+                            onChange={e => setPriceModalDraft(p => ({...p, monatlich: e.target.value}))}
+                            placeholder="z.B. 24,99"
+                            style={{width:'100%',height:'44px',border:'1.5px solid #cbd5e1',borderRadius:'10px',padding:'0 12px',fontSize:'16px',fontWeight:700,color:'#1e293b',outline:'none',boxSizing:'border-box'}}
+                            onKeyDown={e => { if(e.key==='Enter') savePriceModal(); }} />
+                    </div>
+                </div>
+                <div style={{display:'flex',gap:'8px',marginTop:'20px'}}>
+                    <button onClick={() => setShowPriceModal(false)}
+                        style={{flex:1,height:'42px',borderRadius:'10px',border:'1.5px solid #e2e8f0',background:'#f8fafc',color:'#64748b',fontWeight:700,fontSize:'14px',cursor:'pointer'}}>
+                        Abbrechen
+                    </button>
+                    {hasValue && <button onClick={() => { setPackagePrices(p => ({...p, [priceModalTarget]: {einmalig:'',monatlich:''}})); setShowPriceModal(false); setOfferData(prev => { const updated = {...packagePrices, [priceModalTarget]: {einmalig:'',monatlich:''}}; const parse2 = v => parseFloat((v||'').replace(',','.')) || 0; const totalE = ['offer1','offer2','offer3'].reduce((s,k) => s+parse2(updated[k].einmalig),0); const m = ['offer1','offer2','offer3'].map(k=>parse2(updated[k].monatlich)); return {...prev, einmalig:totalE, einmaligRaw:totalE>0?totalE.toFixed(2).replace('.',','):'', monatlich1:m[0], monatlich1Raw:m[0]>0?m[0].toFixed(2).replace('.',','):'', monatlich2:m[1]+m[2], monatlich2Raw:m[1]+m[2]>0?(m[1]+m[2]).toFixed(2).replace('.',','): ''}; }); }}
+                        style={{height:'42px',padding:'0 12px',borderRadius:'10px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#dc2626',fontWeight:700,fontSize:'13px',cursor:'pointer'}}>
+                        Löschen
+                    </button>}
+                    <button onClick={savePriceModal}
+                        style={{flex:2,height:'42px',borderRadius:'10px',border:'none',background:'#2563eb',color:'#fff',fontWeight:800,fontSize:'15px',cursor:'pointer',boxShadow:'0 4px 12px rgba(37,99,235,0.3)'}}>
+                        ✓ Übernehmen
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+})()}
+<BundleModal isOpen={showBundleModal} onClose={() => setShowBundleModal(false)} url={bundleModalUrl} onImportToCanvas={importBundleToCanvas} triggerToast={triggerToast} targetKey={bundleTargetKey} />
 <AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} />
                     <StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} />
                     
@@ -11616,7 +11692,7 @@ const handlePDFShare = async () => {
                                     const hidden = offerLayoutMode === 'step' && currentOfferStep !== idx;
                                     return (
                                         <div className={orderClass} style={hidden ? {display:'none'} : offerLayoutMode==='step' ? {gridColumn:'1/-1'} : {}}>
-                                            <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} htmlOverlayProp={canvasHtml[key] || null} bundleInsertCount={bundleInsertCounter[key] || 0} viewOfferCount={viewOfferCounter} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} triggerToast={triggerToast} />
+                                            <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} htmlOverlayProp={canvasHtml[key] || null} bundleInsertCount={bundleInsertCounter[key] || 0} viewOfferCount={viewOfferCounter} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} onSetPackagePrice={openPriceModal} packagePriceData={packagePrices[key]} triggerToast={triggerToast} />
                                         </div>
                                     );
                                 })}
