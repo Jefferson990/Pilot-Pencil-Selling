@@ -7087,12 +7087,12 @@ function App() {
             // Nutzung: .../Pilot-Pencil-Selling...?m=jefferson   oder ...?m=D.%20Da%20Silva
             // -> setzt AgentName automatisch (kann bei Bedarf trotzdem überschrieben werden)
             const __urlParams = new URLSearchParams(window.location.search || '');
-            const __mRaw = __urlParams.get('m') || '';
+            const __mRaw = __urlParams.get('agent') || __urlParams.get('m') || ''; // agent= neu, m= als Fallback für alte Links
             const __mDecoded = (() => {
                 try { return decodeURIComponent(String(__mRaw).replace(/\+/g, ' ')).trim(); } catch(e) { return String(__mRaw).trim(); }
             })();
             // Sanitizer (nur "harmlos" erlauben)
-            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || 'Birsen Özcan';
+            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || '';
             // Optional: global sichtbar (für Debug/Exports)
             try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
             // PATCH (Stylus Year-2 Costs): When the 2nd-year cost field becomes visible, force a DPR-correct resize
@@ -7385,7 +7385,7 @@ const handleOpenStats = () => { setShowPinLock(true); };
             const [textSize, setTextSize] = useState('medium'); 
             const [textStyle, setTextStyle] = useState({ bold: false, italic: false });
             const [textData, setTextData] = useState({ 
-                AgentName: (LINK_EMPLOYEE || 'Birsen Özcan'), 
+                AgentName: (LINK_EMPLOYEE || ''), 
                 DateValue: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
                 OfferValidUntil: '', 
                 offer1: '', 
@@ -8206,9 +8206,9 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             
             const getAgentDisplayNameForUpload = () => {
                 const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                if (!raw) return 'Birsen Özcan';
+                if (!raw) return '–';
                 
-                if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Birsen Özcan';
+                if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return '–';
                 return raw;
             };
             const getDslFlagForUpload = () => {
@@ -8313,8 +8313,8 @@ const handleFinishOfferClick = () => {
                         ts: new Date().toISOString(),
                         user: (() => {
                             const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                            if (!raw) return 'Birsen Özcan';
-                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Birsen Özcan';
+                            if (!raw) return '–';
+                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return '–';
                             return raw;
                         })(),
                         shop: 'Telekom',
@@ -8374,8 +8374,8 @@ const handleFinishOfferClick = () => {
                         ts: new Date().toISOString(),
                         user: (() => {
                             const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
-                            if (!raw) return 'Birsen Özcan';
-                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return 'Birsen Özcan';
+                            if (!raw) return '–';
+                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return '–';
                             return raw;
                         })(),
                         shop: 'Telekom',
