@@ -6357,6 +6357,7 @@ const highResHTML = buildHighResBundleHTML(d);
             const [activeTab, setActiveTab] = useState('overview');
             const [fbRows, setFbRows] = useState(null); // null = noch nicht geladen, [] = leer
             const [fbLoading, setFbLoading] = useState(false);
+            const [selectedAgent, setSelectedAgent] = useState('__all__');
 
             // Firebase-Daten laden sobald Modal öffnet
             useEffect(() => {
@@ -6501,6 +6502,7 @@ const highResHTML = buildHighResBundleHTML(d);
                                 {TAB_BTN('overview','Übersicht','📈')}
                                 {TAB_BTN('mitarbeiter','Mitarbeiter','👤')}
                                 {TAB_BTN('vorgaenge','Vorgänge','📋')}
+                                {TAB_BTN('coaching','Coaching','🎯')}
                             </div>
                         </div>
 
@@ -6650,12 +6652,174 @@ const highResHTML = buildHighResBundleHTML(d);
                                 </div>
                             )}
 
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+                            {activeTab === 'coaching' && (() => {
+                                const IST_KEYS = [
+                                    { key: 'sit_Kundenname',       label: 'Kundenname' },
+                                    { key: 'sit_Rufnummer',        label: 'Rufnummer' },
+                                    { key: 'sit_Anbieter',         label: 'Anbieter' },
+                                    { key: 'sit_Hardware',         label: 'Hardware' },
+                                    { key: 'sit_Nutzung',          label: 'Nutzung' },
+                                    { key: 'sit_Haushalt',         label: 'Haushalt' },
+                                    { key: 'sit_WeitereProdukte',  label: 'Weitere Produkte' },
+                                    { key: 'sit_Fernsehen',        label: 'Fernsehen' },
+                                    { key: 'sit_WiFi',             label: 'Wi-Fi' },
+                                    { key: 'sit_Gesamtkosten',     label: 'Gesamtkosten' },
+                                ];
+                                const OFFER_KEYS = [
+                                    { key: 'offer1', label: '1. Hardware, Anbieter & Nutzung' },
+                                    { key: 'offer2', label: '2. Haushalt & Weitere Produkte' },
+                                    { key: 'offer3', label: '3. Fernsehen & Wi-Fi' },
+                                ];
 
+                                // Alle eindeutigen Agenten
+                                const allAgents = [...new Set(rows.map(r => resolveUserName(r.user)).filter(u => u && u !== '–'))].sort();
+
+                                // Gefilterte Rows nach Agent
+                                const coachRows = selectedAgent === '__all__'
+                                    ? filtered
+                                    : filtered.filter(r => resolveUserName(r.user) === selectedAgent);
+
+                                const total = coachRows.length;
+                                const skipped = coachRows.filter(r => {
+                                    const cs = r.canvasStats || {};
+                                    return cs.skip_reason && cs.skip_reason.used;
+                                }).length;
+
+                                // Ist-Analyse: wie oft wurde jede Frage ausgefüllt
+                                const istCounts = IST_KEYS.map(({ key, label }) => {
+                                    const count = coachRows.filter(r => {
+                                        const v = (r.canvasStats || {})[key];
+                                        return v && v.used;
+                                    }).length;
+                                    return { key, label, count, pct: total ? Math.round((count/total)*100) : 0 };
+                                });
+
+                                // Angebote: wie oft wurde jedes Angebot befüllt
+                                const offerCounts = OFFER_KEYS.map(({ key, label }) => {
+                                    const count = coachRows.filter(r => {
+                                        const v = (r.canvasStats || {})[key];
+                                        return v && v.used;
+                                    }).length;
+                                    return { key, label, count, pct: total ? Math.round((count/total)*100) : 0 };
+                                });
+
+                                // Export Coaching CSV (ein Agent oder alle)
+                                const exportCoachingCSV = (agentFilter) => {
+                                    const targetRows = agentFilter === '__all__'
+                                        ? filtered
+                                        : filtered.filter(r => resolveUserName(r.user) === agentFilter);
+                                    const lines = [];
+                                    // Header
+                                    lines.push(['Mitarbeiter','Datum','Ergebnis','Übersprungen',
+                                        ...IST_KEYS.map(k=>'IST: '+k.label),
+                                        ...OFFER_KEYS.map(k=>'Angebot: '+k.label)
+                                    ].join(';'));
+                                    targetRows.forEach(r => {
+                                        const cs = r.canvasStats || {};
+                                        const ts = new Date(r.ts).toLocaleDateString('de-DE');
+                                        const skip = (cs.skip_reason && cs.skip_reason.used) ? 'Ja' : 'Nein';
+                                        const istVals = IST_KEYS.map(({key}) => (cs[key] && cs[key].used) ? '✓' : '');
+                                        const offerVals = OFFER_KEYS.map(({key}) => (cs[key] && cs[key].used) ? '✓' : '');
+                                        lines.push([
+                                            resolveUserName(r.user)||'–', ts, r.result||'–', skip,
+                                            ...istVals, ...offerVals
+                                        ].join(';'));
+                                    });
+                                    const name = agentFilter === '__all__' ? 'Alle_Mitarbeiter' : agentFilter.replace(/ /g,'_');
+                                    const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+                                    const a = document.createElement('a');
+                                    a.href = URL.createObjectURL(blob);
+                                    a.download = `Coaching_${name}_${new Date().toISOString().slice(0,10)}.csv`;
+                                    a.click();
+                                };
+
+                                const BAR = (pct, color) => (
+                                    <div style={{flex:1,height:'8px',borderRadius:'4px',background:'#f1f5f9',overflow:'hidden'}}>
+                                        <div style={{width:`${pct}%`,height:'100%',background:color,borderRadius:'4px',transition:'width 0.4s ease'}}/>
+                                    </div>
+                                );
+
+                                return (
+                                    <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+
+                                        {/* Agent Auswahl + Export */}
+                                        <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',padding:'14px 16px',display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
+                                            <span style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em'}}>Mitarbeiter</span>
+                                            <select value={selectedAgent} onChange={e=>setSelectedAgent(e.target.value)}
+                                                style={{flex:1,minWidth:'160px',border:'1.5px solid #e2e8f0',borderRadius:'8px',padding:'7px 10px',fontSize:'13px',fontWeight:700,color:'#1e293b',background:'#f8fafc',outline:'none',cursor:'pointer'}}>
+                                                <option value="__all__">👥 Alle Mitarbeiter</option>
+                                                {allAgents.map(a=><option key={a} value={a}>{a}</option>)}
+                                            </select>
+                                            <button onClick={()=>exportCoachingCSV(selectedAgent)}
+                                                style={{padding:'7px 14px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#059669',color:'#fff',border:'none',cursor:'pointer'}}>
+                                                ⬇ CSV Export
+                                            </button>
+                                            <button onClick={()=>{ allAgents.forEach(a => exportCoachingCSV(a)); }}
+                                                style={{padding:'7px 14px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#1e293b',color:'#fff',border:'none',cursor:'pointer'}}>
+                                                ⬇ Alle exportieren
+                                            </button>
+                                        </div>
+
+                                        {/* Zusammenfassung */}
+                                        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'8px'}}>
+                                            {[
+                                                {label:'Pencil Sellings', value:total, color:'#2563eb', bg:'#eff6ff', border:'#bfdbfe', icon:'📋'},
+                                                {label:'Übersprungen', value:skipped, color:'#d97706', bg:'#fffbeb', border:'#fde68a', icon:'⏭'},
+                                                {label:'Skip-Quote', value:total?`${Math.round((skipped/total)*100)}%`:'0%', color:skipped/Math.max(1,total)>0.2?'#dc2626':'#059669', bg:skipped/Math.max(1,total)>0.2?'#fef2f2':'#ecfdf5', border:skipped/Math.max(1,total)>0.2?'#fecaca':'#a7f3d0', icon:'📊'},
+                                            ].map(k=>(
+                                                <div key={k.label} style={{background:'#fff',borderRadius:'14px',padding:'14px 12px',border:`1.5px solid ${k.border}`}}>
+                                                    <div style={{fontSize:'18px',marginBottom:'6px'}}>{k.icon}</div>
+                                                    <div style={{fontSize:'22px',fontWeight:900,color:k.color,lineHeight:1}}>{k.value}</div>
+                                                    <div style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',marginTop:'5px'}}>{k.label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Ist-Analyse */}
+                                        <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',padding:'16px'}}>
+                                            <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'12px',display:'flex',alignItems:'center',gap:'6px'}}>
+                                                🔍 Ist-Analyse – wie oft abgefragt
+                                            </div>
+                                            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                                                {istCounts.map(({label,count,pct})=>(
+                                                    <div key={label} style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                                        <div style={{width:'140px',fontSize:'12px',fontWeight:600,color:'#475569',flexShrink:0}}>{label}</div>
+                                                        {BAR(pct,'#3b82f6')}
+                                                        <div style={{width:'44px',textAlign:'right',fontSize:'12px',fontWeight:800,color:'#1e293b',flexShrink:0}}>{count}×</div>
+                                                        <div style={{width:'36px',textAlign:'right',fontSize:'11px',fontWeight:700,color:'#94a3b8',flexShrink:0}}>{pct}%</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Angebote */}
+                                        <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',padding:'16px'}}>
+                                            <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'12px',display:'flex',alignItems:'center',gap:'6px'}}>
+                                                📄 Angebote – wie oft präsentiert
+                                            </div>
+                                            <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+                                                {offerCounts.map(({label,count,pct})=>(
+                                                    <div key={label} style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                                        <div style={{width:'200px',fontSize:'12px',fontWeight:600,color:'#475569',flexShrink:0}}>{label}</div>
+                                                        {BAR(pct,'#7c3aed')}
+                                                        <div style={{width:'44px',textAlign:'right',fontSize:'12px',fontWeight:800,color:'#1e293b',flexShrink:0}}>{count}×</div>
+                                                        <div style={{width:'36px',textAlign:'right',fontSize:'11px',fontWeight:700,color:'#94a3b8',flexShrink:0}}>{pct}%</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {total === 0 && (
+                                            <div style={{padding:'40px 20px',background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',textAlign:'center'}}>
+                                                <div style={{fontSize:'32px',marginBottom:'10px'}}>📭</div>
+                                                <div style={{color:'#64748b',fontWeight:700,fontSize:'14px'}}>Keine Daten im gewählten Zeitraum</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                        </div> = ({ isOpen, onClose, category, question, onNextQuestion }) => { if (!isOpen) return null; return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6"><h3 className="text-xl font-bold mb-4">Frage zu: {category}</h3><p className="text-lg mb-6">{question}</p><div className="flex justify-end gap-2"><button onClick={onNextQuestion} className="px-4 py-2 border rounded">Nächste</button><button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded">OK</button></div></div></div>); };
 
         const QuestionModal = ({ isOpen, onClose, category, question, onNextQuestion }) => { if (!isOpen) return null; return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6"><h3 className="text-xl font-bold mb-4">Frage zu: {category}</h3><p className="text-lg mb-6">{question}</p><div className="flex justify-end gap-2"><button onClick={onNextQuestion} className="px-4 py-2 border rounded">Nächste</button><button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded">OK</button></div></div></div>); };
 
