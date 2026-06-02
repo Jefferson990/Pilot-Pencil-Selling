@@ -5075,6 +5075,26 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             const [prevHD,     setPrevHD]     = useState('');
             const [prevStream, setPrevStream] = useState('');
             const [selectedCol, setSelectedCol] = useState(null);
+            // Custom Preise: { 'o2_s_0': 9.99, 'telekom_m_1': 7.50, ... }
+            const [customPrices, setCustomPrices] = useState({});
+            const [editingCell, setEditingCell] = useState(null); // { prov, col, row, key }
+            const [editValue, setEditValue] = useState('');
+            const longPressTimer = React.useRef(null);
+            const startLongPress = () => {};
+            const cancelLongPress = () => {};
+            const confirmEdit = () => {
+                if (!editingCell) return;
+                const val = parseFloat(String(editValue).replace(',','.'));
+                if (!isNaN(val) && val >= 0) {
+                    setCustomPrices(prev => ({ ...prev, [editingCell.key]: val }));
+                }
+                setEditingCell(null);
+            };
+            const getPrice = (prov, colId, rowIdx, original) => {
+                const key = `${prov}_${colId}_${rowIdx}`;
+                return customPrices[key] ?? original;
+            };
+            const resetPrices = () => { setCustomPrices({}); setEditingCell(null); };
 
             if (!isOpen) return null;
 
@@ -5134,9 +5154,20 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             const pd = providerData[provider];
             const activeCol = selectedCol || pd.recommended;
             const prevTotal = parse(prevTV) + parse(prevHD) + parse(prevStream);
-            const recTotal  = pd.totals[activeCol];
+
+            // Dynamische Totals (berücksichtigt custom Preise)
+            const dynamicTotals = {};
+            pd.cols.forEach(col => {
+                dynamicTotals[col.id] = pd.rows.reduce((sum, row, ri) => {
+                    if (!col.checks[ri]) return sum;
+                    return sum + getPrice(provider, col.id, ri, row.tarif[col.id]);
+                }, 0);
+            });
+
+            const recTotal  = dynamicTotals[activeCol];
             const recCol    = pd.cols.find(c => c.id === activeCol);
             const ersparnis = prevTotal > 0 ? (prevTotal - recTotal) : null;
+            const hasCustom = Object.keys(customPrices).some(k => k.startsWith(provider+'_'));
             const providers = [{id:'o2',label:'o2 TV',color:'#003CA6'},{id:'telekom',label:'MagentaTV',color:'#E2007A'},{id:'vodafone',label:'Giga TV',color:'#E50000'}];
 
             return (
@@ -5151,12 +5182,15 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                         </div>
                         <div>
                           <div style={{fontSize:'17px',fontWeight:900,color:'#0b1e42',letterSpacing:'-0.02em'}}>TV Preisvergleich</div>
-                          <div style={{fontSize:'11px',color:'#94a3b8',fontWeight:600}}>Anbieter vergleichen & Tarif auswählen</div>
+                          <div style={{fontSize:'11px',color:'#94a3b8',fontWeight:600}}>Anbieter vergleichen · <span style={{color:'#7c3aed'}}>Lang drücken auf Preis zum Anpassen</span></div>
                         </div>
                       </div>
-                      <button onClick={onClose} style={{width:'36px',height:'36px',borderRadius:'50%',border:'1px solid #e2e8f0',background:'#f8fafc',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#64748b'}}>
-                        <Icon d={ICONS.X} size={16}/>
-                      </button>
+                      <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                        {hasCustom && <button onClick={resetPrices} style={{fontSize:'10px',padding:'5px 10px',borderRadius:'7px',background:'#fef2f2',border:'1px solid #fecaca',color:'#dc2626',cursor:'pointer',fontWeight:700}}>↺ Preise zurücksetzen</button>}
+                        <button onClick={onClose} style={{width:'36px',height:'36px',borderRadius:'50%',border:'1px solid #e2e8f0',background:'#f8fafc',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'#64748b'}}>
+                          <Icon d={ICONS.X} size={16}/>
+                        </button>
+                      </div>
                     </div>
 
                     {/* PROVIDER TABS */}
@@ -5229,23 +5263,53 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                                 <div style={{fontSize:'13px',fontWeight:900,color:isActive ? pd.color : '#1e293b',lineHeight:1.2}}>{col.label}</div>
                                 {col.sub && <div style={{fontSize:'10px',color:'#64748b',fontWeight:600,marginTop:'2px'}}>{col.sub}</div>}
                               </div>
-                              <div style={{display:'flex',flexDirection:'column',gap:'5px',flex:1}}>
-                                {pd.rows.map((row,ri) => (
-                                  <div key={ri} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 8px',borderRadius:'7px',background:col.checks[ri] ? (isActive ? pd.color+'15' : '#f8fafc') : '#f8fafc'}}>
-                                    {col.checks[ri] ? (
-                                      <>
-                                        <span style={{fontSize:'13px',fontWeight:900,color:pd.color}}>✓</span>
-                                        <span style={{fontSize:'10px',fontWeight:700,color:'#475569'}}>{row.tarif[col.id] > 0 ? row.tarif[col.id].toFixed(2)+' €' : 'inkl.'}</span>
-                                      </>
-                                    ) : (
-                                      <span style={{fontSize:'15px',color:'#cbd5e1',margin:'0 auto'}}>—</span>
-                                    )}
-                                  </div>
-                                ))}
+                                  <div style={{display:'flex',flexDirection:'column',gap:'5px',flex:1}}>
+                                    {pd.rows.map((row,ri) => {
+                                      const origPrice = row.tarif[col.id];
+                                      const custPrice = getPrice(provider, col.id, ri, origPrice);
+                                      const cellKey = `${provider}_${col.id}_${ri}`;
+                                      const isEditing = editingCell && editingCell.key === cellKey;
+                                      const isCustom = customPrices[cellKey] !== undefined;
+                                      return (
+                                        <div key={ri} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'5px 8px',borderRadius:'7px',background:col.checks[ri]?(isActive?pd.color+'15':'#f8fafc'):'#f8fafc'}}>
+                                          {col.checks[ri] ? (
+                                            isEditing ? (
+                                              <div style={{display:'flex',gap:'4px',width:'100%',alignItems:'center'}}>
+                                                <input autoFocus type="text" inputMode="decimal" value={editValue}
+                                                  onChange={e=>setEditValue(e.target.value)}
+                                                  onKeyDown={e=>{ if(e.key==='Enter') confirmEdit(); if(e.key==='Escape') setEditingCell(null); }}
+                                                  style={{flex:1,border:'1.5px solid '+pd.color,borderRadius:'5px',padding:'2px 5px',fontSize:'12px',fontWeight:700,textAlign:'center',outline:'none'}}/>
+                                                <button onClick={confirmEdit} style={{background:pd.color,color:'white',border:'none',borderRadius:'5px',padding:'2px 7px',fontSize:'11px',fontWeight:800,cursor:'pointer'}}>✓</button>
+                                              </div>
+                                            ) : (
+                                              <>
+                                                <span style={{fontSize:'13px',fontWeight:900,color:pd.color}}>✓</span>
+                                                <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
+                                                  <span style={{fontSize:'10px',fontWeight:700,color:isCustom?pd.color:'#475569'}}>
+                                                    {custPrice > 0 ? custPrice.toFixed(2)+' €' : 'inkl.'}
+                                                  </span>
+                                                  <button
+                                                    onClick={e=>{ e.stopPropagation(); setEditingCell({prov:provider,colId:col.id,rowIdx:ri,key:cellKey}); setEditValue(String(custPrice)); }}
+                                                    style={{width:'16px',height:'16px',borderRadius:'4px',background:isCustom?pd.color+'20':'#f1f5f9',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',padding:0,flexShrink:0}}
+                                                    title="Preis anpassen">
+                                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={isCustom?pd.color:'#94a3b8'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                    </svg>
+                                                  </button>
+                                                </div>
+                                              </>
+                                            )
+                                          ) : (
+                                            <span style={{fontSize:'15px',color:'#cbd5e1',margin:'0 auto'}}>—</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                               </div>
                               <div style={{padding:'10px',borderRadius:'10px',background:isActive ? pd.color : '#f1f5f9',textAlign:'center',marginTop:'auto'}}>
                                 <div style={{fontSize:'9px',fontWeight:800,color:isActive ? 'rgba(255,255,255,0.7)' : '#94a3b8',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:'2px'}}>mtl. gesamt</div>
-                                <div style={{fontSize:'17px',fontWeight:900,color:isActive ? 'white' : '#334155'}}>{pd.totals[col.id].toFixed(2)} €</div>
+                                <div style={{fontSize:'17px',fontWeight:900,color:isActive ? 'white' : '#334155'}}>{dynamicTotals[col.id].toFixed(2)} €</div>
                               </div>
                             </button>
                           );
@@ -6707,6 +6771,12 @@ const highResHTML = buildHighResBundleHTML(d);
                                     { key: 'offer2', label: '2. Haushalt & Weitere Produkte' },
                                     { key: 'offer3', label: '3. Fernsehen & Wi-Fi' },
                                 ];
+                                const COST_KEYS = [
+                                    { key: 'cost_einmalig',   label: 'Einmalig (€)' },
+                                    { key: 'cost_monatlich1', label: 'Monatlich 1. Jahr (€)' },
+                                    { key: 'cost_monatlich2', label: 'Monatlich 2. Jahr (€)' },
+                                    { key: 'cost_smartphone', label: 'Smartphone Finanzierung (€)' },
+                                ];
 
                                 // Alle eindeutigen Agenten
                                 const allAgents = [...new Set(rows.map(r => resolveUserName(r.user)).filter(u => u && u !== '–'))].sort();
@@ -6748,6 +6818,15 @@ const highResHTML = buildHighResBundleHTML(d);
 
                                 // Angebote: wie oft wurde jedes Angebot befüllt
                                 const offerCounts = OFFER_KEYS.map(({ key, label }) => {
+                                    const count = coachRows.filter(r => {
+                                        const v = (r.canvasStats || {})[key];
+                                        return v && v.used;
+                                    }).length;
+                                    return { key, label, count, pct: total ? Math.round((count/total)*100) : 0 };
+                                });
+
+                                // Kosten: wie oft wurden Preisfelder ausgefüllt
+                                const costCounts = COST_KEYS.map(({ key, label }) => {
                                     const count = coachRows.filter(r => {
                                         const v = (r.canvasStats || {})[key];
                                         return v && v.used;
@@ -6890,6 +6969,23 @@ const highResHTML = buildHighResBundleHTML(d);
                                                     <div key={label} style={{display:'flex',alignItems:'center',gap:'10px'}}>
                                                         <div style={{width:'200px',fontSize:'12px',fontWeight:600,color:'#475569',flexShrink:0}}>{label}</div>
                                                         {BAR(pct,'#7c3aed')}
+                                                        <div style={{width:'44px',textAlign:'right',fontSize:'12px',fontWeight:800,color:'#1e293b',flexShrink:0}}>{count}×</div>
+                                                        <div style={{width:'36px',textAlign:'right',fontSize:'11px',fontWeight:700,color:'#94a3b8',flexShrink:0}}>{pct}%</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Kostenübersicht */}
+                                        <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',padding:'16px'}}>
+                                            <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'12px',display:'flex',alignItems:'center',gap:'6px'}}>
+                                                💰 Kostenübersicht & Abschluss – wie oft Preise eingetragen
+                                            </div>
+                                            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                                                {costCounts.map(({label,count,pct})=>(
+                                                    <div key={label} style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                                        <div style={{width:'200px',fontSize:'12px',fontWeight:600,color:'#475569',flexShrink:0}}>{label}</div>
+                                                        {BAR(pct,'#059669')}
                                                         <div style={{width:'44px',textAlign:'right',fontSize:'12px',fontWeight:800,color:'#1e293b',flexShrink:0}}>{count}×</div>
                                                         <div style={{width:'36px',textAlign:'right',fontSize:'11px',fontWeight:700,color:'#94a3b8',flexShrink:0}}>{pct}%</div>
                                                     </div>
