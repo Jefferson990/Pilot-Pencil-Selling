@@ -3416,18 +3416,79 @@ html.device-android-tablet .sit-aside-panel {
             Print: '<polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect>'
         };
 
-        // ===== Pencil Analytics (local, DSGVO-safe: no content stored) =====
+        // ===== Pencil Analytics (local + Firebase Sync) =====
         const ANALYTICS_STORAGE_KEY = 'pencil_analytics_v1';
         const STATS_PASSWORD = (()=>{try{return localStorage.getItem('ps_stats_pw')||'telekom2026';}catch(e){return'telekom2026';}})();
 
-        const loadAnalyticsRows = () => {
-            try { return JSON.parse(localStorage.getItem(ANALYTICS_STORAGE_KEY) || '[]'); } catch(e){ return []; }
+        // ── Firebase Stats Config (pencil-selling-stats) ──
+        const STATS_FB_CONFIG = {
+            apiKey: "AIzaSyCgKvoW6mB_heUkQDpeZMFE-0CQSUFuN0g",
+            authDomain: "pencil-selling-stats-2f86e.firebaseapp.com",
+            projectId: "pencil-selling-stats-2f86e",
+            storageBucket: "pencil-selling-stats-2f86e.firebasestorage.app",
+            messagingSenderId: "166126857606",
+            appId: "1:166126857606:web:0b29898ae53a8c3aaa1007"
         };
-        const saveAnalyticsRows = (rows) => {
-            localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(rows));
+
+        // ── Firebase Stats DB singleton ──
+        const getStatsDb = () => {
+            try {
+                if (window.__statsDb) return window.__statsDb;
+                const existing = window.firebase?.apps?.find(a => a.name === 'stats');
+                const app = existing
+                    ? existing
+                    : window.firebase.initializeApp(STATS_FB_CONFIG, 'stats');
+                window.__statsDb = window.firebase.firestore(app);
+                return window.__statsDb;
+            } catch(e) {
+                console.warn('Stats Firebase init failed:', e);
+                return null;
+            }
         };
-        const clearAnalyticsRows = () => {
-            localStorage.removeItem(ANALYTICS_STORAGE_KEY);
+
+        // ── Push einzelne Zeile zu Firebase (fire & forget) ──
+        const pushRowToFirebase = async (row) => {
+            try {
+                const db = getStatsDb();
+                if (!db) return;
+                await db.collection('analytics').doc(row.id).set({
+                    ...row,
+                    ts: row.ts,
+                    syncedAt: Date.now()
+                });
+            } catch(e) {
+                console.warn('Firebase push failed:', e);
+            }
+        };
+
+        // ── Alle Zeilen von Firebase laden (für Admin) ──
+        const loadRowsFromFirebase = async () => {
+            try {
+                const db = getStatsDb();
+                if (!db) return null;
+                const snap = await db.collection('analytics')
+                    .orderBy('ts', 'desc')
+                    .limit(2000)
+                    .get();
+                return snap.docs.map(d => d.data());
+            } catch(e) {
+                console.warn('Firebase load failed:', e);
+                return null;
+            }
+        };
+
+        // ── Lokal (nur noch als temporärer Puffer falls Firebase kurz offline) ──
+        const loadAnalyticsRows = () => { return []; }; // Deaktiviert – nur Firebase
+        const saveAnalyticsRows = (rows) => {}; // Deaktiviert – nur Firebase
+        const clearAnalyticsRows = async () => {
+            try {
+                const db = getStatsDb();
+                if (!db) return;
+                const snap = await db.collection('analytics').get();
+                const batch = db.batch();
+                snap.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+            } catch(e) { console.warn('Firebase clear failed:', e); }
         };
 
         // ─── Activity thresholds (anti-manipulation) ─────────────────────────
@@ -3568,9 +3629,8 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         };
 
         const appendAnalyticsRow = (row) => {
-            const rows = loadAnalyticsRows();
-            rows.push(row);
-            saveAnalyticsRows(rows);
+            // Nur Firebase – kein localStorage
+            pushRowToFirebase(row);
             return row;
         };
 
@@ -3646,17 +3706,15 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             return header.trimEnd() + '\n' + lines.join('\n');
         };
 
-        const exportAnalyticsJSON = () => {
-            const rows = loadAnalyticsRows();
+        const exportAnalyticsJSON = async () => {
+            const rows = (await loadRowsFromFirebase()) || [];
             const ym = new Date().toISOString().slice(0,7);
             downloadTextFile(`Analytics_${ym}.json`, JSON.stringify(rows, null, 2), 'application/json');
         };
-        const exportAnalyticsCSV = () => {
-            const rows = loadAnalyticsRows();
+        const exportAnalyticsCSV = async () => {
+            const rows = (await loadRowsFromFirebase()) || [];
             const ym = new Date().toISOString().slice(0,7);
-            // 1) compact summary (recommended)
             downloadTextFile(`Analytics_${ym}_summary.csv`, rowsToCSV_Summary(rows), 'text/csv');
-            // 2) long format (perfect for Pivot by field)
             downloadTextFile(`Analytics_${ym}_fields.csv`, rowsToCSV_Fields(rows), 'text/csv');
         };
 
@@ -6296,8 +6354,25 @@ const highResHTML = buildHighResBundleHTML(d);
             };
 
             const [range, setRange] = useState('7');
-            const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'mitarbeiter' | 'vorgaenge'
-            const rows = useMemo(() => loadAnalyticsRows().slice().reverse(), [isOpen]);
+            const [activeTab, setActiveTab] = useState('overview');
+            const [fbRows, setFbRows] = useState(null); // null = noch nicht geladen, [] = leer
+            const [fbLoading, setFbLoading] = useState(false);
+
+            // Firebase-Daten laden sobald Modal öffnet
+            useEffect(() => {
+                if (!isOpen) return;
+                setFbLoading(true);
+                loadRowsFromFirebase().then(data => {
+                    setFbRows(data); // null wenn Firebase nicht erreichbar
+                    setFbLoading(false);
+                });
+            }, [isOpen]);
+
+            // Nur Firebase – kein lokaler Fallback
+            const rows = useMemo(() => {
+                if (!fbRows) return [];
+                return [...fbRows].sort((a,b) => new Date(b.ts) - new Date(a.ts));
+            }, [fbRows]);
 
             const filtered = useMemo(() => {
                 if (!rows.length) return [];
@@ -6399,7 +6474,9 @@ const highResHTML = buildHighResBundleHTML(d);
                                 <div style={{width:'40px',height:'40px',borderRadius:'12px',background:'rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',flexShrink:0}}>📊</div>
                                 <div>
                                     <div style={{color:'#fff',fontWeight:900,fontSize:'16px',letterSpacing:'-0.02em'}}>Statistik & Auswertung</div>
-                                    <div style={{color:'rgba(255,255,255,0.55)',fontSize:'11px',fontWeight:500,marginTop:'1px'}}>{totalVorgaenge} Vorgänge erfasst · DSGVO-konform lokal</div>
+                                    <div style={{color:'rgba(255,255,255,0.55)',fontSize:'11px',fontWeight:500,marginTop:'1px'}}>
+                                        {fbLoading ? '⏳ Lade Daten...' : fbRows !== null ? `🔥 ${rows.length} Vorgänge · Alle Mitarbeiter · Live` : '⚠️ Firebase nicht erreichbar'}
+                                    </div>
                                 </div>
                             </div>
                             <button onClick={onClose} style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.2)',color:'rgba(255,255,255,0.8)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,flexShrink:0}}>✕</button>
