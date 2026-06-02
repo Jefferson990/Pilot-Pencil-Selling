@@ -6573,6 +6573,24 @@ const highResHTML = buildHighResBundleHTML(d);
                                         const initials = user === '–' ? '?' : user.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
                                         const convColor = conv>=30?'#059669':conv>=15?'#d97706':'#dc2626';
                                         const convBg = conv>=30?'#ecfdf5':conv>=15?'#fffbeb':'#fef2f2';
+
+                                        // Qualität pro Mitarbeiter
+                                        const userRows = filtered.filter(r => resolveUserName(r.user) === user);
+                                        const IST_KEYS_Q = ['sit_Kundenname','sit_Rufnummer','sit_Anbieter','sit_Hardware','sit_Nutzung','sit_Haushalt','sit_WeitereProdukte','sit_Fernsehen','sit_WiFi','sit_Gesamtkosten'];
+                                        const qPassed = userRows.filter(r => {
+                                            const cs = r.canvasStats || {};
+                                            return IST_KEYS_Q.filter(k => cs[k] && cs[k].used).length / 10 >= 0.75;
+                                        }).length;
+                                        const qRate = userRows.length ? Math.round((qPassed / userRows.length) * 100) : 0;
+                                        const qColor  = qRate >= 75 ? '#059669' : qRate >= 50 ? '#d97706' : '#dc2626';
+                                        const qBg     = qRate >= 75 ? '#ecfdf5' : qRate >= 50 ? '#fffbeb' : '#fef2f2';
+                                        const qBorder = qRate >= 75 ? '#a7f3d0' : qRate >= 50 ? '#fde68a' : '#fecaca';
+                                        const qIcon   = qRate >= 75 ? '✅' : qRate >= 50 ? '⚠️' : '❌';
+                                        // Übersprungen pro Mitarbeiter
+                                        const userSkipped = userRows.filter(r => { const cs = r.canvasStats || {}; return cs.skip_reason && cs.skip_reason.used; }).length;
+                                        const skipRate = userRows.length ? Math.round((userSkipped / userRows.length) * 100) : 0;
+                                        const skipColor = skipRate > 20 ? '#dc2626' : skipRate > 10 ? '#d97706' : '#059669';
+
                                         return (
                                             <div key={user} style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',padding:'14px 16px',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}>
                                                 <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
@@ -6589,6 +6607,25 @@ const highResHTML = buildHighResBundleHTML(d);
                                                             ].map(chip=>(
                                                                 <span key={chip.label} style={{fontSize:'10px',fontWeight:700,padding:'3px 8px',borderRadius:'999px',background:`${chip.color}10`,color:chip.color,border:`1px solid ${chip.color}25`}}>{chip.label}: {chip.val}</span>
                                                             ))}
+                                                        </div>
+                                                        {/* Qualitäts- & Skip-Balken */}
+                                                        <div style={{marginTop:'8px',display:'flex',flexDirection:'column',gap:'5px'}}>
+                                                            <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                                                <span style={{width:'70px',fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',flexShrink:0}}>{qIcon} Qualität</span>
+                                                                <div style={{flex:1,height:'6px',borderRadius:'3px',background:'#f1f5f9',overflow:'hidden'}}>
+                                                                    <div style={{width:`${qRate}%`,height:'100%',background:qColor,borderRadius:'3px',transition:'width 0.4s ease'}}/>
+                                                                </div>
+                                                                <span style={{fontSize:'11px',fontWeight:800,color:qColor,whiteSpace:'nowrap',width:'34px',textAlign:'right'}}>{qRate}%</span>
+                                                                <span style={{fontSize:'10px',color:'#94a3b8',whiteSpace:'nowrap'}}>({qPassed}/{userRows.length})</span>
+                                                            </div>
+                                                            <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                                                <span style={{width:'70px',fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',flexShrink:0}}>⏭ Übersprungen</span>
+                                                                <div style={{flex:1,height:'6px',borderRadius:'3px',background:'#f1f5f9',overflow:'hidden'}}>
+                                                                    <div style={{width:`${skipRate}%`,height:'100%',background:skipColor,borderRadius:'3px',transition:'width 0.4s ease'}}/>
+                                                                </div>
+                                                                <span style={{fontSize:'11px',fontWeight:800,color:skipColor,whiteSpace:'nowrap',width:'34px',textAlign:'right'}}>{skipRate}%</span>
+                                                                <span style={{fontSize:'10px',color:'#94a3b8',whiteSpace:'nowrap'}}>({userSkipped}/{userRows.length})</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'3px',background:convBg,borderRadius:'12px',padding:'10px 14px',flexShrink:0}}>
@@ -6685,6 +6722,21 @@ const highResHTML = buildHighResBundleHTML(d);
                                     return cs.skip_reason && cs.skip_reason.used;
                                 }).length;
 
+                                // Qualitätskontrolle: mind. 75% = 8 von 10 Ist-Felder ausgefüllt
+                                const QUALITY_THRESHOLD = 0.75;
+                                const QUALITY_FIELDS_TOTAL = 10;
+                                const qualityPassed = coachRows.filter(r => {
+                                    const cs = r.canvasStats || {};
+                                    const filled = IST_KEYS.filter(({key}) => cs[key] && cs[key].used).length;
+                                    return (filled / QUALITY_FIELDS_TOTAL) >= QUALITY_THRESHOLD;
+                                }).length;
+                                const qualityFailed = total - qualityPassed;
+                                const qualityRate = total ? Math.round((qualityPassed / total) * 100) : 0;
+                                const qualityColor = qualityRate >= 75 ? '#059669' : qualityRate >= 50 ? '#d97706' : '#dc2626';
+                                const qualityBg    = qualityRate >= 75 ? '#ecfdf5' : qualityRate >= 50 ? '#fffbeb' : '#fef2f2';
+                                const qualityBorder= qualityRate >= 75 ? '#a7f3d0' : qualityRate >= 50 ? '#fde68a' : '#fecaca';
+                                const qualityIcon  = qualityRate >= 75 ? '✅' : qualityRate >= 50 ? '⚠️' : '❌';
+
                                 // Ist-Analyse: wie oft wurde jede Frage ausgefüllt
                                 const istCounts = IST_KEYS.map(({ key, label }) => {
                                     const count = coachRows.filter(r => {
@@ -6710,7 +6762,7 @@ const highResHTML = buildHighResBundleHTML(d);
                                         : filtered.filter(r => resolveUserName(r.user) === agentFilter);
                                     const lines = [];
                                     // Header
-                                    lines.push(['Mitarbeiter','Datum','Ergebnis','Übersprungen',
+                                    lines.push(['Mitarbeiter','Datum','Ergebnis','Übersprungen','Qualität bestanden (≥75%)',
                                         ...IST_KEYS.map(k=>'IST: '+k.label),
                                         ...OFFER_KEYS.map(k=>'Angebot: '+k.label)
                                     ].join(';'));
@@ -6718,10 +6770,12 @@ const highResHTML = buildHighResBundleHTML(d);
                                         const cs = r.canvasStats || {};
                                         const ts = new Date(r.ts).toLocaleDateString('de-DE');
                                         const skip = (cs.skip_reason && cs.skip_reason.used) ? 'Ja' : 'Nein';
+                                        const filled = IST_KEYS.filter(({key}) => cs[key] && cs[key].used).length;
+                                        const qualOk = (filled / 10) >= 0.75 ? 'Ja' : 'Nein';
                                         const istVals = IST_KEYS.map(({key}) => (cs[key] && cs[key].used) ? '✓' : '');
                                         const offerVals = OFFER_KEYS.map(({key}) => (cs[key] && cs[key].used) ? '✓' : '');
                                         lines.push([
-                                            resolveUserName(r.user)||'–', ts, r.result||'–', skip,
+                                            resolveUserName(r.user)||'–', ts, r.result||'–', skip, qualOk,
                                             ...istVals, ...offerVals
                                         ].join(';'));
                                     });
@@ -6775,6 +6829,40 @@ const highResHTML = buildHighResBundleHTML(d);
                                             ))}
                                         </div>
 
+                                        {/* Qualitätskontrolle Block */}
+                                        <div style={{background:'#fff',borderRadius:'14px',border:`2px solid ${qualityBorder}`,padding:'16px'}}>
+                                            <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'12px'}}>
+                                                {qualityIcon} Qualitätskontrolle · mind. 75% Ist-Analyse (8 von 10 Felder)
+                                            </div>
+                                            <div style={{display:'flex',alignItems:'center',gap:'16px',flexWrap:'wrap'}}>
+                                                <div style={{flex:1,minWidth:'180px'}}>
+                                                    {/* Balken */}
+                                                    <div style={{height:'14px',borderRadius:'7px',background:'#f1f5f9',overflow:'hidden',marginBottom:'8px'}}>
+                                                        <div style={{width:`${qualityRate}%`,height:'100%',background:qualityColor,borderRadius:'7px',transition:'width 0.4s ease'}}/>
+                                                    </div>
+                                                    <div style={{display:'flex',justifyContent:'space-between',fontSize:'11px',color:'#64748b',fontWeight:600}}>
+                                                        <span>0%</span>
+                                                        <span style={{color:'#94a3b8'}}>Schwelle 75%</span>
+                                                        <span>100%</span>
+                                                    </div>
+                                                </div>
+                                                <div style={{display:'flex',gap:'10px',flexShrink:0}}>
+                                                    <div style={{textAlign:'center',background:qualityBg,borderRadius:'12px',padding:'10px 16px',border:`1px solid ${qualityBorder}`}}>
+                                                        <div style={{fontSize:'24px',fontWeight:900,color:qualityColor}}>{qualityRate}%</div>
+                                                        <div style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',marginTop:'3px'}}>Qualitätsquote</div>
+                                                    </div>
+                                                    <div style={{textAlign:'center',background:'#ecfdf5',borderRadius:'12px',padding:'10px 16px',border:'1px solid #a7f3d0'}}>
+                                                        <div style={{fontSize:'24px',fontWeight:900,color:'#059669'}}>{qualityPassed}</div>
+                                                        <div style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',marginTop:'3px'}}>Bestanden</div>
+                                                    </div>
+                                                    <div style={{textAlign:'center',background:'#fef2f2',borderRadius:'12px',padding:'10px 16px',border:'1px solid #fecaca'}}>
+                                                        <div style={{fontSize:'24px',fontWeight:900,color:'#dc2626'}}>{qualityFailed}</div>
+                                                        <div style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',marginTop:'3px'}}>Nicht bestanden</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         {/* Ist-Analyse */}
                                         <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',padding:'16px'}}>
                                             <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'12px',display:'flex',alignItems:'center',gap:'6px'}}>
@@ -6819,7 +6907,11 @@ const highResHTML = buildHighResBundleHTML(d);
                                 );
                             })()}
 
-                        </div> = ({ isOpen, onClose, category, question, onNextQuestion }) => { if (!isOpen) return null; return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6"><h3 className="text-xl font-bold mb-4">Frage zu: {category}</h3><p className="text-lg mb-6">{question}</p><div className="flex justify-end gap-2"><button onClick={onNextQuestion} className="px-4 py-2 border rounded">Nächste</button><button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded">OK</button></div></div></div>); };
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         const QuestionModal = ({ isOpen, onClose, category, question, onNextQuestion }) => { if (!isOpen) return null; return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6"><h3 className="text-xl font-bold mb-4">Frage zu: {category}</h3><p className="text-lg mb-6">{question}</p><div className="flex justify-end gap-2"><button onClick={onNextQuestion} className="px-4 py-2 border rounded">Nächste</button><button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded">OK</button></div></div></div>); };
 
