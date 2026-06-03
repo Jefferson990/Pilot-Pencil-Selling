@@ -3396,11 +3396,41 @@ html.device-android-tablet .sit-aside-panel {
         min-width: 320px !important;
         max-width: 320px !important;
         flex: 0 0 320px !important;
-        overflow-y: auto !important;
+        overflow-y: scroll !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
         max-height: calc(100dvh - 64px - 56px) !important;
         box-sizing: border-box !important;
+        padding: 12px !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: #94a3b8 #f1f5f9 !important;
+    }
+    body .situation-view-wrapper > aside.sit-aside-panel::-webkit-scrollbar,
+    body aside.sit-aside-panel::-webkit-scrollbar,
+    html body .sit-aside-panel::-webkit-scrollbar {
+        width: 10px !important;
+        display: block !important;
+    }
+    body .situation-view-wrapper > aside.sit-aside-panel::-webkit-scrollbar-thumb,
+    body aside.sit-aside-panel::-webkit-scrollbar-thumb,
+    html body .sit-aside-panel::-webkit-scrollbar-thumb {
+        background: #94a3b8 !important;
+        border-radius: 5px !important;
+        border: 2px solid #f1f5f9 !important;
+    }
+    body .situation-view-wrapper > aside.sit-aside-panel::-webkit-scrollbar-track,
+    body aside.sit-aside-panel::-webkit-scrollbar-track {
+        background: #f1f5f9 !important;
+        border-radius: 5px !important;
+    }
+    /* Mehr Abstand zwischen Sektionen */
+    body .situation-view-wrapper > aside.sit-aside-panel > div,
+    body aside.sit-aside-panel > div {
+        margin-bottom: 14px !important;
+    }
+    body .situation-view-wrapper > aside.sit-aside-panel .flex.flex-col.gap-4,
+    body aside.sit-aside-panel .flex.flex-col.gap-4 {
+        gap: 16px !important;
     }
 }
 @media screen and (hover: none) and (pointer: coarse) and (max-width: 850px) {
