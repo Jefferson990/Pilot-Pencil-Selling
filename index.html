@@ -10711,10 +10711,23 @@ try {
 const opt = {
         margin: 0,
         filename: `Angebot_o2_${new Date().toISOString().split('T')[0]}.pdf`,
-        pagebreak: { mode: ['css', 'legacy'] },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'img', '.offer-canvas-wrap'] },
         image: { type: 'jpeg', quality: 1.0 },
         html2canvas: {
-            scale: 4,
+            // iOS/iPad: Canvas-Pixel-Limit (~16M px) → hohe scale erzeugt Leerseiten.
+            // Daher auf iOS-Geräten scale reduzieren.
+            scale: (function(){
+                try {
+                    var ua = navigator.userAgent || '';
+                    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                    var dpr = window.devicePixelRatio || 1;
+                    if (isIOS) {
+                        // effektive Auflösung dpr*scale soll ~3-4 bleiben, nicht 8+
+                        return Math.max(2, Math.min(3, Math.round(3 / Math.max(1, dpr) * 2)));
+                    }
+                    return 4;
+                } catch(e) { return 3; }
+            })(),
 
             useCORS: true,
             allowTaint: true,
@@ -11064,9 +11077,26 @@ const opt = {
                 const hasAnlage = !!(window.__anlageHtml && window.__anlageHtml.trim().length > 10);
                 const maxPages = 2 + offerPageCount + 1 + (hasAnlage ? 1 : 0); // Cover + Sit + Angebote + Outro + ggf. Anlage
                 if (typeof pdf.deletePage === 'function') {
+                    // Überzählige Seiten am Ende entfernen (iPad erzeugt oft Leerseiten)
                     for (let i = total; i > maxPages; i--) {
                         try { pdf.deletePage(i); } catch(_) {}
                     }
+                    // Zusätzlich: komplett leere weiße Seiten erkennen und entfernen
+                    try {
+                        const remaining = pdf.getNumberOfPages();
+                        for (let i = remaining; i >= 1; i--) {
+                            pdf.setPage(i);
+                            // Wenn eine Seite keinerlei Inhalt hat (nur weiß), entfernen
+                            // jsPDF speichert content streams – sehr kurze = leer
+                            const pageInfo = pdf.internal.pages[i];
+                            if (pageInfo && Array.isArray(pageInfo)) {
+                                const contentLen = pageInfo.join('').length;
+                                if (contentLen < 50 && pdf.getNumberOfPages() > 1) {
+                                    try { pdf.deletePage(i); } catch(_) {}
+                                }
+                            }
+                        }
+                    } catch(_) {}
                 }
             } catch(e) { /* ignore */ }
         }
@@ -11238,20 +11268,6 @@ const handlePDFShare = async () => {
     let blob = null;
 
     try {
-        // ── iOS/Safari Fix: html2pdf erzeugt auf Apple-Geräten weiße Seiten ──
-        // Grund: WebKit blockiert Canvas-Rasterisierung im Offscreen-Iframe.
-        // Lösung: Direkt den Print-Dialog öffnen – Safari exportiert daraus sauber als PDF.
-        const isIOS = window.__device && (window.__device.isIOS || window.__device.isIpad);
-        const isSafari = window.__device && window.__device.isSafari;
-        if (isIOS || isSafari) {
-            try { ensurePrintHeaders(); } catch(e){}
-            try { triggerToast('PDF wird über Drucken-Dialog erstellt …'); } catch(e){}
-            setTimeout(() => {
-                try { (window.safePrint ? window.safePrint() : window.print()); } catch(e){}
-            }, 200);
-            return;
-        }
-
         if (!window.html2pdf) {
             // leiser Fallback: Print
             try { triggerToast('PDF-Generator nicht verfügbar.'); } catch(e){}
@@ -11628,17 +11644,35 @@ const handlePDFShare = async () => {
                         try {
                             const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
                             const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
-                            // PDF drucken: einfach im neuen Tab öffnen, KEIN Share-Sheet
-                            const url = URL.createObjectURL(blob);
-                            const pdfTab = window.open(url, '_blank');
-                            if (!pdfTab) {
-                                // Popup geblockt → als Download anbieten
-                                const a = document.createElement('a');
-                                a.href = url; a.download = pdfFileName;
-                                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                            // System-Teilen-Sheet (WhatsApp, Mail, AirDrop, Drucken)
+                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
+                                try {
+                                    await navigator.share({
+                                        title: 'Angebot',
+                                        text: 'Ihr persönliches Angebot',
+                                        files: [new File([blob], pdfFileName, { type: 'application/pdf' })]
+                                    });
+                                    triggerToast('✅ PDF geteilt.');
+                                } catch(shareErr) {
+                                    if (shareErr.name !== 'AbortError') {
+                                        const url = URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                                    }
+                                }
+                            } else {
+                                // Fallback: neuer Tab (Desktop)
+                                const url = URL.createObjectURL(blob);
+                                const pdfTab = window.open(url, '_blank');
+                                if (!pdfTab) {
+                                    const a = document.createElement('a');
+                                    a.href = url; a.download = pdfFileName;
+                                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                }
+                                setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                triggerToast('✅ PDF geöffnet – drucken oder speichern.');
                             }
-                            setTimeout(() => URL.revokeObjectURL(url), 120000);
-                            triggerToast('✅ PDF geöffnet – drucken oder speichern.');
                         } catch(e) {
                             triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                         }
@@ -11743,48 +11777,18 @@ const handlePDFShare = async () => {
                     {view === 'offer' && (
                         <div style={{display:'flex',alignItems:'center',gap:'5px',flexShrink:0,marginRight:'4px'}}>
                             <span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Beratungs-ID</span>
-                            {inputMode === 'keyboard' ? (
-                                /* ── Tastatur-Modus: echtes Input-Feld, kein Numpad ── */
-                                <div style={{position:'relative',height:'32px',width:'160px',flexShrink:0}}>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        maxLength={15}
-                                        value={beratungsId}
-                                        onChange={e=>setBeratungsId(e.target.value.replace(/[^0-9]/g,''))}
-                                        placeholder="– – – – –"
-                                        style={{
-                                            width:'100%',height:'32px',
-                                            border:`1.5px solid ${beratungsId?'#3b82f6':'#e2e8f0'}`,
-                                            borderRadius:'8px',background:'#fff',
-                                            fontFamily:'monospace',fontSize:'11px',fontWeight:700,
-                                            letterSpacing:'0.08em',color:beratungsId?'#1e293b':'#cbd5e1',
-                                            paddingLeft:'10px',paddingRight: beratungsId?'26px':'10px',
-                                            boxSizing:'border-box',outline:'none'
-                                        }}
-                                    />
-                                    {beratungsId && (
-                                        <button
-                                            onClick={e=>{e.stopPropagation();setBeratungsId('');}}
-                                            style={{position:'absolute',right:'4px',top:'50%',transform:'translateY(-50%)',width:'18px',height:'18px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#64748b',lineHeight:1}}>✕</button>
-                                    )}
-                                </div>
-                            ) : (
-                                /* ── Stift-Modus: Numpad öffnen ── */
-                                <div
-                                    onClick={()=>setShowNumpad(true)}
-                                    style={{position:'relative',height:'32px',width:'160px',border:`1.5px solid ${beratungsId?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',cursor:'pointer',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
-                                    <span style={{fontFamily:'monospace',fontSize:'11px',fontWeight:700,letterSpacing:'0.08em',color:beratungsId?'#1e293b':'#cbd5e1'}}>
-                                        {beratungsId||'– – – – –'}
-                                    </span>
-                                    {beratungsId && (
-                                        <button
-                                            onClick={e=>{e.stopPropagation();setBeratungsId('');}}
-                                            style={{position:'absolute',right:'4px',top:'50%',transform:'translateY(-50%)',width:'18px',height:'18px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#64748b',lineHeight:1}}>✕</button>
-                                    )}
-                                </div>
-                            )}
+                            <div
+                                onClick={()=>setShowNumpad(true)}
+                                style={{position:'relative',height:'32px',width:'160px',border:`1.5px solid ${beratungsId?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',cursor:'pointer',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
+                                <span style={{fontFamily:'monospace',fontSize:'11px',fontWeight:700,letterSpacing:'0.08em',color:beratungsId?'#1e293b':'#cbd5e1'}}>
+                                    {beratungsId||'– – – – –'}
+                                </span>
+                                {beratungsId && (
+                                    <button
+                                        onClick={e=>{e.stopPropagation();setBeratungsId('');}}
+                                        style={{position:'absolute',right:'4px',top:'50%',transform:'translateY(-50%)',width:'18px',height:'18px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',color:'#64748b',lineHeight:1}}>✕</button>
+                                )}
+                            </div>
                         </div>
                     )}
                     {/* Numpad für Beratungs-ID — hell, zentriert, mit safe-area */}
