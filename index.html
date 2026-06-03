@@ -3423,14 +3423,28 @@ html.device-android-tablet .sit-aside-panel {
         background: #f1f5f9 !important;
         border-radius: 5px !important;
     }
-    /* Mehr Abstand zwischen Sektionen */
+    /* Sektionen vollständig zeigen und Abstand erzwingen */
     body .situation-view-wrapper > aside.sit-aside-panel > div,
     body aside.sit-aside-panel > div {
         margin-bottom: 14px !important;
+        min-height: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        flex-shrink: 0 !important;
+        overflow: visible !important;
+    }
+    /* Stammdaten-Card: Email-Block muss komplett sichtbar sein */
+    body aside.sit-aside-panel > div:first-child,
+    body .situation-view-wrapper > aside.sit-aside-panel > div:first-child {
+        min-height: 180px !important;
+        overflow: visible !important;
     }
     body .situation-view-wrapper > aside.sit-aside-panel .flex.flex-col.gap-4,
     body aside.sit-aside-panel .flex.flex-col.gap-4 {
-        gap: 16px !important;
+        gap: 18px !important;
+        height: auto !important;
+        max-height: none !important;
+        flex: none !important;
     }
 }
 @media screen and (hover: none) and (pointer: coarse) and (max-width: 850px) {
