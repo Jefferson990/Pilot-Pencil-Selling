@@ -4171,7 +4171,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                             </button>
 
                             {/* Teilen – volle Breite */}
-                            <button onClick={onShare} style={{display:'flex',alignItems:'center',gap:'16px',padding:'16px 20px',borderRadius:'16px',border:'2px solid #bfdbfe',background:'linear-gradient(135deg,#eff6ff,#dbeafe)',cursor:'pointer',textAlign:'left',transition:'all 0.15s',width:'100%'}}
+                            <button onClick={onShare} className="hide-share-button" style={{display:'none',alignItems:'center',gap:'16px',padding:'16px 20px',borderRadius:'16px',border:'2px solid #bfdbfe',background:'linear-gradient(135deg,#eff6ff,#dbeafe)',cursor:'pointer',textAlign:'left',transition:'all 0.15s',width:'100%'}}
                                 onMouseEnter={e=>{e.currentTarget.style.borderColor='#3b82f6';e.currentTarget.style.transform='translateY(-1px)';}}
                                 onMouseLeave={e=>{e.currentTarget.style.borderColor='#bfdbfe';e.currentTarget.style.transform='none';}}>
                                 <div style={{width:'48px',height:'48px',borderRadius:'14px',background:'linear-gradient(135deg,#2563eb,#1d4ed8)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'22px'}}>📤</div>
@@ -11614,36 +11614,17 @@ const handlePDFShare = async () => {
                         try {
                             const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
                             const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
-                            // Web Share API → natives System-Teilen (WhatsApp, Mail, Drucken, etc.)
-                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
-                                try {
-                                    await navigator.share({
-                                        title: 'Angebot',
-                                        text: 'Ihr persönliches Angebot',
-                                        files: [new File([blob], pdfFileName, { type: 'application/pdf' })]
-                                    });
-                                    triggerToast('✅ PDF geteilt.');
-                                } catch(shareErr) {
-                                    if (shareErr.name !== 'AbortError') {
-                                        // Teilen abgebrochen oder fehlgeschlagen → Tab öffnen als Fallback
-                                        const url = URL.createObjectURL(blob);
-                                        window.open(url, '_blank');
-                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
-                                    }
-                                }
-                            } else {
-                                // Kein Web Share (Desktop Firefox etc.) → neuer Tab
-                                const url = URL.createObjectURL(blob);
-                                const pdfTab = window.open(url, '_blank');
-                                if (!pdfTab) {
-                                    const a = document.createElement('a');
-                                    a.href = url; a.download = pdfFileName;
-                                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                                }
-                                setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                            // PDF drucken: einfach im neuen Tab öffnen, KEIN Share-Sheet
+                            const url = URL.createObjectURL(blob);
+                            const pdfTab = window.open(url, '_blank');
+                            if (!pdfTab) {
+                                // Popup geblockt → als Download anbieten
+                                const a = document.createElement('a');
+                                a.href = url; a.download = pdfFileName;
+                                document.body.appendChild(a); a.click(); document.body.removeChild(a);
                             }
+                            setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            triggerToast('✅ PDF geöffnet – drucken oder speichern.');
                         } catch(e) {
                             triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                         }
