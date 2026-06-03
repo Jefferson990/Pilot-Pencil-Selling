@@ -8598,6 +8598,40 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             };
 
             const safePrint = useCallback(() => {
+                // iOS/iPad: window.print() lässt Canvas-Overlays im Vordergrund "schweben".
+                // Daher auf iOS immer den flachen html2canvas-PDF-Weg + System-Teilen nutzen.
+                const ua = navigator.userAgent || '';
+                const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+                if (isIOS) {
+                    (async () => {
+                        try {
+                            if (!window.html2pdf) { triggerToast('PDF-Generator fehlt.'); return; }
+                            triggerToast('PDF wird erstellt… einen Moment.');
+                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
+                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
+                                try {
+                                    await navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [new File([blob], pdfFileName, { type: 'application/pdf' })] });
+                                    triggerToast('✅ PDF geteilt.');
+                                } catch(shareErr) {
+                                    if (shareErr.name !== 'AbortError') {
+                                        const url = URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                    }
+                                }
+                            } else {
+                                const url = URL.createObjectURL(blob);
+                                window.open(url, '_blank');
+                                setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            }
+                        } catch(e) { triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt')); }
+                    })();
+                    return;
+                }
+
+                // Desktop / Android: normaler Druck
                 try { window.print(); return; } catch(e) {}
 
                 // 2) Fallback: PDF im Print-Look erzeugen und speichern (wenn Drucken vom Browser blockiert wird)
