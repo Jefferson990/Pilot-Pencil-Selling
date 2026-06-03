@@ -2363,145 +2363,6 @@ body.pdf-share-mode .offer-toolbar-icons{ display:none !important; }
   .print-recs-toggle-btn{ box-shadow:0 10px 30px rgba(15,23,42,.18); }
 }
 
-
-/* =====================================================================
-   SCREEN PATCH – iPad 9,7" / kleine Tablets: rechte Seite besser sichtbar
-   Ziel: E-Mail-Feld sichtbar, Sidebar luftiger + eigene Scrollleiste.
-   WICHTIG: nur Bildschirm, NICHT Print/PDF.
-   ===================================================================== */
-@media screen and (min-width: 768px) and (max-width: 1100px) and (orientation: landscape) {
-
-    html:not(.pdf-share-mode),
-    body:not(.pdf-share-mode),
-    #root {
-        overflow: hidden !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
-    }
-
-    body:not(.pdf-share-mode) .situation-view-wrapper {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: stretch !important;
-        gap: 10px !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
-        height: calc(100dvh - 64px - 56px) !important;
-        max-height: calc(100dvh - 64px - 56px) !important;
-        overflow: hidden !important;
-        box-sizing: border-box !important;
-        padding-right: 8px !important;
-    }
-
-    /* Linke Kachelfläche etwas kompakter, damit rechts mehr Platz bleibt */
-    body:not(.pdf-share-mode) .situation-view-wrapper > div.flex-1 {
-        flex: 1 1 auto !important;
-        min-width: 0 !important;
-        width: auto !important;
-        max-width: none !important;
-        overflow: hidden !important;
-    }
-
-    /* Rechte Sidebar breiter + scrollbar */
-    body:not(.pdf-share-mode) .sit-aside-panel,
-    body:not(.pdf-share-mode) .situation-view-wrapper > aside.sit-aside-panel {
-        display: flex !important;
-        flex: 0 0 335px !important;
-        width: 335px !important;
-        min-width: 335px !important;
-        max-width: 335px !important;
-        height: 100% !important;
-        max-height: 100% !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        scrollbar-width: auto !important;
-        scrollbar-color: #94a3b8 #e2e8f0 !important;
-        padding: 12px !important;
-        box-sizing: border-box !important;
-    }
-
-    body:not(.pdf-share-mode) .sit-aside-panel::-webkit-scrollbar {
-        width: 11px !important;
-    }
-    body:not(.pdf-share-mode) .sit-aside-panel::-webkit-scrollbar-track {
-        background: #e2e8f0 !important;
-        border-radius: 999px !important;
-    }
-    body:not(.pdf-share-mode) .sit-aside-panel::-webkit-scrollbar-thumb {
-        background: #94a3b8 !important;
-        border-radius: 999px !important;
-        border: 2px solid #e2e8f0 !important;
-    }
-
-    /* Sidebar-Karten luftiger, aber nicht so hoch, dass unten alles verschwindet */
-    body:not(.pdf-share-mode) .sit-aside-panel .bg-white.rounded-xl,
-    body:not(.pdf-share-mode) .sit-aside-panel .bg-white.rounded-2xl {
-        padding: 12px !important;
-        margin-bottom: 10px !important;
-    }
-
-    body:not(.pdf-share-mode) .sit-aside-panel h3 {
-        font-size: 12px !important;
-        line-height: 1.25 !important;
-        margin-bottom: 8px !important;
-    }
-
-    /* Formularfelder besser lesbar */
-    body:not(.pdf-share-mode) .sit-aside-panel select,
-    body:not(.pdf-share-mode) .sit-aside-panel input,
-    body:not(.pdf-share-mode) .sit-aside-panel textarea {
-        width: 100% !important;
-        min-width: 0 !important;
-        min-height: 38px !important;
-        font-size: 13px !important;
-        line-height: 1.2 !important;
-        box-sizing: border-box !important;
-    }
-
-    /* Kundentyp + Segment dürfen nebeneinander bleiben, aber mit genug Platz */
-    body:not(.pdf-share-mode) .sit-aside-panel .grid.grid-cols-2 {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-        gap: 8px !important;
-    }
-
-    /* E-Mail-Feld: nie abschneiden */
-    body:not(.pdf-share-mode) .sit-aside-panel input[type="email"] {
-        display: block !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-
-    /* Kacheln links etwas kompakter, damit iPad nicht gequetscht wirkt */
-    body:not(.pdf-share-mode) .sit-card-grid {
-        gap: 10px !important;
-        grid-template-rows: repeat(3, minmax(145px, 1fr)) !important;
-    }
-
-    body:not(.pdf-share-mode) .sit-card-grid > div {
-        min-height: 145px !important;
-    }
-}
-
-/* Hochformat bleibt scrollfähig: Sidebar unter den Kacheln, nichts wird abgeschnitten */
-@media screen and (min-width: 700px) and (max-width: 900px) and (orientation: portrait) {
-    body:not(.pdf-share-mode) .situation-view-wrapper {
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-    }
-
-    body:not(.pdf-share-mode) .sit-aside-panel {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        overflow-y: visible !important;
-    }
-}
-
 </style>
 
 <style id="export-hardlock-patch-v1">
@@ -3535,55 +3396,42 @@ html.device-android-tablet .sit-aside-panel {
         min-width: 320px !important;
         max-width: 320px !important;
         flex: 0 0 320px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    /* Der innere Container ist das echte Scroll-Element */
+    body .sit-aside-panel .sit-aside-inner,
+    html body .sit-aside-inner {
+        gap: 18px !important;
+        padding: 14px 14px 80px 14px !important;
         overflow-y: scroll !important;
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: touch !important;
-        max-height: calc(100dvh - 64px - 56px) !important;
-        box-sizing: border-box !important;
-        padding: 12px !important;
         scrollbar-width: thin !important;
         scrollbar-color: #94a3b8 #f1f5f9 !important;
+        height: 100% !important;
+        max-height: 100% !important;
     }
-    body .situation-view-wrapper > aside.sit-aside-panel::-webkit-scrollbar,
-    body aside.sit-aside-panel::-webkit-scrollbar,
-    html body .sit-aside-panel::-webkit-scrollbar {
+    body .sit-aside-inner::-webkit-scrollbar {
         width: 10px !important;
         display: block !important;
     }
-    body .situation-view-wrapper > aside.sit-aside-panel::-webkit-scrollbar-thumb,
-    body aside.sit-aside-panel::-webkit-scrollbar-thumb,
-    html body .sit-aside-panel::-webkit-scrollbar-thumb {
+    body .sit-aside-inner::-webkit-scrollbar-thumb {
         background: #94a3b8 !important;
         border-radius: 5px !important;
         border: 2px solid #f1f5f9 !important;
     }
-    body .situation-view-wrapper > aside.sit-aside-panel::-webkit-scrollbar-track,
-    body aside.sit-aside-panel::-webkit-scrollbar-track {
+    body .sit-aside-inner::-webkit-scrollbar-track {
         background: #f1f5f9 !important;
         border-radius: 5px !important;
     }
-    /* Sektionen vollständig zeigen und Abstand erzwingen */
-    body .situation-view-wrapper > aside.sit-aside-panel > div,
-    body aside.sit-aside-panel > div {
-        margin-bottom: 14px !important;
-        min-height: auto !important;
-        height: auto !important;
-        max-height: none !important;
+    /* Jede Sektion in voller Höhe */
+    body .sit-aside-inner > div {
         flex-shrink: 0 !important;
-        overflow: visible !important;
-    }
-    /* Stammdaten-Card: Email-Block muss komplett sichtbar sein */
-    body aside.sit-aside-panel > div:first-child,
-    body .situation-view-wrapper > aside.sit-aside-panel > div:first-child {
-        min-height: 180px !important;
-        overflow: visible !important;
-    }
-    body .situation-view-wrapper > aside.sit-aside-panel .flex.flex-col.gap-4,
-    body aside.sit-aside-panel .flex.flex-col.gap-4 {
-        gap: 18px !important;
         height: auto !important;
         max-height: none !important;
-        flex: none !important;
+        min-height: auto !important;
+        overflow: visible !important;
     }
 }
 @media screen and (hover: none) and (pointer: coarse) and (max-width: 850px) {
@@ -12204,9 +12052,9 @@ const handlePDFShare = async () => {
                                     })()}
                                 </div>
 
-                        <aside className="shrink-0 sit-aside-panel flex flex-col border-l border-slate-200/60 z-10 h-full" style={{background:'linear-gradient(180deg,#f8faff 0%,#f0f6ff 100%)', overflowY:'auto', overflowX:'hidden', WebkitOverflowScrolling:'touch'}}>
+                        <aside className="shrink-0 sit-aside-panel flex flex-col border-l border-slate-200/60 z-10 h-full" style={{background:'linear-gradient(180deg,#f8faff 0%,#f0f6ff 100%)'}}>
                             
-                            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar" style={{padding:'8px 10px 72px 10px',gap:'6px',display:'flex',flexDirection:'column'}}>
+                            <div className="sit-aside-inner flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar" style={{padding:'12px 12px 72px 12px',gap:'12px',display:'flex',flexDirection:'column'}}>
 
                             {/* ── Karten-Helper: Header ── */}
                             {/* STAMMDATEN */}
