@@ -3050,10 +3050,10 @@ body.pdf-share-mode .print-situation-view {
 /* ===== SIDEBAR SCROLL: iPad ===== */
 html.device-ipad .sit-aside-panel,
 html.device-iphone .sit-aside-panel {
-    flex: 0 0 240px !important;
-    width: 240px !important;
-    min-width: 240px !important;
-    max-width: 240px !important;
+    width: 270px !important;
+    min-width: 270px !important;
+    max-width: 270px !important;
+    flex: 0 0 270px !important;
     max-height: calc(100dvh - 64px - 56px) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
@@ -3061,10 +3061,10 @@ html.device-iphone .sit-aside-panel {
     scrollbar-width: thin !important;
 }
 html.device-android-tablet .sit-aside-panel {
-    flex: 0 0 240px !important;
-    width: 240px !important;
-    min-width: 240px !important;
-    max-width: 240px !important;
+    width: 270px !important;
+    min-width: 270px !important;
+    max-width: 270px !important;
+    flex: 0 0 270px !important;
     max-height: calc(100dvh - 64px - 56px) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
@@ -3072,6 +3072,10 @@ html.device-android-tablet .sit-aside-panel {
 }
 @media screen and (max-width: 1180px) {
     .sit-aside-panel {
+        width: 270px !important;
+        min-width: 270px !important;
+        max-width: 270px !important;
+        flex: 0 0 270px !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         scrollbar-width: thin !important;
@@ -11990,7 +11994,7 @@ const handlePDFShare = async () => {
                                     })()}
                                 </div>
 
-                        <aside className="w-[340px] xl:w-[360px] min-w-[340px] shrink-0 sit-aside-panel flex flex-col border-l border-slate-200/60 z-10 h-full overflow-hidden" style={{background:'linear-gradient(180deg,#f8faff 0%,#f0f6ff 100%)'}}>
+                        <aside className="shrink-0 sit-aside-panel flex flex-col border-l border-slate-200/60 z-10 h-full" style={{background:'linear-gradient(180deg,#f8faff 0%,#f0f6ff 100%)', width:'340px', minWidth:'340px', maxWidth:'340px', overflowY:'auto', overflowX:'hidden', WebkitOverflowScrolling:'touch'}}>
                             
                             <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar" style={{padding:'8px 10px 72px 10px',gap:'6px',display:'flex',flexDirection:'column'}}>
 
