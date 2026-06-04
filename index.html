@@ -197,6 +197,17 @@
 .offer-html-overlay-wrap * {
     color: inherit;
 }
+/* Oberen Leerraum im Bundle entfernen - erstes Element nach oben ziehen */
+.offer-html-overlay-wrap > *:first-child,
+.offer-html-overlay-wrap > div:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+.offer-html-overlay-wrap > body,
+.offer-html-overlay-wrap body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
 .offer-html-overlay-wrap [style*="color: rgb(255"] ,
 .offer-html-overlay-wrap [style*="color:#fff"],
 .offer-html-overlay-wrap [style*="color: #fff"],
@@ -459,6 +470,16 @@ body.pdf-share-mode .canvas-image-fixed {
         width: 100% !important;
         height: 100% !important;
         object-fit: cover !important;
+    }
+    .offer-overlay-outer {
+        position: relative !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+    }
+    .offer-html-overlay-wrap {
+        position: relative !important;
     }
 }
 
@@ -6420,10 +6441,16 @@ const highResHTML = buildHighResBundleHTML(d);
         }
         try {
             if (typeof onImportToCanvas === "function") {
+                let result;
                 if (pendingImport.kind === "image") {
-                    onImportToCanvas(pendingImport.value);
+                    result = onImportToCanvas(pendingImport.value);
                 } else if (pendingImport.kind === "html") {
-                    onImportToCanvas({ kind: "html", html: pendingImport.value });
+                    result = onImportToCanvas({ kind: "html", html: pendingImport.value });
+                }
+                // Wenn Ersetzen-Abfrage läuft: kein Erfolg-Toast, Modal bleibt geschlossen
+                if (result === 'pending') {
+                    setPendingImport(null);
+                    return;
                 }
             }
             if (typeof triggerToast === "function") triggerToast("In " + targetLabel + " uebernommen.");
@@ -7299,6 +7326,45 @@ const highResHTML = buildHighResBundleHTML(d);
                 };
 
                 const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '24px' : textSize === 'large' ? '44px' : '32px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
+        const overlayWrapRef = useRef(null);
+        const overlayOuterRef = useRef(null);
+        const [overlayFitScale, setOverlayFitScale] = useState(1);
+        const [overlayBoxHeight, setOverlayBoxHeight] = useState(0);
+        // Bundle füllt die Canvas-BREITE; Outer-Höhe = exakt skalierte Bundle-Höhe (kein Leerraum, nichts abgeschnitten)
+        useEffect(() => {
+            if (!htmlOverlay || !overlayWrapRef.current || !overlayOuterRef.current) { setOverlayFitScale(1); setOverlayBoxHeight(0); return; }
+            const measure = () => {
+                try {
+                    const wrap = overlayWrapRef.current;
+                    const outer = overlayOuterRef.current;
+                    if (!wrap || !outer) return;
+                    const availW = outer.clientWidth || 300;
+                    // Wrap temporär bei voller Breite (100% des Containers), scale 1 messen
+                    const prevTransform = wrap.style.transform;
+                    const prevWidth = wrap.style.width;
+                    wrap.style.transform = 'scale(1)';
+                    wrap.style.width = '100%';
+                    const naturalW = wrap.scrollWidth || availW;
+                    const naturalH = wrap.offsetHeight || wrap.scrollHeight;
+                    wrap.style.transform = prevTransform;
+                    wrap.style.width = prevWidth;
+                    if (naturalH <= 0 || naturalW <= 0) return;
+                    // Skaliere auf Breite (Bundle füllt Canvas-Breite)
+                    const fit = availW / naturalW;
+                    const scaledH = naturalH * fit;
+                    setOverlayFitScale(fit > 0.05 ? fit : 0.05);
+                    setOverlayBoxHeight(Math.ceil(scaledH));
+                } catch(_) {}
+            };
+            measure();
+            const ro = new ResizeObserver(measure);
+            try { ro.observe(overlayOuterRef.current); } catch(_) {}
+            try { overlayWrapRef.current.querySelectorAll('img').forEach(img => { if (!img.complete) img.addEventListener('load', measure, { once: true }); }); } catch(_) {}
+            const t1 = setTimeout(measure, 300);
+            const t2 = setTimeout(measure, 1000);
+            const t3 = setTimeout(measure, 2000);
+            return () => { try { ro.disconnect(); } catch(_) {} clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+        }, [htmlOverlay]);
                 // Immer wenn ein neues Bundle/Bild eingefügt wird: Edit-Modus aktivieren (blau = bewegbar).
                 // bundleInsertCount wird bei jedem Import erhöht – dadurch feuert dieser Effect garantiert,
                 // auch wenn dasselbe Bundle nochmals eingefügt wird.
@@ -7500,7 +7566,7 @@ const highResHTML = buildHighResBundleHTML(d);
             try { hardEndInteraction(); } catch(_) {}
         };
         const handleImageReset = () => { onUpdateImageTransform(statusKey, { x: 0, y: 0, scale: 0.8, rotation: 0 }); }; 
-        return (<div className={containerClasses} style={{transition: 'all 0.25s ease'}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-[60] shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2 offer-toolbar-icons">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{typeof onSetPackagePrice === 'function' && (() => { const pd = packagePriceData||{}; const hp = pd.einmalig||pd.monatlich; return (<button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();onSetPackagePrice(statusKey);}} style={{padding:'6px',borderRadius:'50%',background:hp?'#dcfce7':'#f8fafc',color:hp?'#16a34a':'#94a3b8',border:hp?'1.5px solid #86efac':'1.5px solid #e2e8f0',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:'11px',width:'28px',height:'28px'}} title="Paket-Preis setzen">€</button>); })()}{htmlOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImageReset(); }} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}
+        return (<div className={containerClasses} style={{transition: 'all 0.25s ease', ...(htmlOverlay && overlayBoxHeight ? { minHeight: (overlayBoxHeight + 130) + 'px' } : {})}}> <div className="p-4 bg-white/90 border-b border-slate-100 relative z-[60] shrink-0 flex flex-col"><div className="flex justify-between items-start"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icon d={icon} size={20} className="text-blue-600"/><span>{label}</span></div><div className="flex items-center gap-2 offer-toolbar-icons">{(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && typeof onOpenBundleModal === 'function' ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenBundleModal('customer', statusKey); }} className="p-1.5 rounded-full bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Bundle öffnen"><Icon d={ICONS.Smartphone} size={16}/></button>) : null}{typeof onSetPackagePrice === 'function' && (() => { const pd = packagePriceData||{}; const hp = pd.einmalig||pd.monatlich; return (<button type="button" onClick={(e)=>{e.preventDefault();e.stopPropagation();onSetPackagePrice(statusKey);}} style={{padding:'6px',borderRadius:'50%',background:hp?'#dcfce7':'#f8fafc',color:hp?'#16a34a':'#94a3b8',border:hp?'1.5px solid #86efac':'1.5px solid #e2e8f0',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:'11px',width:'28px',height:'28px'}} title="Paket-Preis setzen">€</button>); })()}{htmlOverlay && (x !== 0 || y !== 0 || scale !== 1.0 || rotation !== 0) && (<button onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); handleImageReset(); }} className="p-1.5 rounded-full bg-slate-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Position/Skalierung/Rotation zurücksetzen"><Icon d={ICONS.RefreshCw} size={14}/></button>)}
         {htmlOverlay && (statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (
             <>
                 <button type="button" onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); toggleOverlayEdit(); }} className={`p-1.5 rounded-full transition-colors ${overlayEditEnabled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`} title={overlayEditEnabled ? 'Bearbeiten aktiv: Angebot kann bewegt/skaliert werden (Zeichnen ist dann gesperrt). Klick zum Sperren.' : 'Bearbeiten aus: Zeichnen ist frei. Klick um Angebot zu bewegen/skaliert zu bearbeiten.'}><Icon d={ICONS.Lock} size={16}/></button>
@@ -7515,7 +7581,7 @@ const highResHTML = buildHighResBundleHTML(d);
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
-</div><div className="canvas-lines"></div>{htmlOverlay && (<div className="offer-overlay-outer absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}><div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
             </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'100%', height:'150px', overflow:'hidden', background:'#f1f5f9', borderTop:'1px solid #e2e8f0', position:'relative', flexShrink:0 }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none' }}/></div>)}</div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
@@ -8218,6 +8284,13 @@ const fileInputRef = useRef(null);
             const toastTimerRef = useRef(null);
             const [canvasImages, setCanvasImages] = useState({ offer1: null, offer2: null, offer3: null });
             const [canvasHtml, setCanvasHtml] = React.useState({ offer1: null, offer2: null, offer3: null });
+            const [pendingBundleImport, setPendingBundleImport] = useState(null); // {payload, key} wartet auf Ersetzen-Bestätigung
+            const [mergedCanvases, setMergedCanvases] = useState(null); // null | '1+2' | '2+3' | 'all'
+            // Refs halten immer den aktuellen Canvas-Stand (gegen veraltete Closures)
+            const canvasHtmlRef = useRef(canvasHtml);
+            const canvasImagesRef = useRef(canvasImages);
+            useEffect(() => { canvasHtmlRef.current = canvasHtml; }, [canvasHtml]);
+            useEffect(() => { canvasImagesRef.current = canvasImages; }, [canvasImages]);
             // Zähler: jedes Mal wenn ein Bundle/Bild eingefügt wird, erhöht sich dieser Wert.
             // Damit kann OfferCanvas zuverlässig den Edit-Modus aktivieren – auch bei gleichem Inhalt.
             const [bundleInsertCounter, setBundleInsertCounter] = React.useState({ offer1: 0, offer2: 0, offer3: 0 });
@@ -8556,7 +8629,42 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             });
 
             // ===== Bundle -> Ziel-Canva (HTML bevorzugt, Fallback Bild) =====
+            // Eigentlicher Import (ohne Abfrage) – ersetzt den Canvas-Inhalt
+            const doImportBundle = React.useCallback((payload, key) => {
+                if (!payload) return;
+                // Bundle passt sich an Canvas an: keine Verschiebung, volle Breite, unter Status
+                const applyFit = () => {
+                    setImageTransform(prev => ({ ...prev, [key]: { x: 0, y: 0, scale: 1, rotation: 0 } }));
+                };
+                // HTML-Import (scharf)
+                if (typeof payload === 'object' && payload.kind === 'html') {
+                    setCanvasHtml(prev => ({ ...prev, [key]: payload.html || null }));
+                    setCanvasImages(prev => ({ ...prev, [key]: null }));
+                    setBundleInsertCounter(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+                    requestAnimationFrame(() => requestAnimationFrame(applyFit));
+                    triggerToast('✓ Bundle eingefügt.');
+                    setShowBundleModal(false);
+                    return;
+                }
+                // Bild-Import (Fallback)
+                if (typeof payload === 'string') {
+                    setCanvasImages(prev => ({ ...prev, [key]: payload }));
+                    setCanvasHtml(prev => ({ ...prev, [key]: null }));
+                    setBundleInsertCounter(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+                    requestAnimationFrame(() => requestAnimationFrame(applyFit));
+                    triggerToast('✓ Bundle eingefügt.');
+                    setShowBundleModal(false);
+                }
+            }, [triggerToast, offerLayoutMode]);
+
             const importBundleToCanvas = React.useCallback((payload) => {
+                if (!payload) return true;
+                const key = bundleTargetKey || 'offer1';
+                doImportBundle(payload, key);
+                return true;
+            }, [bundleTargetKey, doImportBundle]);
+
+            const _unused_importBundleToCanvas = React.useCallback((payload) => {
                 if (!payload) return;
                 const key = bundleTargetKey || 'offer1';
                 const applyCenteredY = () => {
@@ -9842,8 +9950,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
 
                     // ULTRA SHARP v37: avoid blur from CSS transforms/filters during rasterization
                     try{
-                        doc.querySelectorAll('.offer-html-overlay-wrap, .bundle-import-wrap, .canvas-image, img, canvas, svg').forEach(el=>{
-                            try { el.style.transform = 'none'; } catch(e){}
+                        doc.querySelectorAll('.bundle-import-wrap, .canvas-image, img, canvas, svg').forEach(el=>{
                             try { el.style.filter = 'none'; } catch(e){}
                             try { el.style.backfaceVisibility = 'hidden'; } catch(e){}
                             try { el.style.willChange = 'auto'; } catch(e){}
@@ -9851,24 +9958,42 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                         });
                     }catch(e){}
 
-                    // ===== FESTER PLATZ für übernommene Angebote im Druck =====
-                    // Am Bildschirm frei verschiebbar (translate/scale/rotate),
-                    // im PDF/Druck: oben fest einrasten, kein Versatz, volle Breite.
+                    // ===== Übernommenes Angebot im Druck: muss komplett in den A4-Canvas passen =====
                     try{
                         doc.querySelectorAll('.offer-overlay-outer').forEach(outer=>{
-                            outer.style.transform = 'none';
                             outer.style.position = 'relative';
-                            outer.style.inset = 'auto';
                             outer.style.width = '100%';
-                            outer.style.top = '0';
-                            outer.style.left = '0';
-                            // Den nachfolgenden Schreib-/Canvas-Bereich unter das Angebot fließen lassen
+                            outer.style.overflow = 'hidden';
+                            try {
+                                const wrap = outer.querySelector('.offer-html-overlay-wrap');
+                                if (wrap) {
+                                    // Verfügbare Höhe im A4-Canvas (min-height 600 - Header ~130 - Puffer)
+                                    const availH = 440;
+                                    const availW = outer.clientWidth || wrap.scrollWidth || 300;
+                                    // natürliche Bundle-Größe messen (scale 1, volle Breite)
+                                    const prevT = wrap.style.transform;
+                                    const prevW = wrap.style.width;
+                                    wrap.style.transform = 'scale(1)';
+                                    wrap.style.width = '100%';
+                                    const naturalH = wrap.offsetHeight || wrap.scrollHeight;
+                                    const naturalW = wrap.scrollWidth || availW;
+                                    wrap.style.transform = prevT;
+                                    wrap.style.width = prevW;
+                                    if (naturalH > 0 && naturalW > 0) {
+                                        // Skaliere so dass HÖHE und Breite passen → ganzes Bundle sichtbar
+                                        const fit = Math.min(availW / naturalW, availH / naturalH);
+                                        wrap.style.transform = `scale(${fit})`;
+                                        wrap.style.transformOrigin = 'top left';
+                                        wrap.style.width = (100 / fit) + '%';
+                                        // Outer-Höhe exakt auf skalierte Bundle-Höhe
+                                        outer.style.height = Math.ceil(naturalH * fit) + 'px';
+                                        outer.style.maxHeight = Math.ceil(naturalH * fit) + 'px';
+                                    }
+                                }
+                            } catch(_){}
                             try {
                                 const sib = outer.nextElementSibling;
-                                if (sib) {
-                                    sib.style.position = 'relative';
-                                    sib.style.inset = 'auto';
-                                }
+                                if (sib) { sib.style.position = 'relative'; sib.style.inset = 'auto'; }
                             } catch(_){}
                         });
                     }catch(e){}
@@ -11187,12 +11312,19 @@ const opt = {
                         body.pdf-share-mode .offer-canvas-container > div[style*="translate"] {
                             transform: none !important;
                         }
-                        /* Overlay-Wrap: immer oben-links, volle Breite, voll sichtbar */
+                        /* Overlay-Wrap: Fit-Skalierung beibehalten (passt sich an Canvas an) */
                         body.pdf-share-mode .offer-html-overlay-wrap {
                             position: relative !important;
-                            transform: none !important;
-                            width: 100% !important;
                             opacity: 1 !important;
+                        }
+                        /* Overlay-Outer im PDF: im Canvas-Fluss */
+                        body.pdf-share-mode .offer-overlay-outer {
+                            position: relative !important;
+                            width: 100% !important;
+                            overflow: hidden !important;
+                            display: flex !important;
+                            align-items: flex-start !important;
+                            justify-content: center !important;
                         }
 
                         /* Jede Share-Seite ist ein echtes A4-Landscape Blatt */
@@ -12027,6 +12159,26 @@ const handlePDFShare = async () => {
     );
 })()}
 <BundleModal isOpen={showBundleModal} onClose={() => setShowBundleModal(false)} url={bundleModalUrl} onImportToCanvas={importBundleToCanvas} triggerToast={triggerToast} targetKey={bundleTargetKey} />
+{pendingBundleImport && (() => {
+    const keyLabels = { offer1: '1. Hardware, Anbieter & Nutzung', offer2: '2. Haushalt und weitere Produkte', offer3: '3. Weiteres Angebot' };
+    const label = keyLabels[pendingBundleImport.key] || pendingBundleImport.key;
+    return (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 border border-slate-200">
+                <h3 className="text-lg font-black text-slate-800 mb-2 flex items-center gap-2">
+                    <Icon d={ICONS.AlertCircle} size={22} className="text-amber-600"/>
+                    Canvas ersetzen?
+                </h3>
+                <p className="text-sm text-slate-600 mb-1">In <strong>Canvas {label}</strong> ist bereits ein Angebot.</p>
+                <p className="text-sm text-slate-600 mb-5">Soll das neue Angebot aus der Aktionsmappe es ersetzen? Größe und Position bleiben gleich.</p>
+                <div className="flex justify-end gap-2">
+                    <button onClick={() => setPendingBundleImport(null)} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors">Abbrechen</button>
+                    <button onClick={() => { const p = pendingBundleImport; setPendingBundleImport(null); doImportBundle(p.payload, p.key); }} className="px-6 py-2 rounded-lg font-bold shadow-md bg-amber-600 text-white hover:bg-amber-700 transition-all flex items-center gap-2">Ersetzen <Icon d={ICONS.RefreshCw} size={16}/></button>
+                </div>
+            </div>
+        </div>
+    );
+})()}
 <AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} />
                     <PinLockModal isOpen={showPinLock} onClose={()=>setShowPinLock(false)} onSuccess={()=>{ setShowPinLock(false); setShowStats(true); }} />
                     <StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} />
@@ -12703,8 +12855,40 @@ const handlePDFShare = async () => {
                                 {[{ key: 'offer1', icon: ICONS.Smartphone, labelKey: 'Offer1Title', ref: offerCanvasRef1, scaleRef: scaleRef1 }, { key: 'offer2', icon: ICONS.Users, labelKey: 'Offer2Title', ref: offerCanvasRef2, scaleRef: scaleRef2 }, { key: 'offer3', icon: ICONS.Router, labelKey: 'Offer3Title', ref: offerCanvasRef3, scaleRef: scaleRef3 }].map(({ key, icon, labelKey, ref, scaleRef }, idx) => {
                                     const orderClass = key === 'offer1' ? 'order-1' : key === 'offer2' ? 'order-2' : 'order-3';
                                     const hidden = offerLayoutMode === 'step' && currentOfferStep !== idx;
+                                    // Fusion: Grid-Spans dynamisch setzen
+                                    let mergeStyle = {};
+                                    if (offerLayoutMode !== 'step' && mergedCanvases) {
+                                        if (mergedCanvases === 'all') {
+                                            mergeStyle = key === 'offer1' ? { gridColumn: '1 / -1' } : { display: 'none' };
+                                        } else if (mergedCanvases === '1+2') {
+                                            if (key === 'offer1') mergeStyle = { gridColumn: 'span 2' };
+                                            else if (key === 'offer2') mergeStyle = { display: 'none' };
+                                            else mergeStyle = { gridColumn: 'span 1' };
+                                        } else if (mergedCanvases === '2+3') {
+                                            if (key === 'offer1') mergeStyle = { gridColumn: 'span 1' };
+                                            else if (key === 'offer2') mergeStyle = { gridColumn: 'span 2' };
+                                            else mergeStyle = { display: 'none' };
+                                        }
+                                    }
                                     return (
-                                        <div className={orderClass} style={hidden ? {display:'none'} : offerLayoutMode==='step' ? {gridColumn:'1/-1'} : {}}>
+                                        <div className={orderClass} style={{ position: 'relative', ...(hidden ? {display:'none'} : offerLayoutMode==='step' ? {gridColumn:'1/-1'} : mergeStyle) }}>
+                                            {/* Fusion-Symbol zwischen den Canvases (nur Nebeneinander-Modus, nicht hinter offer3) */}
+                                            {offerLayoutMode !== 'step' && (key === 'offer1' || key === 'offer2') && (() => {
+                                                const fusionMode = key === 'offer1' ? '1+2' : '2+3';
+                                                const isActive = mergedCanvases === fusionMode;
+                                                // Verstecken wenn dieser Canvas durch andere Fusion ausgeblendet ist
+                                                if (mergeStyle.display === 'none') return null;
+                                                return (
+                                                    <button
+                                                        onClick={() => setMergedCanvases(isActive ? null : fusionMode)}
+                                                        title={isActive ? 'Fusion aufheben' : `Canvas ${fusionMode.replace('+',' und ')} fusionieren`}
+                                                        style={{ position:'absolute', top:'50%', right:'-26px', transform:'translateY(-50%)', zIndex:70, width:'40px', height:'40px', borderRadius:'50%', border:'none', cursor:'pointer', background: isActive ? '#2563eb' : '#fff', color: isActive ? '#fff' : '#2563eb', boxShadow:'0 2px 10px rgba(0,0,0,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', fontWeight:900, transition:'all 0.15s' }}
+                                                        className="hidden md:flex fusion-btn"
+                                                    >
+                                                        {isActive ? '✕' : '🔗'}
+                                                    </button>
+                                                );
+                                            })()}
                                             <OfferCanvas key={key} canvasRef={ref} icon={icon} label={getStaticLabel(labelKey)} statusKey={key} status={canvasStatus[key]} setStatus={setCanvasStatus} inputMode={inputMode} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} textValue={getDisplayText(key)} handleTextChange={handleTextChange} textStyle={textStyle} textSize={textSize} imageTransform={imageTransform[key]} onUpdateImageTransform={handleUpdateImageTransform} drawnStrokes={drawnStrokes[key]} setDrawnStrokes={(newStrokes) => setDrawnStrokes(prev => ({ ...prev, [key]: newStrokes }))} scaleRef={scaleRef} triggerRedraw={redrawCounter} image={canvasImages[key]} htmlOverlayProp={canvasHtml[key] || null} bundleInsertCount={bundleInsertCounter[key] || 0} viewOfferCount={viewOfferCounter} onClearImage={() => handleClearImage(key)} onClearOverlay={() => handleClearOverlay(key)} onOpenBundleModal={openBundleModal} onSetPackagePrice={openPriceModal} packagePriceData={packagePrices[key]} triggerToast={triggerToast} />
                                         </div>
                                     );
