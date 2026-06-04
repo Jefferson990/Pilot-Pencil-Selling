@@ -6634,6 +6634,32 @@ const highResHTML = buildHighResBundleHTML(d);
                 loadRowsFromFirebase().then(data => { setFbRows(data); setFbLoading(false); });
             }, [isOpen]);
 
+            // Lade Skip-Daten wenn Skip-Tab geöffnet wird
+            useEffect(() => {
+                if (activeTab !== 'skip-management' || LINK_EMPLOYEE !== 'Diego da Silva') return;
+                const monthKey = new Date().toISOString().slice(0, 7);
+                (async () => {
+                    try {
+                        const db = getStatsDb();
+                        const allAgents = [...new Set((fbRows || []).map(r => resolveUserName(r.user)).filter(Boolean))];
+                        const data = {};
+                        for (const agent of allAgents) {
+                            let count = 0, limit = 15;
+                            try {
+                                const cDoc = await db.collection('skip_limits').doc(`skip_${agent}_${monthKey}`).get();
+                                if (cDoc.exists) count = cDoc.data().count || 0;
+                            } catch(_){}
+                            try {
+                                const lDoc = await db.collection('skip_limits').doc(`limit_${agent}`).get();
+                                if (lDoc.exists) limit = lDoc.data().max_limit || 15;
+                            } catch(_){}
+                            data[agent] = { count, limit };
+                        }
+                        setSkipAgentsData(data);
+                    } catch (e) { console.error('Skip data load error:', e); }
+                })();
+            }, [activeTab, fbRows]);
+
             const rows = useMemo(() => {
                 if (!fbRows) return [];
                 return [...fbRows].sort((a,b) => new Date(b.ts) - new Date(a.ts));
@@ -7063,6 +7089,8 @@ const highResHTML = buildHighResBundleHTML(d);
                                     {filtered.length>25&&<div style={{padding:'9px 12px',textAlign:'center',fontSize:'11px',color:'#94a3b8',background:'#f8fafc',borderTop:'1px solid #f1f5f9'}}>+{filtered.length-25} weitere · Export via CSV</div>}
                                 </div>
                             )
+                        )}
+
                         {activeTab==='skip-management' && LINK_EMPLOYEE === 'Diego da Silva' && (() => {
                             const allAgents = Object.keys(skipAgentsData);
                             return (
@@ -7085,8 +7113,8 @@ const highResHTML = buildHighResBundleHTML(d);
                                                         <td style={{padding:'12px',fontSize:'13px',fontVariantNumeric:'tabular-nums',color:isAtLimit?'#dc2626':'#475569'}}><strong>{count}/{limit}</strong> {isAtLimit && '⚠️'}</td>
                                                         <td style={{padding:'12px',fontFamily:'monospace',fontSize:'11px',color:'#64748b'}}>{limit}</td>
                                                         <td style={{padding:'12px',display:'flex',gap:'6px'}}>
-                                                            <button onClick={async () => { await setSkipLimit(agent, limit + 5); setSkipAgentsData(prev => ({ ...prev, [agent]: {count, limit: limit + 5} })); triggerToast(`✓ Limit für ${agent} auf ${limit+5} erhöht`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>+5</button>
-                                                            <button onClick={async () => { await resetSkipCount(agent); setSkipAgentsData(prev => ({ ...prev, [agent]: {count: 0, limit} })); triggerToast(`✓ Skip-Zähler für ${agent} resetet`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#f59e0b',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>Reset</button>
+                                                            <button onClick={async () => { try { const db = getStatsDb(); await db.collection('skip_limits').doc(`limit_${agent}`).set({ agent, max_limit: limit + 5, ts: new Date().toISOString() }, { merge: true }); } catch(_){} setSkipAgentsData(prev => ({ ...prev, [agent]: {count, limit: limit + 5} })); triggerToast(`✓ Limit für ${agent} auf ${limit+5} erhöht`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>+5</button>
+                                                            <button onClick={async () => { try { const db = getStatsDb(); const monthKey = new Date().toISOString().slice(0,7); await db.collection('skip_limits').doc(`skip_${agent}_${monthKey}`).set({ agent, month: monthKey, count: 0, ts: new Date().toISOString() }); } catch(_){} setSkipAgentsData(prev => ({ ...prev, [agent]: {count: 0, limit} })); triggerToast(`✓ Skip-Zähler für ${agent} resetet`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#f59e0b',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>Reset</button>
                                                         </td>
                                                     </tr>
                                                 );
@@ -7099,8 +7127,6 @@ const highResHTML = buildHighResBundleHTML(d);
                                 </div>
                             );
                         })()}
-
-                        )}
 
                         </>
                         )}
@@ -8257,27 +8283,7 @@ const fileInputRef = useRef(null);
                 } catch (e) { console.error('setSkipLimit:', e); }
             };
 
-            // Lade Skip-Daten wenn Dialog öffnet oder Tab wechselt
-            useEffect(() => {
-                if (activeTab !== 'skip-management' || LINK_EMPLOYEE !== 'Diego da Silva') return;
-                
-                (async () => {
-                    try {
-                        const allAgents = [...new Set(filtered.map(r => resolveUserName(r.user)).filter(Boolean))];
-                        const data = {};
-                        
-                        for (const agent of allAgents) {
-                            const count = await getSkipCountThisMonth(agent);
-                            const limit = await getSkipLimit(agent);
-                            data[agent] = { count, limit };
-                        }
-                        
-                        setSkipAgentsData(data);
-                    } catch (e) {
-                        console.error('Failed to load skip data:', e);
-                    }
-                })();
-            }, [activeTab, filtered]);
+            // Lade Skip-Daten → wurde in Stats-Scope verschoben
 
             // Brücke für die OfferCanvas-Komponente (minimal-invasiv)
             React.useEffect(() => {
