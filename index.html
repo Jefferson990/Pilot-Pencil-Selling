@@ -419,24 +419,24 @@ body.pdf-share-mode .canvas-image-lock{
 /* Fixer Foto-Rahmen: immer stabile Größe, kein Overflow */
 .foto-frame-fixed {
     width: 100%;
-    height: 120px;
+    height: 130px;
     overflow: hidden;
     flex-shrink: 0;
     position: relative;
     background: #f1f5f9;
-    border-bottom: 1px solid #e2e8f0;
+    border-top: 1px solid #e2e8f0;
 }
 .canvas-image-fixed {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center top;
+    object-position: center center;
     display: block;
     pointer-events: none;
     user-select: none;
 }
 body.pdf-share-mode .foto-frame-fixed {
-    height: 200px !important;
+    height: 170px !important;
     overflow: hidden !important;
     flex-shrink: 0 !important;
 }
@@ -444,14 +444,14 @@ body.pdf-share-mode .canvas-image-fixed {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    object-position: center top !important;
+    object-position: center center !important;
     opacity: 1 !important;
     filter: none !important;
     display: block !important;
 }
 @media print {
     .foto-frame-fixed {
-        height: 200px !important;
+        height: 170px !important;
         overflow: hidden !important;
         page-break-inside: avoid !important;
     }
@@ -5198,16 +5198,67 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 };
         
         
-        const SkipReasonModal = ({ isOpen, onClose, onConfirm, reason, setReason, reasonMode, setReasonMode, drawnStrokes, setDrawnStrokes, canvasRef, startDrawing, draw, stopDrawing, MIN_LENGTH }) => {
+        const SKIP_REASONS = [
+            'Nur Handyfinanzierung',
+            'Sprachbarrieren',
+            'Shop Agent keine Lust',
+            'Zeitdruck / zu wenig Zeit',
+            'Technischer Fehler / App-Problem',
+            'Sonstiges (bitte beschreiben)'
+        ];
+        const SkipReasonModal = ({ isOpen, onClose, onConfirm }) => {
+            const [selectedReason, setSelectedReason] = useState('');
+            const [customText, setCustomText] = useState('');
+            const isSonstiges = selectedReason === 'Sonstiges (bitte beschreiben)';
+            const isValid = selectedReason && (isSonstiges ? customText.trim().length >= 5 : true);
+            const handleConfirm = () => {
+                if (!isValid) return;
+                const reasonText = isSonstiges ? customText.trim() : selectedReason;
+                onConfirm(reasonText);
+                setSelectedReason('');
+                setCustomText('');
+            };
             if (!isOpen) return null;
-            const isPen = reasonMode === 'pen';
-            const keyboardValid = reason.trim().length >= MIN_LENGTH;
-            const penValid = drawnStrokes['skip_reason']?.length > 0;
-            const isValid = isPen ? penValid : keyboardValid;
-            const handleConfirm = () => { const reasonData = isPen ? 'HANDWRITING (Grund per Stift erfasst)' : reason; if (isValid) { onConfirm(reasonData); } };
-            const clearCanvas = () => { const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); const dpr = window.devicePixelRatio || 1; ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr); setDrawnStrokes(prev => ({ ...prev, ['skip_reason']: [] })); };
-            useEffect(() => { if (!isOpen || !isPen || !canvasRef.current || !drawnStrokes['skip_reason']) return; redrawCanvas(canvasRef.current, drawnStrokes['skip_reason'], 1, 'skip_reason'); }, [isOpen, isPen, drawnStrokes['skip_reason']]);
-            return (<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in"><div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-6 relative border border-slate-200"><h3 className="text-xl font-black text-slate-800 mb-2 flex items-center gap-2"><Icon d={ICONS.AlertCircle} size={24} className="text-amber-600"/> Grund für Überspringen</h3><p className="text-sm text-slate-600 mb-4">Bitte geben Sie kurz an, warum die Situation-Analyse übersprungen wird (min. {MIN_LENGTH} Buchstaben/Stift-Eintrag).</p><div className="relative w-full h-32 border border-slate-300 rounded-lg bg-slate-50 overflow-hidden"><div className="absolute top-2 right-2 z-20 flex gap-1"><button onClick={() => setReasonMode(p => p === 'keyboard' ? 'pen' : 'keyboard')} className="p-1 hover:bg-slate-200 rounded text-slate-400 transition-colors" title={reasonMode === 'keyboard' ? 'Stift-Eingabe' : 'Tastatur-Eingabe'}><Icon d={reasonMode === 'keyboard' ? ICONS.Pen : ICONS.Keyboard} size={16}/></button>{isPen && drawnStrokes['skip_reason']?.length > 0 && (<button onClick={clearCanvas} className="p-1 hover:bg-slate-200 rounded text-slate-400" title="Löschen"><Icon d={ICONS.Trash} size={16}/></button>)}</div>{isPen ? (<canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-crosshair z-10 drawing-canvas" style={{ touchAction: 'none' }} onPointerDown={(e) => startDrawing(e, canvasRef, 'skip_reason')} onPointerMove={(e) => draw(e, canvasRef, 'skip_reason')} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)}/>) : (<textarea value={reason} onChange={(e) => setReason(e.target.value)} onInput={(e) => setReason(e.target.value)} placeholder="Grund hier eingeben..." className="w-full h-full p-4 text-base font-medium text-slate-700 bg-transparent resize-none focus:ring-0 focus:outline-none pr-12" autoFocus maxLength={100}/>)}</div><div className="flex justify-between items-center mt-4"><span className={`text-xs font-bold transition-colors ${isValid ? 'text-green-600' : 'text-red-500'}`}>{isValid ? 'Anforderung erfüllt.' : `Mind. ${MIN_LENGTH} Buchstaben erforderlich.`}</span><div className="flex gap-2"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors">Abbrechen</button><button onClick={handleConfirm} className={`px-6 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 ${isValid ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} disabled={!isValid}>Bestätigen & Springen <Icon d={ICONS.ArrowRight} size={16}/></button></div></div></div></div>);
+            return (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in">
+                    <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-6 relative border border-slate-200">
+                        <h3 className="text-xl font-black text-slate-800 mb-2 flex items-center gap-2">
+                            <Icon d={ICONS.AlertCircle} size={24} className="text-amber-600"/>
+                            Grund für Überspringen
+                        </h3>
+                        <p className="text-sm text-slate-600 mb-4">Warum wird die Situation-Analyse übersprungen?</p>
+                        
+                        {/* Dropdown mit vordefinierten Gründen */}
+                        <div className="mb-4">
+                            <select value={selectedReason} onChange={(e) => { setSelectedReason(e.target.value); setCustomText(''); }} className="w-full border border-slate-300 p-3 rounded-lg text-base font-medium focus:ring-2 focus:ring-amber-200 outline-none bg-white text-slate-700">
+                                <option value="">-- Grund auswählen --</option>
+                                {SKIP_REASONS.map(reason => (
+                                    <option key={reason} value={reason}>{reason}</option>
+                                ))}
+                            </select>
+                        </div>
+                        
+                        {/* Freitext-Input nur für "Sonstiges" */}
+                        {isSonstiges && (
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Bitte beschreiben (min. 5 Zeichen)</label>
+                                <textarea value={customText} onChange={(e) => setCustomText(e.target.value)} placeholder="Grund hier eingeben..." maxLength={150} className="w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-200 outline-none resize-none h-24 text-slate-700"/>
+                                <div className="text-xs text-slate-400 mt-1">{customText.length}/150 Zeichen</div>
+                            </div>
+                        )}
+                        
+                        {/* Action Buttons */}
+                        <div className="flex justify-end gap-2 mt-6">
+                            <button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors">
+                                Abbrechen
+                            </button>
+                            <button onClick={handleConfirm} className={`px-6 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 ${isValid ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} disabled={!isValid}>
+                                Bestätigen & Springen <Icon d={ICONS.ArrowRight} size={16}/>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
         };
         
         const AdminModal = ({ isOpen, onClose, questions, onUpdate, oneDriveLink, onUpdateLink }) => { 
@@ -6574,6 +6625,7 @@ const highResHTML = buildHighResBundleHTML(d);
             const [fbLoading, setFbLoading] = useState(false);
             const [selectedAgent, setSelectedAgent] = useState('__all__');
             const [activeTab, setActiveTab] = useState('uebersicht');
+            const [skipAgentsData, setSkipAgentsData] = useState({}); // { agentName: {count, limit} }
             const [range, setRange] = useState('31');
 
             useEffect(() => {
@@ -6697,12 +6749,13 @@ const highResHTML = buildHighResBundleHTML(d);
 
             const exportCoachingCSV = () => {
                 const targetRows = selectedAgent==='__all__' ? filtered : filtered.filter(r=>resolveUserName(r.user)===selectedAgent);
-                const lines = [['Mitarbeiter','Datum','Ergebnis','Übersprungen','Qualität ≥75%',...IST_KEYS.map(k=>'IST: '+k.label),...OFFER_KEYS.map(k=>'Angebot: '+k.label),...COST_KEYS.map(k=>'Kosten: '+k.label)].join(';')];
+                const lines = [['Mitarbeiter','Datum','Ergebnis','Übersprungen','Skip-Grund','Qualität ≥75%',...IST_KEYS.map(k=>'IST: '+k.label),...OFFER_KEYS.map(k=>'Angebot: '+k.label),...COST_KEYS.map(k=>'Kosten: '+k.label)].join(';')];
                 targetRows.forEach(r=>{
                     const cs=r.canvasStats||{};
                     const skip=(cs.skip_reason&&cs.skip_reason.used)?'Ja':'Nein';
+                    const skipText=(r.skipReasonText||'').replace(/;/g,',').replace(/\n/g,' ');
                     const qual=(IST_KEYS.filter(({key})=>cs[key]&&cs[key].used).length/10>=0.75)?'Ja':'Nein';
-                    lines.push([resolveUserName(r.user)||'–',new Date(r.ts).toLocaleDateString('de-DE'),r.result||'–',skip,qual,...IST_KEYS.map(({key})=>(cs[key]&&cs[key].used)?'✓':''),...OFFER_KEYS.map(({key})=>(cs[key]&&cs[key].used)?'✓':''),...COST_KEYS.map(({key})=>(cs[key]&&cs[key].used)?'✓':'')].join(';'));
+                    lines.push([resolveUserName(r.user)||'–',new Date(r.ts).toLocaleDateString('de-DE'),r.result||'–',skip,skipText,qual,...IST_KEYS.map(({key})=>(cs[key]&&cs[key].used)?'✓':''),...OFFER_KEYS.map(({key})=>(cs[key]&&cs[key].used)?'✓':''),...COST_KEYS.map(({key})=>(cs[key]&&cs[key].used)?'✓':'')].join(';'));
                 });
                 const name = selectedAgent==='__all__'?'Alle':selectedAgent.replace(/ /g,'_');
                 const blob = new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
@@ -6754,6 +6807,7 @@ const highResHTML = buildHighResBundleHTML(d);
                             {TAB('entwicklung','Entwicklung','📅')}
                             {TAB('coaching','Coaching','🎯')}
                             {TAB('vorgaenge','Vorgänge','📋')}
+                            {LINK_EMPLOYEE === 'Diego da Silva' && TAB('skip-management','Skip-Limits','⏭')}
                         </div>
                     </div>
 
@@ -6946,6 +7000,30 @@ const highResHTML = buildHighResBundleHTML(d);
                                     </div>
                                 </div>
                             </div>
+                            {/* Übersprungen-Gründe (nur getippte Texte) */}
+                            {(() => {
+                                const reasons = filtered
+                                    .filter(r => r.skipReasonText && r.skipReasonText.trim())
+                                    .map(r => ({ user: resolveUserName(r.user), text: r.skipReasonText.trim(), ts: r.ts }));
+                                if (reasons.length === 0) return null;
+                                return (
+                                    <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',padding:'16px'}}>
+                                        <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:'12px'}}>⏭ Gründe für Überspringen ({reasons.length})</div>
+                                        <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                                            {reasons.slice(0,30).map((r,i)=>(
+                                                <div key={i} style={{display:'flex',gap:'10px',alignItems:'flex-start',padding:'8px 10px',background:'#fffbeb',borderRadius:'8px',border:'1px solid #fde68a'}}>
+                                                    <span style={{fontSize:'14px',flexShrink:0}}>💬</span>
+                                                    <div style={{flex:1,minWidth:0}}>
+                                                        <div style={{fontSize:'12px',color:'#1e293b',fontWeight:600,lineHeight:1.4}}>{r.text}</div>
+                                                        <div style={{fontSize:'10px',color:'#94a3b8',marginTop:'2px'}}>{r.user} · {new Date(r.ts).toLocaleDateString('de-DE')}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div style={{fontSize:'10px',color:'#cbd5e1',marginTop:'8px',fontStyle:'italic'}}>Nur getippte Gründe werden erfasst. Handschriftliche Gründe sind nicht auswertbar.</div>
+                                    </div>
+                                );
+                            })()}
                             {total===0&&<div style={{padding:'40px',textAlign:'center',color:'#94a3b8',fontSize:'13px',fontWeight:600,background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0'}}>📭 Keine Daten im gewählten Zeitraum</div>}
                         </>)}
 
@@ -6985,6 +7063,43 @@ const highResHTML = buildHighResBundleHTML(d);
                                     {filtered.length>25&&<div style={{padding:'9px 12px',textAlign:'center',fontSize:'11px',color:'#94a3b8',background:'#f8fafc',borderTop:'1px solid #f1f5f9'}}>+{filtered.length-25} weitere · Export via CSV</div>}
                                 </div>
                             )
+                        {activeTab==='skip-management' && LINK_EMPLOYEE === 'Diego da Silva' && (() => {
+                            const allAgents = Object.keys(skipAgentsData);
+                            return (
+                                <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',overflow:'hidden'}}>
+                                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:'12px'}}>
+                                        <thead>
+                                            <tr style={{background:'#f8fafc',borderBottom:'2px solid #e2e8f0'}}>
+                                                {['Mitarbeiter','Übersprungen diesen Monat','Limit','Aktion'].map(h=>(
+                                                    <th key={h} style={{padding:'9px 12px',textAlign:'left',fontWeight:700,color:'#475569',fontSize:'10px',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {allAgents.map((agent,i) => {
+                                                const {count, limit} = skipAgentsData[agent] || {count: 0, limit: 15};
+                                                const isAtLimit = count >= limit;
+                                                return (
+                                                    <tr key={agent} style={{borderTop:'1px solid #f1f5f9',background:i%2===0?'#fff':'#fafafa'}}>
+                                                        <td style={{padding:'12px',fontWeight:700,color:'#1e293b'}}>{agent}</td>
+                                                        <td style={{padding:'12px',fontSize:'13px',fontVariantNumeric:'tabular-nums',color:isAtLimit?'#dc2626':'#475569'}}><strong>{count}/{limit}</strong> {isAtLimit && '⚠️'}</td>
+                                                        <td style={{padding:'12px',fontFamily:'monospace',fontSize:'11px',color:'#64748b'}}>{limit}</td>
+                                                        <td style={{padding:'12px',display:'flex',gap:'6px'}}>
+                                                            <button onClick={async () => { await setSkipLimit(agent, limit + 5); setSkipAgentsData(prev => ({ ...prev, [agent]: {count, limit: limit + 5} })); triggerToast(`✓ Limit für ${agent} auf ${limit+5} erhöht`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>+5</button>
+                                                            <button onClick={async () => { await resetSkipCount(agent); setSkipAgentsData(prev => ({ ...prev, [agent]: {count: 0, limit} })); triggerToast(`✓ Skip-Zähler für ${agent} resetet`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#f59e0b',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>Reset</button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                    <div style={{padding:'12px',background:'#f0fdf4',borderTop:'1px solid #e2e8f0',fontSize:'11px',color:'#16a34a',lineHeight:1.5}}>
+                                        ✓ Automatisch zählt jeder übersprungene Vorgang (+1). Limits können erhöht oder auf 0 resetet werden. Diego hat kein Limit. Daten live aus Firestore.
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         )}
 
                         </>
@@ -7374,8 +7489,8 @@ const highResHTML = buildHighResBundleHTML(d);
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
-</div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'100%', height:'120px', overflow:'hidden', background:'#f1f5f9', borderBottom:'1px solid #e2e8f0', position:'relative', flexShrink:0 }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', display:'block', pointerEvents:'none', userSelect:'none' }}/></div>)}<div className="canvas-lines"></div>{htmlOverlay && (<div className="absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}><div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
-            </div></div>); });
+</div><div className="canvas-lines"></div>{htmlOverlay && (<div className="offer-overlay-outer absolute inset-0" style={{ zIndex: overlayEditEnabled ? 45 : (inputMode === 'keyboard' ? 5 : 45), pointerEvents: overlayEditEnabled ? 'auto' : (inputMode === 'keyboard' ? 'none' : 'auto'), touchAction: overlayEditEnabled ? 'none' : 'auto', transform: `translate(${x}px, ${y}px)`, transition: 'none', cursor: (!overlayEditEnabled ? 'grab' : (overlayMode === 'drag' ? 'grabbing' : (overlayMode === 'scale' ? 'crosshair' : 'grab'))) }} onPointerDown={overlayEditEnabled ? handleInteractionStart : (inputMode !== 'keyboard' ? handleInteractionStart : undefined)} onPointerMove={overlayEditEnabled ? handleInteractionMove : (inputMode !== 'keyboard' ? handleInteractionMove : undefined)} onPointerUp={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerCancel={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onPointerLeave={overlayEditEnabled ? handleInteractionEnd : (inputMode !== 'keyboard' ? handleInteractionEnd : undefined)} onContextMenu={(e)=>{ if(!overlayEditEnabled && inputMode==='keyboard') return; e.preventDefault(); e.stopPropagation(); try{hardEndInteraction();}catch(_){} (onClearOverlay||onClearImage)?.(); }}><div className="offer-html-overlay-wrap" style={{ width: '100%', maxWidth: '920px', margin: '0 auto', boxSizing: 'border-box', padding: '0 10px', transform: `scale(${scale}) rotate(${rotation}deg)`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px', minHeight: '100%' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden"><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+            </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'100%', height:'150px', overflow:'hidden', background:'#f1f5f9', borderTop:'1px solid #e2e8f0', position:'relative', flexShrink:0 }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none' }}/></div>)}</div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
         
@@ -8083,6 +8198,87 @@ const fileInputRef = useRef(null);
             // Zähler: Jedes Mal wenn zur Angebotsseite gewechselt wird, overlayEditEnabled für alle OfferCanvas auf true setzen.
             const [viewOfferCounter, setViewOfferCounter] = React.useState(0);
 
+            // ===== SKIP-LIMIT MANAGEMENT (Firestore-basiert) =====
+            const getMonthKey = () => new Date().toISOString().slice(0, 7); // "2026-06"
+            
+            const getSkipCountThisMonth = async (agentName) => {
+                try {
+                    const db = getStatsDb();
+                    const docId = `skip_${agentName}_${getMonthKey()}`;
+                    const doc = await db.collection('skip_limits').doc(docId).get();
+                    return doc.exists ? (doc.data().count || 0) : 0;
+                } catch (e) { console.error('getSkipCountThisMonth:', e); return 0; }
+            };
+            
+            const getSkipLimit = async (agentName) => {
+                try {
+                    const db = getStatsDb();
+                    const doc = await db.collection('skip_limits').doc(`limit_${agentName}`).get();
+                    return doc.exists ? (doc.data().max_limit || 15) : 15;
+                } catch (e) { console.error('getSkipLimit:', e); return 15; }
+            };
+            
+            const incrementSkipCount = async (agentName) => {
+                try {
+                    const db = getStatsDb();
+                    const docId = `skip_${agentName}_${getMonthKey()}`;
+                    const doc = await db.collection('skip_limits').doc(docId).get();
+                    const current = doc.exists ? (doc.data().count || 0) : 0;
+                    await db.collection('skip_limits').doc(docId).set({
+                        agent: agentName,
+                        month: getMonthKey(),
+                        count: current + 1,
+                        ts: new Date().toISOString()
+                    });
+                } catch (e) { console.error('incrementSkipCount:', e); }
+            };
+            
+            const resetSkipCount = async (agentName) => {
+                try {
+                    const db = getStatsDb();
+                    const docId = `skip_${agentName}_${getMonthKey()}`;
+                    await db.collection('skip_limits').doc(docId).set({
+                        agent: agentName,
+                        month: getMonthKey(),
+                        count: 0,
+                        ts: new Date().toISOString()
+                    });
+                } catch (e) { console.error('resetSkipCount:', e); }
+            };
+            
+            const setSkipLimit = async (agentName, newLimit) => {
+                try {
+                    const db = getStatsDb();
+                    await db.collection('skip_limits').doc(`limit_${agentName}`).set({
+                        agent: agentName,
+                        max_limit: Math.max(0, newLimit),
+                        ts: new Date().toISOString()
+                    }, { merge: true });
+                } catch (e) { console.error('setSkipLimit:', e); }
+            };
+
+            // Lade Skip-Daten wenn Dialog öffnet oder Tab wechselt
+            useEffect(() => {
+                if (activeTab !== 'skip-management' || LINK_EMPLOYEE !== 'Diego da Silva') return;
+                
+                (async () => {
+                    try {
+                        const allAgents = [...new Set(filtered.map(r => resolveUserName(r.user)).filter(Boolean))];
+                        const data = {};
+                        
+                        for (const agent of allAgents) {
+                            const count = await getSkipCountThisMonth(agent);
+                            const limit = await getSkipLimit(agent);
+                            data[agent] = { count, limit };
+                        }
+                        
+                        setSkipAgentsData(data);
+                    } catch (e) {
+                        console.error('Failed to load skip data:', e);
+                    }
+                })();
+            }, [activeTab, filtered]);
+
             // Brücke für die OfferCanvas-Komponente (minimal-invasiv)
             React.useEffect(() => {
                 window.__canvasHtmlOffer1 = canvasHtml.offer1 || null;
@@ -8771,6 +8967,7 @@ const handleFinishOfferClick = () => {
                         shop: 'Telekom',
                         beratungsId: beratungsId || '',
                         result: computedResult,
+                        skipReasonText: (typeof skipReason === 'string' && skipReason.trim() && skipReason !== 'Übersprungen (Admin)') ? skipReason.trim().slice(0, 200) : '',
                         canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
                     });
                 } catch (e) { /* ignore */ }
@@ -8832,6 +9029,7 @@ const handleFinishOfferClick = () => {
                         shop: 'Telekom',
                         beratungsId: beratungsId || '',
                         result: computedResult,
+                        skipReasonText: (typeof skipReason === 'string' && skipReason.trim() && skipReason !== 'Übersprungen (Admin)') ? skipReason.trim().slice(0, 200) : '',
                         canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
                     });
                 } catch(e) {}
@@ -8892,7 +9090,27 @@ const handleFinishOfferClick = () => {
                 }
             };
             
-            const handleSkipToOffer = (reasonData) => { setSkipReason(reasonData); setShowSkipReasonModal(false); setView('offer'); setViewOfferCounter(c => c + 1); triggerToast(`Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`); };
+            const handleSkipToOffer = async (reasonData) => {
+                const agentName = LINK_EMPLOYEE || 'Unbekannt';
+                const currentCount = await getSkipCountThisMonth(agentName);
+                const limit = await getSkipLimit(agentName);
+                
+                // Diego (Admin) kann unbegrenzt überspringen
+                const isDiego = agentName === 'Diego da Silva';
+                
+                if (!isDiego && currentCount >= limit) {
+                    triggerToast(`⚠️ Skip-Limit (${limit}/Monat) erreicht. Admin kann es erhöhen.`);
+                    return; // Nicht durchlassen
+                }
+                
+                // Durchlassen + zählen
+                await incrementSkipCount(agentName);
+                setSkipReason(reasonData);
+                setShowSkipReasonModal(false);
+                setView('offer');
+                setViewOfferCounter(c => c + 1);
+                triggerToast(`✓ Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`);
+            };
 
             const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], cost_smartphone: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setPackagePrices({ offer1:{einmalig:'',monatlich:''}, offer2:{einmalig:'',monatlich:''}, offer3:{einmalig:'',monatlich:''} }); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
 
@@ -9624,6 +9842,28 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                             try { el.style.backfaceVisibility = 'hidden'; } catch(e){}
                             try { el.style.willChange = 'auto'; } catch(e){}
                             try { el.style.imageRendering = 'auto'; } catch(e){}
+                        });
+                    }catch(e){}
+
+                    // ===== FESTER PLATZ für übernommene Angebote im Druck =====
+                    // Am Bildschirm frei verschiebbar (translate/scale/rotate),
+                    // im PDF/Druck: oben fest einrasten, kein Versatz, volle Breite.
+                    try{
+                        doc.querySelectorAll('.offer-overlay-outer').forEach(outer=>{
+                            outer.style.transform = 'none';
+                            outer.style.position = 'relative';
+                            outer.style.inset = 'auto';
+                            outer.style.width = '100%';
+                            outer.style.top = '0';
+                            outer.style.left = '0';
+                            // Den nachfolgenden Schreib-/Canvas-Bereich unter das Angebot fließen lassen
+                            try {
+                                const sib = outer.nextElementSibling;
+                                if (sib) {
+                                    sib.style.position = 'relative';
+                                    sib.style.inset = 'auto';
+                                }
+                            } catch(_){}
                         });
                     }catch(e){}
 
@@ -11732,7 +11972,7 @@ const handlePDFShare = async () => {
                     />
 
 
-                    <SkipReasonModal isOpen={showSkipReasonModal} onClose={() => setShowSkipReasonModal(false)} onConfirm={handleSkipToOffer} reason={skipReason} setReason={setSkipReason} reasonMode={skipReasonMode} setReasonMode={setSkipReasonMode} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} canvasRef={skipReasonCanvasRef} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} MIN_LENGTH={MIN_REASON_LENGTH} /> {showPriceModal && (() => {
+                    <SkipReasonModal isOpen={showSkipReasonModal} onClose={() => setShowSkipReasonModal(false)} onConfirm={handleSkipToOffer} /> {showPriceModal && (() => {
     const labels = { offer1: 'Paket 1', offer2: 'Paket 2', offer3: 'Paket 3' };
     const parse = v => parseFloat((v||'').replace(',','.')) || 0;
     const hasValue = priceModalDraft.einmalig || priceModalDraft.monatlich;
