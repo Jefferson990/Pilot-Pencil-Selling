@@ -1,0 +1,93 @@
+name: Patch LINK_EMPLOYEE admin fix
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch index.html
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          marker = "// === PATCH: global LINK_EMPLOYEE for Admin/Stats ==="
+          if marker in text:
+              print('LINK_EMPLOYEE patch already present.')
+              raise SystemExit(0)
+
+          needle = "const { useState, useRef, useEffect, useMemo, useCallback } = React;"
+          patch = r'''
+
+        // === PATCH: global LINK_EMPLOYEE for Admin/Stats ===
+        // Der Admin-/Statistikbereich liegt außerhalb von App(). Deshalb darf LINK_EMPLOYEE
+        // nicht nur innerhalb von App() definiert sein, sonst crasht Admin mit:
+        // "LINK_EMPLOYEE is not defined".
+        const LINK_EMPLOYEE = (() => {
+            try {
+                const params = new URLSearchParams(window.location.search || '');
+                const raw = params.get('agent') || params.get('m') || '';
+                const decoded = decodeURIComponent(String(raw).replace(/\+/g, ' ')).trim();
+                return (decoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || '';
+            } catch (e) {
+                return '';
+            }
+        })();
+        try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
+'''
+
+          if needle not in text:
+              raise SystemExit('Needle not found: React destructuring line')
+
+          text = text.replace(needle, needle + patch, 1)
+
+          # Entferne die lokale Doppel-Definition in App(), weil sie den globalen Namen überdeckt
+          # und bei späteren Admin-Erweiterungen wieder zu Scope-Problemen führen kann.
+          local_block = r'''            // === Mitarbeiter-Link-System (Variante A) ===
+            // Nutzung: .../Pilot-Pencil-Selling...?m=jefferson   oder ...?m=D.%20Da%20Silva
+            // -> setzt AgentName automatisch (kann bei Bedarf trotzdem überschrieben werden)
+            const __urlParams = new URLSearchParams(window.location.search || '');
+            const __mRaw = __urlParams.get('agent') || __urlParams.get('m') || ''; // agent= neu, m= als Fallback für alte Links
+            const __mDecoded = (() => {
+                try { return decodeURIComponent(String(__mRaw).replace(/\+/g, ' ')).trim(); } catch(e) { return String(__mRaw).trim(); }
+            })();
+            // Sanitizer (nur "harmlos" erlauben)
+            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || '';
+            // Optional: global sichtbar (für Debug/Exports)
+            try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
+'''
+          replacement = r'''            // === Mitarbeiter-Link-System (Variante A) ===
+            // LINK_EMPLOYEE ist jetzt global definiert, damit Admin/Stats außerhalb von App() nicht crashen.
+            try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
+'''
+          if local_block in text:
+              text = text.replace(local_block, replacement, 1)
+          else:
+              print('Local App block not found exactly; global patch still applied.')
+
+          path.write_text(text, encoding='utf-8')
+          print('Patched index.html')
+          PY
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix admin LINK_EMPLOYEE scope"
+          git push
