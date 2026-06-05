@@ -1880,6 +1880,16 @@ body.pdf-share-mode .share-page:last-child{
 .share-cover-shop-name{font-size:26px;font-weight:1000;letter-spacing:-0.02em;}
 .share-cover-shop-addr{margin-top:6px;color:rgba(255,255,255,0.82);font-weight:600;font-size:13px;}
 
+
+
+/* PATCH 2026-06-05: Bonus-/QR-Blaukasten im Share-PDF 5px nach oben,
+   damit er bei geöffneter Handyfinanzierung/Kostenblock unten nicht angeschnitten wird. */
+body.pdf-share-mode .share-outro,
+.pdf-share-pdf-container .share-outro,
+.share-page .share-outro {
+    transform: translateY(-5px) !important;
+}
+
 .share-outro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1060px;margin:0 auto;flex:1 1 auto;min-height:0;align-content:stretch;}
 .share-outro-card{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:center;}
 .share-outro-card-focus{border-color:rgba(0,60,166,0.55);background:rgba(255,255,255,0.12);transform:scale(1.02);}
@@ -4346,14 +4356,14 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                                                 </div>
                                                 <div style={{marginLeft:'auto',fontSize:'18px',color:'#f59e0b'}}>→</div>
                                     </button>
-                                    <button onClick={onShare} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
+                                    <button onClick={onShare} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 hover:bg-blue-700 transition-all" style={{display:'none'}} aria-hidden="true" tabIndex={-1}>
                                         <Icon d={ICONS.Share} size={18} /> Digital senden
                                     </button>
                                 </div>
 
                                 {/* Bereich: Drucken */}
-                                <div className="flex flex-col items-center gap-3 pt-2">
-                                    <button onClick={handlePrintAction} className="px-8 py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-black transition-all">
+                                <div className="flex flex-col items-center gap-3 pt-2" style={{display:'none'}} aria-hidden="true">
+                                    <button onClick={handlePrintAction} className="px-8 py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-black transition-all" tabIndex={-1}>
                                         Weiter zum Druck
                                     </button>
                                 </div>
@@ -5311,15 +5321,15 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         };
         
         const AdminModal = ({ isOpen, onClose, questions, onUpdate, oneDriveLink, onUpdateLink }) => { 
-            const [localData, setLocalData] = useState(questions); 
+            const [localData, setLocalData] = useState(() => (questions && typeof questions === 'object') ? questions : { default: [] }); 
             const [localLink, setLocalLink] = useState(oneDriveLink || '');
             const [expandedCat, setExpandedCat] = useState(null); 
-            useEffect(() => { setLocalData(questions); setLocalLink(oneDriveLink || ''); }, [questions, oneDriveLink, isOpen]); 
+            useEffect(() => { setLocalData((questions && typeof questions === 'object') ? questions : { default: [] }); setLocalLink(oneDriveLink || ''); }, [questions, oneDriveLink, isOpen]); 
             const handleQuestionChange = (cat, index, val) => { const newQs = [...(localData[cat] || [])]; newQs[index] = val; setLocalData(prev => ({ ...prev, [cat]: newQs.filter(q => q.trim() !== '') })); }; 
             const handleAddQuestion = (cat) => { const newQs = [...(localData[cat] || []), "Neue Frage..."]; setLocalData(prev => ({ ...prev, [cat]: newQs })); }; 
-            const handleSave = () => { const cleanedData = Object.keys(localData).reduce((acc, cat) => { acc[cat] = localData[cat].filter(q => q.trim() !== ''); return acc; }, {}); Object.keys(cleanedData).forEach(cat => onUpdate(cat, cleanedData[cat])); if (onUpdateLink) onUpdateLink(localLink.trim()); onClose(); }; 
+            const handleSave = () => { const safeLocalData = (localData && typeof localData === 'object') ? localData : { default: [] }; const cleanedData = Object.keys(safeLocalData).reduce((acc, cat) => { acc[cat] = (safeLocalData[cat] || []).filter(q => String(q || '').trim() !== ''); return acc; }, {}); Object.keys(cleanedData).forEach(cat => onUpdate(cat, cleanedData[cat])); if (onUpdateLink) onUpdateLink(localLink.trim()); onClose(); }; 
             if (!isOpen) return null; 
-            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Fragen & Links</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div><div className="border border-green-200 rounded-lg p-4 bg-green-50 shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm">Power Automate Webhook-URL</h4><input type="url" defaultValue={(()=>{try{return localStorage.getItem('ps_pa_webhook')||'';}catch(e){return '';}})()}  onChange={(e)=>{try{if(e.target.value.trim())localStorage.setItem('ps_pa_webhook',e.target.value.trim());else localStorage.removeItem('ps_pa_webhook');}catch(err){}}} placeholder="https://prod-xx.westeurope.logic.azure.com/workflows/..." className="w-full border border-green-300 p-2 rounded text-sm focus:ring-2 focus:ring-green-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Power Automate: When an HTTP request is received. Jeden Abschluss automatisch an SharePoint senden.</p></div><div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border border-red-100 rounded-lg p-4 bg-red-50 shadow-sm"><h4 className="font-bold text-red-700 mb-2 text-sm">🔴 Fehler-Monitor (Laufzeit-Errors)</h4><div style={{maxHeight:'140px',overflowY:'auto',fontFamily:'monospace',fontSize:'10px',color:'#7f1d1d',background:'#fff',border:'1px solid #fecaca',borderRadius:'6px',padding:'8px'}}>{(()=>{ const errs=(window.__appErrors||[]).slice().reverse(); if(!errs.length) return React.createElement('span',{style:{color:'#16a34a',fontWeight:700}},'✅ Keine Fehler – App läuft sauber'); return errs.map((e,i)=>React.createElement('div',{key:i,style:{borderBottom:'1px solid #fee2e2',paddingBottom:'3px',marginBottom:'3px'}},React.createElement('span',{style:{color:'#94a3b8'}},e.ts.slice(11,19)+' '),e.msg)); })()}</div><div style={{display:'flex',gap:'6px',marginTop:'6px'}}><button onClick={()=>{window.__appErrors=[];alert('Log geleert.');}} style={{fontSize:'10px',padding:'3px 10px',borderRadius:'6px',background:'#fef2f2',border:'1px solid #fca5a5',color:'#dc2626',cursor:'pointer',fontWeight:700}}>🗑 Log leeren</button><button onClick={()=>{ const txt=(window.__appErrors||[]).map(e=>e.ts+' '+e.msg).join('\n')||'Keine Fehler'; const b=new Blob([txt],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='fehler_log.txt'; a.click(); }} style={{fontSize:'10px',padding:'3px 10px',borderRadius:'6px',background:'#eff6ff',border:'1px solid #93c5fd',color:'#1d4ed8',cursor:'pointer',fontWeight:700}}>⬇ Exportieren</button></div></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{localData[cat].map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
+            return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in"> <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[85vh]"> <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Icon d={ICONS.Lock} size={18}/> Admin: Fragen & Links</h3><button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><Icon d={ICONS.X} size={18}/></button></div> <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"> <div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Book} size={16} className="text-blue-500"/> Link zur Aktionsmappe (OneDrive)</h4><input type="url" value={localLink} onChange={(e) => setLocalLink(e.target.value)} placeholder="https://..." className="w-full border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Dieser Link wird beim Klick auf das Buch-Icon (Angebotsseite) geöffnet.</p></div><div className="border border-green-200 rounded-lg p-4 bg-green-50 shadow-sm"><h4 className="font-bold text-slate-700 mb-2 text-sm">Power Automate Webhook-URL</h4><input type="url" defaultValue={(()=>{try{return localStorage.getItem('ps_pa_webhook')||'';}catch(e){return '';}})()}  onChange={(e)=>{try{if(e.target.value.trim())localStorage.setItem('ps_pa_webhook',e.target.value.trim());else localStorage.removeItem('ps_pa_webhook');}catch(err){}}} placeholder="https://prod-xx.westeurope.logic.azure.com/workflows/..." className="w-full border border-green-300 p-2 rounded text-sm focus:ring-2 focus:ring-green-200 outline-none text-slate-600"/><p className="text-[10px] text-slate-400 mt-1">Power Automate: When an HTTP request is received. Jeden Abschluss automatisch an SharePoint senden.</p></div><div className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm mb-4"><h4 className="font-bold text-slate-700 mb-2 text-sm flex items-center gap-2"><Icon d={ICONS.Lock} size={16} className="text-amber-500"/> Statistik-Passwort ändern</h4><div className="flex gap-2"><input type="password" id="admin-new-pw-field" placeholder="Neues Passwort (min. 4 Zeichen)..." className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600"/><button onClick={()=>{const v=document.getElementById("admin-new-pw-field")?.value?.trim();if(!v||v.length<4){alert("Mind. 4 Zeichen");return;}try{localStorage.setItem("ps_stats_pw",v);}catch(e){}document.getElementById("admin-new-pw-field").value="";alert("Passwort gespeichert!");}} className="px-3 py-2 bg-amber-500 text-white text-sm font-bold rounded hover:bg-amber-600">Speichern</button></div><p className="text-[10px] text-slate-400 mt-1">Wird lokal gespeichert. Gilt ab nächstem App-Start.</p></div><div className="border border-red-100 rounded-lg p-4 bg-red-50 shadow-sm"><h4 className="font-bold text-red-700 mb-2 text-sm">🔴 Fehler-Monitor (Laufzeit-Errors)</h4><div style={{maxHeight:'140px',overflowY:'auto',fontFamily:'monospace',fontSize:'10px',color:'#7f1d1d',background:'#fff',border:'1px solid #fecaca',borderRadius:'6px',padding:'8px'}}>{(()=>{ const errs=(window.__appErrors||[]).slice().reverse(); if(!errs.length) return React.createElement('span',{style:{color:'#16a34a',fontWeight:700}},'✅ Keine Fehler – App läuft sauber'); return errs.map((e,i)=>React.createElement('div',{key:i,style:{borderBottom:'1px solid #fee2e2',paddingBottom:'3px',marginBottom:'3px'}},React.createElement('span',{style:{color:'#94a3b8'}},e.ts.slice(11,19)+' '),e.msg)); })()}</div><div style={{display:'flex',gap:'6px',marginTop:'6px'}}><button onClick={()=>{window.__appErrors=[];alert('Log geleert.');}} style={{fontSize:'10px',padding:'3px 10px',borderRadius:'6px',background:'#fef2f2',border:'1px solid #fca5a5',color:'#dc2626',cursor:'pointer',fontWeight:700}}>🗑 Log leeren</button><button onClick={()=>{ const txt=(window.__appErrors||[]).map(e=>e.ts+' '+e.msg).join('\n')||'Keine Fehler'; const b=new Blob([txt],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='fehler_log.txt'; a.click(); }} style={{fontSize:'10px',padding:'3px 10px',borderRadius:'6px',background:'#eff6ff',border:'1px solid #93c5fd',color:'#1d4ed8',cursor:'pointer',fontWeight:700}}>⬇ Exportieren</button></div></div><div className="border-t border-slate-100 pt-2"><h4 className="font-bold text-slate-700 mb-4 text-sm">Fragenkatalog bearbeiten</h4><div className="space-y-4">{Object.keys(localData || { default: [] }).map(cat => ( <div key={cat} className="border border-slate-200 rounded-lg overflow-hidden"><button onClick={() => setExpandedCat(expandedCat === cat ? null : cat)} className={`w-full p-3 text-left font-bold flex justify-between items-center ${expandedCat === cat ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700 hover:bg-slate-50'}`}><span>{cat === 'default' ? 'Standard Fragen' : cat}</span><Icon d={expandedCat === cat ? ICONS.ArrowLeft : ICONS.ArrowRight} className={`transform transition-transform ${expandedCat === cat ? '-rotate-90' : 'rotate-90'}`} size={16}/></button> {expandedCat === cat && (<div className="p-4 bg-slate-50/50 space-y-2 border-t border-slate-100">{(localData[cat] || []).map((q, i) => (<div key={i} className="flex gap-2"><input className="flex-1 border border-slate-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-200 outline-none" value={q} onChange={(e) => handleQuestionChange(cat, i, e.target.value)} /><button onClick={() => handleQuestionChange(cat, i, '')} className="p-2 text-red-400 hover:bg-red-100 rounded" title="Frage löschen"><Icon d={ICONS.Trash} size={16}/></button></div>))}<button onClick={() => handleAddQuestion(cat)} className="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 flex items-center gap-1"><Icon d={ICONS.Plus} size={14}/> Frage hinzufügen</button></div>)} </div> ))} </div></div></div> <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50 rounded-b-xl"><button onClick={onClose} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-200 rounded-lg transition-colors">Abbrechen</button><button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors">Alle Speichern</button></div> </div> </div> ); 
         };
 
         const TvPriceModal = ({ isOpen, onClose, onUebernehmen }) => {
@@ -7357,18 +7367,28 @@ const highResHTML = buildHighResBundleHTML(d);
                 }, [isEmpty, status, statusKey, setStatus]);
 
                 const toggleStatus = (newStatus) => {
+                    const writeSyncStatus = (val) => {
+                        try {
+                            window.__offerCanvasStatusSync = { ...(window.__offerCanvasStatusSync || {}), [statusKey]: val };
+                        } catch(e) {}
+                    };
                     // Wenn der Bereich leer ist, kein Status-Wechsel erzwingen (bleibt neutral)
                     if (isEmpty) {
                         try { triggerToast && triggerToast('Status nur noetig, wenn im Feld Inhalt vorhanden ist.'); } catch(e) {}
+                        writeSyncStatus('neutral');
                         setStatus(prev => ({ ...prev, [statusKey]: 'neutral' }));
                         return;
                     }
 
                     if (newStatus === 'closed') {
+                        const nextVal = (status === 'closed' ? 'neutral' : 'closed');
+                        writeSyncStatus(nextVal);
                         setStatus(prev => ({ ...prev, [statusKey]: (prev[statusKey] === 'closed' ? 'neutral' : 'closed') }));
                         return;
                     }
                     if (newStatus === 'open') {
+                        const nextVal = (status === 'open' ? 'neutral' : 'open');
+                        writeSyncStatus(nextVal);
                         setStatus(prev => ({ ...prev, [statusKey]: (prev[statusKey] === 'open' ? 'neutral' : 'open') }));
                         return;
                     }
@@ -7718,6 +7738,7 @@ const highResHTML = buildHighResBundleHTML(d);
                         <div className="p-6 space-y-3">
                             <div className="text-sm font-bold text-slate-700">Bis wann ist dieses Angebot gültig?</div>
                             <input
+                                id="offer-validity-modal-input"
                                 type="date"
                                 value={value || ''}
                                 onChange={(e) => onValueChange(e.target.value)}
@@ -7729,7 +7750,7 @@ const highResHTML = buildHighResBundleHTML(d);
                         <div className="p-5 border-t border-slate-200 bg-white flex items-center justify-end gap-3">
                             <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">Abbrechen</button>
                             <button onClick={onConfirm} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-500">
-                                Speichern & Drucken
+                                Speichern & Weiter
                             </button>
                         </div>
                     </div>
@@ -8227,6 +8248,52 @@ const handleOpenStats = () => { setShowPinLock(true); };
             const pendingPostSignature = React.useRef(null); // Funktion die nach Folgetermin läuft
             const [showValidityModal, setShowValidityModal] = useState(false);
             const pendingPrintRef = useRef(null);
+            const offerValidityOverrideRef = useRef(''); // PATCH v8: hält das frisch gespeicherte Datum sofort synchron, bevor React-State neu gerendert hat
+
+            // Zentrale Prüfung: Sobald irgendein Angebot ROT/Offen ist, darf kein Druck/PDF starten,
+            // bevor eine Angebotsgültigkeit eingetragen wurde. Bewusst NICHT erst nach Inhalt prüfen:
+            // Der Status "Offen" allein bedeutet: Gültigkeit ist Pflicht.
+            const hasOpenOfferNeedingValidity = useCallback(() => {
+                try {
+                    const keys = ['offer1','offer2','offer3'];
+                    const sync = (window.__offerCanvasStatusSync || canvasStatusSyncRef.current || {});
+                    if (keys.some(k => (sync && sync[k]) === 'open' || (canvasStatus && canvasStatus[k]) === 'open')) return true;
+
+                    // DOM-Fallback für den allerersten Klick: rote Angebotskarte erkennen,
+                    // selbst wenn React-State noch nicht fertig committed ist.
+                    const cards = Array.from(document.querySelectorAll('.offer-canvas-container'));
+                    return cards.some(el => {
+                        try {
+                            const cls = String(el.className || '');
+                            const border = (window.getComputedStyle(el).borderColor || '').toLowerCase();
+                            return cls.includes('border-red-500') || border.includes('239, 68, 68') || border.includes('rgb(239');
+                        } catch(_) { return false; }
+                    });
+                } catch(e) { return false; }
+            }, [canvasStatus]);
+
+            // Gültigkeit kann digital im Feld stehen ODER per Stift im Feld geschrieben sein.
+            // Zusätzlich DOM-Fallback, damit der allererste Klick nach frischer Eingabe sicher greift.
+            const hasOfferValidity = useCallback(() => {
+                try {
+                    const textVal = String(getDisplayText('OfferValidUntil') || '').trim();
+                    const overrideVal = String((offerValidityOverrideRef.current || '')).trim();
+                    const modalVal = String((document.getElementById('offer-validity-modal-input') || {}).value || '').trim();
+                    const inkVal = !!(drawnStrokes && drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
+                    return !!textVal || !!overrideVal || !!modalVal || inkVal;
+                } catch(e) { return false; }
+            }, [getDisplayText, drawnStrokes]);
+
+            const runOnlyWithOfferValidity = useCallback((nextAction) => {
+                if (hasOpenOfferNeedingValidity() && !hasOfferValidity()) {
+                    pendingPrintRef.current = (typeof nextAction === 'function') ? nextAction : null;
+                    try { setShowFinishTypeModal(false); } catch(e) {}
+                    setShowValidityModal(true);
+                    try { triggerToast('⚠️ Angebot gültig bis fehlt – Drucken nur mit Angebotsgültigkeit.'); } catch(e) {}
+                    return false;
+                }
+                return true;
+            }, [hasOfferValidity, hasOpenOfferNeedingValidity, triggerToast]);
 const [showSkipReasonModal, setShowSkipReasonModal] = useState(false); 
             const [skipReason, setSkipReason] = useState(''); 
             const [skipReasonMode, setSkipReasonMode] = useState('keyboard'); 
@@ -8278,6 +8345,16 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             const [dismissSavingsHint, setDismissSavingsHint] = React.useState(false);
             const [offerData, setOfferData] = useState(initialOfferData);
             const [canvasStatus, setCanvasStatus] = useState({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' });
+            // HARD-FIX: Status zusätzlich synchron speichern.
+            // Grund: Wenn Mitarbeiter direkt nach Klick auf "Offen" sofort Fertigstellen -> PDF drucken klickt,
+            // kann React-State im ersten Moment noch nicht überall angekommen sein. Diese Ref/window-Kopie greift sofort.
+            const canvasStatusSyncRef = useRef({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' });
+            useEffect(() => {
+                try {
+                    canvasStatusSyncRef.current = { ...(canvasStatusSyncRef.current || {}), ...(canvasStatus || {}) };
+                    window.__offerCanvasStatusSync = canvasStatusSyncRef.current;
+                } catch(e) {}
+            }, [canvasStatus]);
 
             // === FOLLOW-UP state (minimal, für followUpsByKey Referenzen in OfferCanvas) ===
             const [followUpsByKey, setFollowUpsByKey] = useState({});
@@ -8897,23 +8974,12 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             }, [injectPrintBgLayers, cleanupPrintBgLayers]);
 
             const requestPrint = useCallback((doPrint) => {
-                // Angebotsgültigkeit nur abfragen, wenn mindestens ein Bereich auf "Offen" steht.
-                const hasOpen = (() => {
-                    try {
-                        const keys = ['offer1','offer2','offer3'];
-                        const nonEmpty = keys.filter(k => {
-                            const hasText = !!String(getDisplayText(k) || '').trim();
-                            const hasInk = !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length);
-                            const hasImg = !!(canvasImages && canvasImages[k]);
-                            const hasHtml = !!(k === 'offer1' ? window.__canvasHtmlOffer1 : k === 'offer2' ? window.__canvasHtmlOffer2 : window.__canvasHtmlOffer3);
-                            return hasText || hasInk || hasImg || hasHtml;
-                        });
-                        return nonEmpty.some(k => (canvasStatus && canvasStatus[k]) === 'open');
-                    } catch(e){ return false; }
-                })();
-
-                const hasText = !!String(getDisplayText('OfferValidUntil') || '').trim();
-                const hasInk = !!(drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
+                // FIX: Sobald ein Angebotsfeld ROT/Offen ist, darf kein Druck/PDF starten,
+                // bevor eine Angebotsgültigkeit als Datum eingetragen wurde.
+                // Wichtig: nicht mehr nur "nicht leere" Angebote prüfen, weil der rote Status
+                // selbst schon bedeutet: Angebot ist noch offen.
+                const hasOpen = hasOpenOfferNeedingValidity();
+                const hasText = hasOfferValidity();
 
                 // PRINT-HINWEIS (Browser-Setting): Farben/Hintergründe werden nur gedruckt, wenn
                 // im Druckdialog "Hintergrundgrafiken" (bzw. "Hintergrundfarben und -bilder") aktiviert ist.
@@ -8925,7 +8991,7 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                 } catch(e) { /* ignore */ }
 
                 // Nur wenn "offen" UND noch kein Datum vorhanden -> Modal zeigen
-                if (hasOpen && !hasText && !hasInk) {
+                if (hasOpen && !hasText) {
                     pendingPrintRef.current = (typeof doPrint === 'function') ? doPrint : (() => window.print());
                     setShowValidityModal(true);
                     return;
@@ -9059,6 +9125,16 @@ const handleFinishOfferClick = () => {
 
                 // Wenn Kunde unterschrieben hat: PDF-Export (Empfohlen) + danach ReferralModal
                 if (customerSignature) {
+                    if (!runOnlyWithOfferValidity(() => {
+                        triggerToast('PDF wird erstellt… einen Moment.');
+                        createPrintLookPdfBlob(triggerToast, ensurePrintHeaders).then((blob) => {
+                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                            const url = URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                            setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            setTimeout(() => setShowReferralModal(true), 400);
+                        }).catch(e => triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt')));
+                    })) return;
                     backgroundAutoUpload({ type: 'abschluss', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
                     // Exakt dieselbe Logik wie der "PDF drucken / Empfohlen"-Button im FinishTypeModal
                     (async () => {
@@ -9218,10 +9294,8 @@ const handleFinishOfferClick = () => {
                                 const hasHtml = !!(k === 'offer1' ? window.__canvasHtmlOffer1 : k === 'offer2' ? window.__canvasHtmlOffer2 : window.__canvasHtmlOffer3);
                                 return hasText || hasInk || hasImg || hasHtml;
                             });
-                            const hasOpen = nonEmpty.some(k => (canvasStatus && canvasStatus[k]) === 'open');
-                            const hasValidityText = !!String(getDisplayText('OfferValidUntil') || '').trim();
-                            const hasValidityInk = !!(drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
-                            return hasOpen && !hasValidityText && !hasValidityInk;
+                            const hasOpen = hasOpenOfferNeedingValidity();
+                            return hasOpen && !hasOfferValidity();
                         } catch(e) { return false; }
                     })();
 
@@ -9276,7 +9350,7 @@ const handleFinishOfferClick = () => {
                 triggerToast(`✓ Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`);
             };
 
-            const handleClearAll = () => { setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], cost_smartphone: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setPackagePrices({ offer1:{einmalig:'',monatlich:''}, offer2:{einmalig:'',monatlich:''}, offer3:{einmalig:'',monatlich:''} }); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
+            const handleClearAll = () => { try { offerValidityOverrideRef.current = ''; } catch(e) {} setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], cost_smartphone: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setPackagePrices({ offer1:{einmalig:'',monatlich:''}, offer2:{einmalig:'',monatlich:''}, offer3:{einmalig:'',monatlich:''} }); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
 
             const Toast = ({ message }) => { if (!message) return null; return (<div className="print-hide-toast fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg border border-slate-700 animate-in fade-in duration-300"><div className="flex items-center gap-2"><Icon d={ICONS.Clipboard} size={16} className="text-green-400"/><span className="text-sm font-medium">{message}</span></div></div>); };
 
@@ -11243,21 +11317,37 @@ if (costBlock) {
     costClone.querySelectorAll('label,[class*="text-[10px]"],[class*="uppercase"]').forEach(el => {
         el.style.fontSize = '8px'; el.style.marginBottom = '1px'; el.style.display = 'block';
     });
-    // Wrapper-Höhe = skalierte Inhalt-Höhe (damit kein Whitespace entsteht)
+    // Wrapper-Höhe = skalierte Inhalt-Höhe (dynamisch gemessen – passt sich expandierter Finanzierung an)
     costWrap.appendChild(costClone);
-    // Höhe via inline-style nach appendChild schätzen (~180px skaliert = ~137px)
-    costWrap.style.height = `${Math.round(300 * COST_SCALE)}px`;
-    costWrap.style.maxHeight = `${Math.round(300 * COST_SCALE)}px`;
+    // Temporär ins DOM hängen um scrollHeight zu messen, dann wieder raus
+    costWrap.style.position = 'fixed';
+    costWrap.style.visibility = 'hidden';
+    costWrap.style.top = '-9999px';
+    document.body.appendChild(costWrap);
+    const _rawH = costClone.scrollHeight;
+    document.body.removeChild(costWrap);
+    costWrap.style.position = '';
+    costWrap.style.visibility = '';
+    costWrap.style.top = '';
+    const _visH = Math.max(180, Math.round(_rawH * COST_SCALE));
+    costWrap.style.height = `${_visH}px`;
+    costWrap.style.maxHeight = `${_visH}px`;
     outroContentWrap.appendChild(costWrap);
 }
 
-// ── Danke & Bonus darunter – feste Höhe ~60% des Restplatzes ──
-// 210mm≈794px minus costWrap~141px minus padding/gap~22px = ~631px Rest → 60%≈378px
-const OUTRO_MAX_H = 378;
+// ── Danke & Bonus darunter – Höhe dynamisch aus verbleibendem Platz ──
+const _PAGE_PX   = 794; // 210mm ≈ 794px
+const _WRAP_PAD  = 14;  // outroContentWrap padding top+bottom
+const _GAP       = 6;   // gap between cost and blue box
+const _BLUE_MT   = 80;  // margin-top (war 60px, jetzt +20px)
+const _costH     = costBlock ? Math.max(180, Math.round(
+    (() => { try { return (outroContentWrap.querySelector('[style*="transform:scale"]') || {scrollHeight: 300}).scrollHeight; } catch(e){ return 300; } })() * 0.76
+)) : 0;
+const OUTRO_MAX_H = Math.max(220, Math.min(420, _PAGE_PX - _WRAP_PAD - _costH - _GAP - _BLUE_MT));
 const outroInner = doc.createElement('div');
 outroInner.style.cssText = [
     'flex:0 0 auto',
-    'margin-top:60px',
+    'margin-top:80px',
     'height:' + OUTRO_MAX_H + 'px',
     'max-height:' + OUTRO_MAX_H + 'px',
     'overflow:hidden',
@@ -11839,6 +11929,15 @@ const backgroundAutoUpload = async ({ type, triggerToast, ensurePrintHeaders, ge
 // Hintergrund: Browser erlauben navigator.share(files) nur bei gültiger "User Activation".
 // Wenn das Rendern zu lange dauert oder Files nicht unterstützt werden, wird automatisch gespeichert.
 const handlePDFShare = async () => {
+    // ── Angebotsgültigkeit prüfen (wie bei requestPrint) ──
+    const _pdfHasOpen = hasOpenOfferNeedingValidity();
+    const _pdfHasValText = hasOfferValidity();
+    if (_pdfHasOpen && !_pdfHasValText) {
+        pendingPrintRef.current = () => { handlePDFShare(); };
+        setShowValidityModal(true);
+        return;
+    }
+
     // FINAL SAFE (ScopeFix + Silent Share):
     // - No blocking alert() (keeps "Offen/Abgeschlossen" Badge/Rand sichtbar)
     // - Try Web Share when possible, otherwise silent download fallback
@@ -12201,6 +12300,44 @@ const handlePDFShare = async () => {
                 </div>`;
             };
 
+
+            const handleRecommendedPdfPrint = async () => {
+                if (!runOnlyWithOfferValidity(() => { handleRecommendedPdfPrint(); })) return;
+
+                try { setShowFinishTypeModal(false); } catch(e) {}
+                triggerToast('PDF wird erstellt… einen Moment.');
+                try {
+                    const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
+                    const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                    const pdfFile = new File([blob], pdfFileName, { type: 'application/pdf' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                        try {
+                            await navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [pdfFile] });
+                            triggerToast('✅ PDF geteilt.');
+                        } catch(shareErr) {
+                            if (shareErr && shareErr.name === 'AbortError') return;
+                            const url = URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                            setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                        }
+                    } else {
+                        const url = URL.createObjectURL(blob);
+                        const pdfTab = window.open(url, '_blank');
+                        if (!pdfTab) {
+                            const a = document.createElement('a');
+                            a.href = url; a.download = pdfFileName;
+                            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        }
+                        setTimeout(() => URL.revokeObjectURL(url), 120000);
+                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                    }
+                } catch(e) {
+                    triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
+                }
+            };
+
             return (
                 <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col overflow-hidden text-sm">
                     <Toast message={toastMessage} />
@@ -12223,101 +12360,33 @@ const handlePDFShare = async () => {
                             try { setTextData(prev => ({ ...prev, OfferValidUntil: '' })); } catch(e) {}
                             try { setDrawnStrokes(prev => ({ ...prev, offer_valid_until: [] })); } catch(e) {}
                         }
-                    }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onPdfPrint={async () => {
-                        triggerToast('PDF wird erstellt… einen Moment.');
-                        try {
-                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
-                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
-                            // Web Share API → natives System-Teilen (WhatsApp, Mail, Drucken, etc.)
-                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
-                                try {
-                                    await navigator.share({
-                                        title: 'Angebot',
-                                        text: 'Ihr persönliches Angebot',
-                                        files: [new File([blob], pdfFileName, { type: 'application/pdf' })]
-                                    });
-                                    triggerToast('✅ PDF geteilt.');
-                                } catch(shareErr) {
-                                    if (shareErr.name !== 'AbortError') {
-                                        // Teilen abgebrochen oder fehlgeschlagen → Tab öffnen als Fallback
-                                        const url = URL.createObjectURL(blob);
-                                        window.open(url, '_blank');
-                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
-                                    }
-                                }
-                            } else {
-                                // Kein Web Share (Desktop Firefox etc.) → neuer Tab
-                                const url = URL.createObjectURL(blob);
-                                const pdfTab = window.open(url, '_blank');
-                                if (!pdfTab) {
-                                    const a = document.createElement('a');
-                                    a.href = url; a.download = pdfFileName;
-                                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                                }
-                                setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                triggerToast('✅ PDF geöffnet – drucken oder speichern.');
-                            }
-                        } catch(e) {
-                            triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
-                        }
-                    }} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
-                    <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} onPdfPrint={async () => {
-                        setShowFinishTypeModal(false);
-                        triggerToast('PDF wird erstellt… einen Moment.');
-                        try {
-                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
-                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
-                            // System-Teilen-Sheet (WhatsApp, Mail, AirDrop, Drucken)
-                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
-                                try {
-                                    await navigator.share({
-                                        title: 'Angebot',
-                                        text: 'Ihr persönliches Angebot',
-                                        files: [new File([blob], pdfFileName, { type: 'application/pdf' })]
-                                    });
-                                    triggerToast('✅ PDF geteilt.');
-                                } catch(shareErr) {
-                                    if (shareErr.name !== 'AbortError') {
-                                        const url = URL.createObjectURL(blob);
-                                        window.open(url, '_blank');
-                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
-                                    }
-                                }
-                            } else {
-                                // Fallback: neuer Tab (Desktop)
-                                const url = URL.createObjectURL(blob);
-                                const pdfTab = window.open(url, '_blank');
-                                if (!pdfTab) {
-                                    const a = document.createElement('a');
-                                    a.href = url; a.download = pdfFileName;
-                                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                                }
-                                setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                triggerToast('✅ PDF geöffnet – drucken oder speichern.');
-                            }
-                        } catch(e) {
-                            triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
-                        }
-                    }} />
+                    }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onPdfPrint={handleRecommendedPdfPrint} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
+                    <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} onPdfPrint={handleRecommendedPdfPrint} />
 
 
                     <OfferValidityModal
                         isOpen={showValidityModal}
                         value={getDisplayText('OfferValidUntil')}
                         onValueChange={(v) => {
+                            try { offerValidityOverrideRef.current = String(v || '').trim(); } catch(e) {}
                             handleTextChange('OfferValidUntil', v);
                             try { digitalTouchedRef.current['offer_valid_until'] = true; } catch(e) {}
                         }}
                         onCancel={() => { setShowValidityModal(false); pendingPrintRef.current = null; }}
                         onConfirm={() => {
-                            const hasText = !!String(getDisplayText('OfferValidUntil') || '').trim();
+                            const domVal = String((document.getElementById('offer-validity-modal-input') || {}).value || '').trim();
+                            const hasText = !!domVal || hasOfferValidity();
+                            if (domVal) {
+                                try { offerValidityOverrideRef.current = domVal; } catch(e) {}
+                                try { handleTextChange('OfferValidUntil', domVal); } catch(e) {}
+                                try { digitalTouchedRef.current['offer_valid_until'] = true; } catch(e) {}
+                            }
                             if (!hasText) { triggerToast('Bitte Gültigkeitsdatum eingeben.'); return; }
                             setShowValidityModal(false);
                             const fn = pendingPrintRef.current;
                             pendingPrintRef.current = null;
-                            (fn || (() => window.print()))();
+                            // PATCH v8: erst im nächsten Tick weitermachen, damit Datum + Modal-Zustand sicher übernommen sind.
+                            setTimeout(() => { (fn || (() => window.print()))(); }, 180);
                         }}
                     />
 
