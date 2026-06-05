@@ -3823,7 +3823,21 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             // 2) Digital text -> tiered thresholds
             const getTextLen = (v) => {
                 if (v == null) return 0;
-                return String(v).trim().length;
+                const s = String(v).trim();
+                // 0 oder 0,00 soll nicht als eingetragener Preis zählen
+                if (/^0+(?:[,.]0+)?$/.test(s)) return 0;
+                return s.length;
+            };
+
+            const firstFilled = (...values) => {
+                for (const v of values) {
+                    if (v == null) continue;
+                    const s = String(v).trim();
+                    if (!s) continue;
+                    if (/^0+(?:[,.]0+)?$/.test(s)) continue;
+                    return s;
+                }
+                return '';
             };
 
             const map = {
@@ -3840,9 +3854,12 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 offer1:               { getter: () => textData.offer1,                                min: ACT_OFFER_MIN_CHARS },
                 offer2:               { getter: () => textData.offer2,                                min: ACT_OFFER_MIN_CHARS },
                 offer3:               { getter: () => textData.offer3,                                min: ACT_OFFER_MIN_CHARS },
-                cost_einmalig:        { getter: () => textData.cost_einmalig,                         min: 1 },
-                cost_monatlich1:      { getter: () => textData.cost_monatlich1,                       min: 1 },
-                cost_monatlich2:      { getter: () => textData.cost_monatlich2,                       min: 1 },
+                // PATCH: Kosten werden in offerData gespeichert (nicht in textData).
+                // Deshalb zusätzlich offerData/Raw-Werte aus extra prüfen, sonst bleibt Coaching bei 0×.
+                cost_einmalig:        { getter: () => firstFilled(textData.cost_einmalig, extra.offerData?.einmaligRaw, extra.offerData?.einmalig),       min: 1 },
+                cost_monatlich1:      { getter: () => firstFilled(textData.cost_monatlich1, extra.offerData?.monatlich1Raw, extra.offerData?.monatlich1), min: 1 },
+                cost_monatlich2:      { getter: () => firstFilled(textData.cost_monatlich2, extra.offerData?.monatlich2Raw, extra.offerData?.monatlich2), min: 1 },
+                cost_smartphone:      { getter: () => firstFilled(textData.cost_smartphone, extra.offerData?.smartphoneRaw, extra.offerData?.smartphone), min: 1 },
                 agent_name:           { getter: () => textData.AgentName,                             min: 3 },
                 date_field:           { getter: () => textData.DateValue,                             min: 3 },
                 skip_reason:          { getter: () => (extra.skipReason ?? textData.skip_reason),     min: 5 },
@@ -9127,7 +9144,7 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             };
             const getDslFlagForUpload = () => {
                 try {
-                    const stats = buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason });
+                    const stats = buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason, offerData });
                     const dslOffered = !!(stats?.offer2?.used || stats?.offer3?.used);
                     return dslOffered ? 'ja' : 'nein';
                 } catch(e) { return 'nein'; }
@@ -9245,7 +9262,7 @@ const handleFinishOfferClick = () => {
                         beratungsId: beratungsId || '',
                         result: computedResult,
                         skipReasonText: (typeof skipReason === 'string' && skipReason.trim() && skipReason !== 'Übersprungen (Admin)') ? skipReason.trim().slice(0, 200) : '',
-                        canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
+                        canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason, offerData })
                     });
                 } catch (e) { /* ignore */ }
 
@@ -9307,7 +9324,7 @@ const handleFinishOfferClick = () => {
                         beratungsId: beratungsId || '',
                         result: computedResult,
                         skipReasonText: (typeof skipReason === 'string' && skipReason.trim() && skipReason !== 'Übersprungen (Admin)') ? skipReason.trim().slice(0, 200) : '',
-                        canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason })
+                        canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason, offerData })
                     });
                 } catch(e) {}
                 try {
