@@ -323,7 +323,8 @@
             .sit-step-overlay { display: none !important; }
             .sit-card-grid { display: grid !important; }
             /* Offer-Schritt: alle Canvases zeigen */
-            .offer-print-grid > div { display: block !important; grid-column: auto !important; }
+            /* grid-column wird NICHT überschrieben – Fusion-Inline-Styles (span 2 / display:none) bleiben aktiv */
+            .offer-print-grid > div { display: block !important; }
             .cost-overview-print { display: block !important; }
             /* Kosten (Ist) Sidebar-Block: im Druck ausblenden */
             .print-hide-kosten { display: none !important; }
@@ -8629,6 +8630,11 @@ const fileInputRef = useRef(null);
                 window.__canvasHtmlOffer3 = canvasHtml.offer3 || null;
             }, [canvasHtml.offer1, canvasHtml.offer2, canvasHtml.offer3]);
 
+            // Brücke: Canvas-Fusion-Modus für PDF-Export
+            React.useEffect(() => {
+                window.__mergedCanvases = mergedCanvases || null;
+            }, [mergedCanvases]);
+
             // Brücke: Beratungs-ID für PDF-Export
             React.useEffect(() => {
                 window.__beratungsId = beratungsId || '';
@@ -11264,14 +11270,33 @@ const makeAllOffersPage = () => {
     const wrapper = doc.createElement('div');
     wrapper.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;box-sizing:border-box;background:#eff6ff;overflow:hidden;padding:8px 12px 6px 12px;gap:6px;';
 
+    // --- Fusion-Modus aus React-Brücke lesen ---
+    const fusionMode = window.__mergedCanvases || null; // null | '1+2' | '2+3' | 'all'
+
+    // Grid-Template je nach Fusion:
+    // all → 1 Spalte, 1+2 → 2fr 1fr (offer1 doppelt, offer2 versteckt), 2+3 → 1fr 2fr (offer2 doppelt, offer3 versteckt)
+    let gridTemplate = '1fr 1fr 1fr';
+    if (fusionMode === 'all')       gridTemplate = '1fr';
+    else if (fusionMode === '1+2')  gridTemplate = '2fr 1fr';
+    else if (fusionMode === '2+3')  gridTemplate = '1fr 2fr';
+
     // --- 3 Karten nebeneinander – nehmen ~72% der Höhe ---
     const cardsRow = doc.createElement('div');
-    cardsRow.style.cssText = 'flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;overflow:hidden;';
+    cardsRow.style.cssText = 'flex:1 1 auto;min-height:0;display:grid;grid-template-columns:' + gridTemplate + ';gap:10px;overflow:hidden;';
 
     const grid = tmpClone.querySelector('.offer-print-grid');
     const cols = grid ? Array.from(grid.children) : [];
 
+    // Spalten die im fusionierten Modus ausgeblendet sind (Canvas-Partner wird in benachbarten Canvas gezeigt)
+    const hiddenIdx = new Set();
+    if (fusionMode === 'all')       { hiddenIdx.add(1); hiddenIdx.add(2); }
+    else if (fusionMode === '1+2')  { hiddenIdx.add(1); } // offer2 (idx 1) ausgeblendet
+    else if (fusionMode === '2+3')  { hiddenIdx.add(2); } // offer3 (idx 2) ausgeblendet
+
     for (let i = 0; i < 3; i++) {
+        // Ausgeblendete Spalten nicht ins Grid einfügen
+        if (hiddenIdx.has(i)) continue;
+
         const col = cols[i];
         const card = doc.createElement('div');
         card.style.cssText = 'display:flex;flex-direction:column;height:100%;overflow:hidden;box-sizing:border-box;';
