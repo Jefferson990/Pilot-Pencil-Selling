@@ -6773,6 +6773,7 @@ const highResHTML = buildHighResBundleHTML(d);
             const [activeTab, setActiveTab] = useState('uebersicht');
             const [skipAgentsData, setSkipAgentsData] = useState({}); // { agentName: {count, limit} }
             const [range, setRange] = useState('31');
+            const isDiegoAdmin = (LINK_EMPLOYEE === 'Diego da Silva');
 
             useEffect(() => {
                 if (!isOpen) return;
@@ -6782,7 +6783,7 @@ const highResHTML = buildHighResBundleHTML(d);
 
             // Lade Skip-Daten wenn Skip-Tab geöffnet wird
             useEffect(() => {
-                if (activeTab !== 'skip-management' || LINK_EMPLOYEE !== 'Diego da Silva') return;
+                if (activeTab !== 'skip-management' || !isDiegoAdmin) return;
                 const monthKey = new Date().toISOString().slice(0, 7);
                 (async () => {
                     try {
@@ -6890,6 +6891,36 @@ const highResHTML = buildHighResBundleHTML(d);
 
             const trendMax = Math.max(1,...trend6m.map(m=>m.total));
 
+            // Skip-Gründe: Übersicht + Excel/CSV-Export für Diego
+            const skipReasonRows = useMemo(() => {
+                const source = selectedAgent === '__all__' ? filtered : filtered.filter(r => resolveUserName(r.user) === selectedAgent);
+                return source
+                    .filter(r => {
+                        const cs = r.canvasStats || {};
+                        const hasText = !!(r.skipReasonText && String(r.skipReasonText).trim());
+                        const wasSkipped = !!(cs.skip_reason && cs.skip_reason.used);
+                        return hasText || wasSkipped;
+                    })
+                    .map(r => ({
+                        id: r.id || '',
+                        ts: r.ts || '',
+                        user: resolveUserName(r.user) || '–',
+                        beratungsId: r.beratungsId || '',
+                        result: r.result || '',
+                        reason: (r.skipReasonText && String(r.skipReasonText).trim()) ? String(r.skipReasonText).trim() : 'Grund nicht digital erfasst'
+                    }))
+                    .sort((a,b) => new Date(b.ts) - new Date(a.ts));
+            }, [filtered, selectedAgent]);
+
+            const skipReasonsByAgent = useMemo(() => {
+                const map = {};
+                skipReasonRows.forEach(r => {
+                    if (!map[r.user]) map[r.user] = [];
+                    map[r.user].push(r);
+                });
+                return map;
+            }, [skipReasonRows]);
+
             if (!isOpen) return null;
 
             const handleClear = () => {
@@ -6935,6 +6966,27 @@ const highResHTML = buildHighResBundleHTML(d);
                 a.download=`Coaching_${name}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
             };
 
+
+            const exportSkipReasonsCSV = () => {
+                const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g,'""').replace(/\r?\n/g,' ') + '"';
+                const lines = [['Mitarbeiter','Datum','Uhrzeit','Beratungs-ID','Ergebnis','Skip-Grund'].map(esc).join(';')];
+                skipReasonRows.forEach(r => {
+                    const d = new Date(r.ts);
+                    lines.push([
+                        r.user,
+                        Number.isFinite(d.getTime()) ? d.toLocaleDateString('de-DE') : '',
+                        Number.isFinite(d.getTime()) ? d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '',
+                        r.beratungsId || '',
+                        r.result || '',
+                        r.reason || ''
+                    ].map(esc).join(';'));
+                });
+                const name = selectedAgent==='__all__'?'Alle':selectedAgent.replace(/ /g,'_');
+                const blob = new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+                const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+                a.download=`Skip_Gruende_${name}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+            };
+
             return (
                 <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/65 backdrop-blur-sm p-3" onClick={onClose}>
                   <div onClick={e=>e.stopPropagation()} style={{background:'#f8fafc',width:'100%',maxWidth:'700px',borderRadius:'20px',boxShadow:'0 30px 80px rgba(0,0,0,0.25)',display:'flex',flexDirection:'column',maxHeight:'94vh',overflow:'hidden'}}>
@@ -6951,7 +7003,7 @@ const highResHTML = buildHighResBundleHTML(d);
                             </div>
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                            {typeof onOpenAdmin === 'function' && (<button onClick={onOpenAdmin} title="Admin: Fragen & Links" style={{padding:'5px 12px',borderRadius:'8px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'rgba(255,255,255,0.9)',cursor:'pointer',fontSize:'11px',fontWeight:800,display:'flex',alignItems:'center',gap:'5px',flexShrink:0,letterSpacing:'0.02em'}}>⚙️ Admin</button>)}
+                            {typeof onOpenAdmin === 'function' && isDiegoAdmin && (<button onClick={onOpenAdmin} title="Admin: Fragen & Links" style={{padding:'5px 12px',borderRadius:'8px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'rgba(255,255,255,0.9)',cursor:'pointer',fontSize:'11px',fontWeight:800,display:'flex',alignItems:'center',gap:'5px',flexShrink:0,letterSpacing:'0.02em'}}>⚙️ Admin</button>)}
                             <button onClick={onClose} style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.2)',color:'rgba(255,255,255,0.8)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,flexShrink:0}}>✕</button>
                         </div>
                     </div>
@@ -6970,6 +7022,7 @@ const highResHTML = buildHighResBundleHTML(d);
                         </div>
                         <div style={{marginLeft:'auto',display:'flex',gap:'5px'}}>
                             <button onClick={exportCoachingCSV} style={{padding:'5px 11px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#059669',color:'#fff',border:'none',cursor:'pointer'}}>⬇ CSV</button>
+                            {isDiegoAdmin && <button onClick={exportSkipReasonsCSV} style={{padding:'5px 11px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#2563eb',color:'#fff',border:'none',cursor:'pointer'}}>⬇ Gründe</button>}
                             <button onClick={exportAnalyticsJSON} style={{padding:'5px 11px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#fff',color:'#475569',border:'1.5px solid #e2e8f0',cursor:'pointer'}}>⬇ JSON</button>
                             <button onClick={handleClear} style={{padding:'5px 11px',borderRadius:'8px',fontSize:'11px',fontWeight:700,background:'#fff',color:'#ef4444',border:'1.5px solid #fecaca',cursor:'pointer'}}>🗑</button>
                         </div>
@@ -6982,7 +7035,7 @@ const highResHTML = buildHighResBundleHTML(d);
                             {TAB('entwicklung','Entwicklung','📅')}
                             {TAB('coaching','Coaching','🎯')}
                             {TAB('vorgaenge','Vorgänge','📋')}
-                            {LINK_EMPLOYEE === 'Diego da Silva' && TAB('skip-management','Skip-Limits','⏭')}
+                            {isDiegoAdmin && TAB('skip-management','Skip-Limits','⏭')}
                         </div>
                     </div>
 
@@ -7240,14 +7293,14 @@ const highResHTML = buildHighResBundleHTML(d);
                             )
                         )}
 
-                        {activeTab==='skip-management' && LINK_EMPLOYEE === 'Diego da Silva' && (() => {
+                        {activeTab==='skip-management' && isDiegoAdmin && (() => {
                             const allAgents = Object.keys(skipAgentsData);
                             return (
                                 <div style={{background:'#fff',borderRadius:'14px',border:'1px solid #e2e8f0',overflow:'hidden'}}>
                                     <table style={{width:'100%',borderCollapse:'collapse',fontSize:'12px'}}>
                                         <thead>
                                             <tr style={{background:'#f8fafc',borderBottom:'2px solid #e2e8f0'}}>
-                                                {['Mitarbeiter','Übersprungen diesen Monat','Limit','Aktion'].map(h=>(
+                                                {['Mitarbeiter','Übersprungen diesen Monat','Limit','Gründe','Aktion'].map(h=>(
                                                     <th key={h} style={{padding:'9px 12px',textAlign:'left',fontWeight:700,color:'#475569',fontSize:'10px',textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>
                                                 ))}
                                             </tr>
@@ -7261,6 +7314,10 @@ const highResHTML = buildHighResBundleHTML(d);
                                                         <td style={{padding:'12px',fontWeight:700,color:'#1e293b'}}>{agent}</td>
                                                         <td style={{padding:'12px',fontSize:'13px',fontVariantNumeric:'tabular-nums',color:isAtLimit?'#dc2626':'#475569'}}><strong>{count}/{limit}</strong> {isAtLimit && '⚠️'}</td>
                                                         <td style={{padding:'12px',fontFamily:'monospace',fontSize:'11px',color:'#64748b'}}>{limit}</td>
+                                                        <td style={{padding:'12px',fontSize:'11px',color:'#475569'}}>
+                                                            <strong>{(skipReasonsByAgent[agent] || []).length}</strong>
+                                                            {(skipReasonsByAgent[agent] || []).length > 0 && <span style={{color:'#94a3b8'}}> digital</span>}
+                                                        </td>
                                                         <td style={{padding:'12px',display:'flex',gap:'6px'}}>
                                                             <button onClick={async () => { try { const db = getStatsDb(); await db.collection('skip_limits').doc(`limit_${agent}`).set({ agent, max_limit: limit + 5, ts: new Date().toISOString() }, { merge: true }); } catch(_){} setSkipAgentsData(prev => ({ ...prev, [agent]: {count, limit: limit + 5} })); triggerToast(`✓ Limit für ${agent} auf ${limit+5} erhöht`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>+5</button>
                                                             <button onClick={async () => { try { const db = getStatsDb(); const monthKey = new Date().toISOString().slice(0,7); await db.collection('skip_limits').doc(`skip_${agent}_${monthKey}`).set({ agent, month: monthKey, count: 0, ts: new Date().toISOString() }); } catch(_){} setSkipAgentsData(prev => ({ ...prev, [agent]: {count: 0, limit} })); triggerToast(`✓ Skip-Zähler für ${agent} resetet`); }} style={{padding:'4px 10px',fontSize:'10px',background:'#f59e0b',color:'#fff',border:'none',borderRadius:'4px',cursor:'pointer',fontWeight:700}}>Reset</button>
@@ -7272,6 +7329,32 @@ const highResHTML = buildHighResBundleHTML(d);
                                     </table>
                                     <div style={{padding:'12px',background:'#f0fdf4',borderTop:'1px solid #e2e8f0',fontSize:'11px',color:'#16a34a',lineHeight:1.5}}>
                                         ✓ Automatisch zählt jeder übersprungene Vorgang (+1). Limits können erhöht oder auf 0 resetet werden. Diego hat kein Limit. Daten live aus Firestore.
+                                    </div>
+                                    <div style={{padding:'12px',background:'#fff',borderTop:'1px solid #e2e8f0'}}>
+                                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px',marginBottom:'8px'}}>
+                                            <div style={{fontSize:'12px',fontWeight:900,color:'#1e293b'}}>📝 Digitale Skip-Gründe ({skipReasonRows.length})</div>
+                                            <button onClick={exportSkipReasonsCSV} style={{padding:'5px 10px',fontSize:'10px',background:'#2563eb',color:'#fff',border:'none',borderRadius:'6px',cursor:'pointer',fontWeight:800}}>⬇ Gründe als CSV/Excel</button>
+                                        </div>
+                                        {skipReasonRows.length===0 ? (
+                                            <div style={{fontSize:'11px',color:'#94a3b8',padding:'10px',background:'#f8fafc',borderRadius:'8px'}}>Noch keine digital erfassten Skip-Gründe im gewählten Zeitraum.</div>
+                                        ) : (
+                                            <div style={{display:'flex',flexDirection:'column',gap:'6px',maxHeight:'220px',overflowY:'auto'}}>
+                                                {skipReasonRows.slice(0,60).map((r,i)=>{
+                                                    const d = new Date(r.ts);
+                                                    return (
+                                                        <div key={r.id||i} style={{padding:'8px 10px',border:'1px solid #e2e8f0',borderRadius:'8px',background:i%2===0?'#f8fafc':'#fff'}}>
+                                                            <div style={{display:'flex',justifyContent:'space-between',gap:'8px',fontSize:'10px',color:'#64748b',fontWeight:800,marginBottom:'3px'}}>
+                                                                <span>{r.user}</span>
+                                                                <span>{Number.isFinite(d.getTime()) ? d.toLocaleDateString('de-DE') + ' · ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '–'}</span>
+                                                            </div>
+                                                            <div style={{fontSize:'12px',color:'#1e293b',fontWeight:600,lineHeight:1.35}}>{r.reason}</div>
+                                                            {r.beratungsId && <div style={{fontSize:'9px',color:'#94a3b8',marginTop:'3px'}}>Beratungs-ID: {r.beratungsId}</div>}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {skipReasonRows.length>60 && <div style={{textAlign:'center',fontSize:'10px',color:'#94a3b8'}}>+{skipReasonRows.length-60} weitere im Export</div>}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -12514,9 +12597,9 @@ const handlePDFShare = async () => {
         </div>
     );
 })()}
-<AdminSafeBoundary onClose={()=>setShowAdmin(false)}><AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} /></AdminSafeBoundary>
+{LINK_EMPLOYEE === 'Diego da Silva' && <AdminSafeBoundary onClose={()=>setShowAdmin(false)}><AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} /></AdminSafeBoundary>}
                     <PinLockModal isOpen={showPinLock} onClose={()=>setShowPinLock(false)} onSuccess={()=>{ setShowPinLock(false); setShowStats(true); }} />
-                    <AdminSafeBoundary onClose={()=>setShowStats(false)}><StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} onOpenAdmin={()=>{ setShowStats(false); setShowAdmin(true); }} /></AdminSafeBoundary>
+                    <AdminSafeBoundary onClose={()=>setShowStats(false)}><StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} onOpenAdmin={()=>{ if (LINK_EMPLOYEE === 'Diego da Silva') { setShowStats(false); setShowAdmin(true); } }} /></AdminSafeBoundary>
                     
                     
                     <ImagePlacementModal isOpen={isImageSelectModalOpen} onClose={() => setIsImageSelectModalOpen(false)} onPlace={handleImagePlacement} imageName={currentImagePayload?.name || 'Datei'} />
