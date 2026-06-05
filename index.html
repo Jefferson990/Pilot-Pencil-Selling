@@ -403,6 +403,22 @@ html, body, #root{
 
 /* === FULLSCREEN/ROTATE: prevent canvas distortion === */
 .drawing-canvas{ width:100% !important; height:100% !important; }
+/* === APPLE PENCIL FIX: iOS Scribble / Text-Selektion auf Zeichenflächen verhindern === */
+.drawing-canvas {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    touch-action: none !important;
+}
+/* Textfelder im Pen-Modus: Scribble deaktivieren (Apple Pencil soll nicht als Texteingabe erkannt werden) */
+.offer-canvas-container textarea,
+.sit-card-canvas textarea,
+.small-canvas-wrapper textarea,
+.small-canvas-wrapper input {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
 
 
         
@@ -7797,7 +7813,7 @@ const highResHTML = buildHighResBundleHTML(d);
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
-</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: 'text' }} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => startDrawing(e, canvasRef, statusKey)} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
             </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'100%', height:'150px', overflow:'hidden', background:'#f1f5f9', borderTop:'1px solid #e2e8f0', position:'relative', flexShrink:0 }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none' }}/></div>)}</div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
@@ -9862,6 +9878,12 @@ const handleFinishOfferClick = () => {
                 const canvas = ref?.current;
                 if(!canvas) return;
 
+                // === APPLE PENCIL FIX: Sofort preventDefault für Pencil-Input ===
+                // Verhindert iOS Scribble / Text-Selektion bevor irgendein anderer Handler greift
+                if (e.pointerType === 'pen') {
+                    e.preventDefault();
+                }
+
                 // Multi-touch erkennen (2 Finger) -> Pinch erlauben
                 const st = getCanvasPointerState(canvas);
                 st.count = (st.count || 0) + 1;
@@ -9891,7 +9913,7 @@ const handleFinishOfferClick = () => {
                 const isSituationCanvasActive = key && key.startsWith('sit_') && inputMode === 'pen';
                 const isSmallCanvasPenActive = (ref === emailCanvasRef && emailMode === 'pen') || (ref === providerCanvasRef && providerMode === 'pen') || (ref === notesCanvasRef && notesMode === 'pen') || (ref === skipReasonCanvasRef && skipReasonMode === 'pen') || (ref === beratungsIdCanvasRef && beratungsIdMode === 'pen');
                 const isOfferCanvasActive = (ref === offerCanvasRef1 || ref === offerCanvasRef2 || ref === offerCanvasRef3) && inputMode === 'pen';
-                const isOfferInputActive = (ref === offerCost1Ref || ref === offerCost2Ref || ref === offerCost3Ref || ref === offerAgentRef || ref === offerDateRef) && inputMode === 'pen';
+                const isOfferInputActive = (ref === offerCost1Ref || ref === offerCost2Ref || ref === offerCost3Ref || ref === offerCostSmartphoneRef || ref === offerAgentRef || ref === offerDateRef || ref === offerValidUntilRef) && inputMode === 'pen';
 
                 if (!isPenInput || (!isMainCanvasPenActive && !isSituationCanvasActive && !isSmallCanvasPenActive && !isOfferCanvasActive && !isOfferInputActive)) {
                     return;
@@ -12809,7 +12831,7 @@ const handlePDFShare = async () => {
       }
     }
   }}
-  style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'24px':textSize==='large'?'44px':'32px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} placeholder="" readOnly={inputMode==='pen'}/>
+  style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'24px':textSize==='large'?'44px':'32px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',WebkitUserSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} inputMode={inputMode==='pen'?'none':undefined} placeholder="" readOnly={inputMode==='pen'}/>
                                                         <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen'&&!scrollMode)?'auto':'none',touchAction:scrollMode?'pan-y':'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
                                                     </div>
                                                 </div>
@@ -14340,8 +14362,19 @@ const handlePDFShare = async () => {
                         const offerCols  = Array.from(offerGrid.children).slice(0, 3);
                         const contentMap = window.__offerHasContent || { offer1:true, offer2:true, offer3:true };
 
+                        // === FUSION-FIX: Fusion-Modus auslesen ===
+                        // Fusionierte Canvas-Partner (display:none) dürfen KEINE Fallback-Karte bekommen
+                        // und dürfen das Grid-Layout nicht kaputtmachen.
+                        const activeFusion = window.__mergedCanvases || null;
+                        const fusionHiddenIdx = new Set();
+                        if (activeFusion === 'all')       { fusionHiddenIdx.add(1); fusionHiddenIdx.add(2); }
+                        else if (activeFusion === '1+2')  { fusionHiddenIdx.add(1); }
+                        else if (activeFusion === '2+3')  { fusionHiddenIdx.add(2); }
+
                         // DOM-Check zusätzlich: Bilder / HTML-Overlays erkennen
                         const realHasContent = offerKeys.map((key, i) => {
+                            // Fusionierte (ausgeblendete) Spalten gelten immer als "hat Inhalt" → kein Fallback
+                            if (fusionHiddenIdx.has(i)) return true;
                             const col = offerCols[i];
                             if (!col) return false;
                             const hasDomImg  = !!col.querySelector('img.canvas-image, img.canvas-image-fixed');
@@ -14443,12 +14476,15 @@ const handlePDFShare = async () => {
 
                         // Grid-Spaltenbreiten anpassen:
                         // Gefüllte Spalten bekommen mehr Platz, Fallback-Spalten weniger.
-                        if (filledCount > 0 && filledCount < 3) {
-                            const colWidths = realHasContent.map(h => h ? '1fr' : '0.55fr');
-                            offerGrid.style.gridTemplateColumns = colWidths.join(' ');
-                        } else if (filledCount === 0) {
-                            // Alle leer → alle gleich groß (3 Fallback-Karten)
-                            offerGrid.style.gridTemplateColumns = '1fr 1fr 1fr';
+                        // Bei aktiver Fusion: Grid-Template NICHT überschreiben – React-Inline-Style bleibt.
+                        if (!activeFusion) {
+                            if (filledCount > 0 && filledCount < 3) {
+                                const colWidths = realHasContent.map(h => h ? '1fr' : '0.55fr');
+                                offerGrid.style.gridTemplateColumns = colWidths.join(' ');
+                            } else if (filledCount === 0) {
+                                // Alle leer → alle gleich groß (3 Fallback-Karten)
+                                offerGrid.style.gridTemplateColumns = '1fr 1fr 1fr';
+                            }
                         }
                     } catch(e) { /* robust – kein Absturz bei Print-Fehler */ }
                 })();
