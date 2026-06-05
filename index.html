@@ -3559,6 +3559,22 @@ body.pdf-share-mode .email-mode-buttons { display: none !important; }
         })();
         const { useState, useRef, useEffect, useMemo, useCallback } = React;
 
+        // === PATCH: global LINK_EMPLOYEE for Admin/Stats ===
+        // Admin/Stats werden außerhalb von App() gerendert und benötigen LINK_EMPLOYEE global.
+        // Fix für GitHub Pages Fehler: "LINK_EMPLOYEE is not defined".
+        const LINK_EMPLOYEE = (() => {
+            try {
+                const params = new URLSearchParams(window.location.search || '');
+                const raw = params.get('agent') || params.get('m') || '';
+                const decoded = decodeURIComponent(String(raw).replace(/\+/g, ' ')).trim();
+                return (decoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || '';
+            } catch (e) {
+                return '';
+            }
+        })();
+        try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
+
+
         // --- 0. ICONS ---
         const Icon = ({ d, size = 24, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -7808,16 +7824,7 @@ function App() {
 
 
             // === Mitarbeiter-Link-System (Variante A) ===
-            // Nutzung: .../Pilot-Pencil-Selling...?m=jefferson   oder ...?m=D.%20Da%20Silva
-            // -> setzt AgentName automatisch (kann bei Bedarf trotzdem überschrieben werden)
-            const __urlParams = new URLSearchParams(window.location.search || '');
-            const __mRaw = __urlParams.get('agent') || __urlParams.get('m') || ''; // agent= neu, m= als Fallback für alte Links
-            const __mDecoded = (() => {
-                try { return decodeURIComponent(String(__mRaw).replace(/\+/g, ' ')).trim(); } catch(e) { return String(__mRaw).trim(); }
-            })();
-            // Sanitizer (nur "harmlos" erlauben)
-            const LINK_EMPLOYEE = (__mDecoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || '';
-            // Optional: global sichtbar (für Debug/Exports)
+            // LINK_EMPLOYEE ist global definiert, damit Admin/Stats außerhalb von App() nicht crashen.
             try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
             // PATCH (Stylus Year-2 Costs): When the 2nd-year cost field becomes visible, force a DPR-correct resize
             // to prevent "jump lines" caused by a 0x0 canvas being drawn before layout settles.
