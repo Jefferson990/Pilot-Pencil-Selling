@@ -1,0 +1,2 @@
+Trigger LINK_EMPLOYEE patch workflow on 2026-06-05.
+This file can stay or be deleted later.
