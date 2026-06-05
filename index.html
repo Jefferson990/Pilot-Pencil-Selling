@@ -98,8 +98,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Firebase für Aktionsmappe-Verknüpfung -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
     
     <!-- 2. React & ReactDOM -->
     <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
@@ -1488,15 +1488,7 @@ body.pdf-share-mode .share-page-content > .share-cover{
 body.pdf-share-mode .share-page-content > .share-cover .share-cover-inner{
   transform: scale(1.06) !important;
   transform-origin: center !important;
-  padding-top: 80px !important;
 }
-/* ===== PDF Deckblatt: Schriften -10% ===== */
-body.pdf-share-mode .share-cover-badge      { font-size: 9.9px   !important; }
-body.pdf-share-mode .share-cover-title      { font-size: 70.2px  !important; }
-body.pdf-share-mode .share-cover-date       { font-size: 11.7px  !important; }
-body.pdf-share-mode .share-cover-chip       { font-size: 9px     !important; }
-body.pdf-share-mode .share-cover-shop-name  { font-size: 23.4px  !important; }
-body.pdf-share-mode .share-cover-shop-addr  { font-size: 11.7px  !important; }
 /* Outro: keine Folgeseite erzwingen */
 body.pdf-share-mode .share-page:last-child{
   page-break-after:auto !important;
@@ -1870,7 +1862,7 @@ body.pdf-share-mode .share-page:last-child{
   color:#fff;
   overflow:hidden;
 }
-.share-cover-inner{max-width:980px;margin:0 auto;text-align:center;padding-top:60px;}
+.share-cover-inner{max-width:980px;margin:0 auto;text-align:center;}
 .share-cover-badge{font-weight:900;font-size:11px;letter-spacing:0.45em;color:rgba(255,255,255,0.70);margin-top:10px;}
 .share-cover-title{font-weight:1000;font-size:78px;line-height:0.92;letter-spacing:-0.04em;margin-top:18px;}
 .share-cover-title-accent{color:#ffffff;}
@@ -1879,16 +1871,6 @@ body.pdf-share-mode .share-page:last-child{
 .share-cover-chip{position:absolute;left:50%;top:-14px;transform:translateX(-50%);background:#003CA6;color:#fff;padding:6px 16px;border-radius:999px;font-weight:900;font-size:10px;letter-spacing:0.18em;}
 .share-cover-shop-name{font-size:26px;font-weight:1000;letter-spacing:-0.02em;}
 .share-cover-shop-addr{margin-top:6px;color:rgba(255,255,255,0.82);font-weight:600;font-size:13px;}
-
-
-
-/* PATCH 2026-06-05: Bonus-/QR-Blaukasten im Share-PDF 5px nach oben,
-   damit er bei geöffneter Handyfinanzierung/Kostenblock unten nicht angeschnitten wird. */
-body.pdf-share-mode .share-outro,
-.pdf-share-pdf-container .share-outro,
-.share-page .share-outro {
-    transform: translateY(-5px) !important;
-}
 
 .share-outro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1060px;margin:0 auto;flex:1 1 auto;min-height:0;align-content:stretch;}
 .share-outro-card{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:center;}
@@ -4356,14 +4338,14 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                                                 </div>
                                                 <div style={{marginLeft:'auto',fontSize:'18px',color:'#f59e0b'}}>→</div>
                                     </button>
-                                    <button onClick={onShare} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 hover:bg-blue-700 transition-all" style={{display:'none'}} aria-hidden="true" tabIndex={-1}>
+                                    <button onClick={onShare} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
                                         <Icon d={ICONS.Share} size={18} /> Digital senden
                                     </button>
                                 </div>
 
                                 {/* Bereich: Drucken */}
-                                <div className="flex flex-col items-center gap-3 pt-2" style={{display:'none'}} aria-hidden="true">
-                                    <button onClick={handlePrintAction} className="px-8 py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-black transition-all" tabIndex={-1}>
+                                <div className="flex flex-col items-center gap-3 pt-2">
+                                    <button onClick={handlePrintAction} className="px-8 py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-black transition-all">
                                         Weiter zum Druck
                                     </button>
                                 </div>
@@ -5320,6 +5302,31 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             );
         };
         
+        // AdminSafeBoundary: verhindert weißen Screen bei Admin/Stats-Fehlern
+        class AdminSafeBoundary extends React.Component {
+            constructor(props){ super(props); this.state = { hasError:false, msg:'' }; }
+            static getDerivedStateFromError(error){ return { hasError:true, msg: (error && (error.message || String(error))) || 'Unbekannter Fehler' }; }
+            componentDidCatch(error, info){
+                try {
+                    window.__appErrors = window.__appErrors || [];
+                    window.__appErrors.push({ ts:new Date().toISOString(), msg:'Admin/Stats Fehler: ' + ((error && error.message) || String(error)) });
+                    console.error('Admin/Stats Fehler:', error, info);
+                } catch(_) {}
+            }
+            render(){
+                if(!this.state.hasError) return this.props.children;
+                return (
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-red-100">
+                            <div className="text-lg font-black text-red-700 mb-2">Admin konnte nicht geladen werden</div>
+                            <div className="text-sm text-slate-600 mb-4">Die Haupt-App bleibt offen. Bitte einmal schließen und neu öffnen. Fehler: {this.state.msg}</div>
+                            <button onClick={()=>{ try{ this.setState({hasError:false,msg:''}); }catch(_){} if(this.props.onClose) this.props.onClose(); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">Schließen</button>
+                        </div>
+                    </div>
+                );
+            }
+        }
+
         const AdminModal = ({ isOpen, onClose, questions, onUpdate, oneDriveLink, onUpdateLink }) => { 
             const [localData, setLocalData] = useState(questions); 
             const [localLink, setLocalLink] = useState(oneDriveLink || '');
@@ -5651,13 +5658,13 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
               /* === PS FIX: keep imported bundle card size consistent immediately === */
               /* IMPORTANT: avoid CSS zoom/transform here because it blurs in html2canvas/PDF */
               .bundle-import-wrap{
-                font-size: 0.74em;
-                line-height: 1.12;
+                font-size: 0.78em;
+                line-height: 1.15;
               }
-              /* Bundle-Bilder (Handy, SIM etc.) kleiner → mehr Platz für Kommentare */
+              /* Bundle-Bilder (Handy, SIM etc.) deutlich kleiner → nebeneinander */
               .bundle-import-wrap img {
-                max-height: 78px !important;
-                max-width: 96px !important;
+                max-height: 90px !important;
+                max-width: 110px !important;
                 width: auto !important;
                 height: auto !important;
                 object-fit: contain !important;
@@ -5820,8 +5827,8 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
             <div style="
                 background:#fff;border-radius:10px;
                 border:1px solid #e5e7eb;
-                padding:8px;
-                width:170px;height:170px;
+                padding:10px;
+                width:220px;height:220px;
                 display:flex;align-items:center;justify-content:center;
             ">
               <img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;" />
@@ -5877,50 +5884,51 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
               ` : ``}
             </div>
 
-            <div style="padding:14px 16px 12px 16px;">
-              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div style="padding:18px 18px 16px 18px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;">
                 <div style="flex:1;min-width:0;">
-                  ${badgesArr.length ? `<div style="margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;">${badgesHTML}</div>` : ``}
+                  ${tarifName ? `<div style="font-size:22px;font-weight:1000;color:#0b1e42;">${tarifName}</div>` : ``}
+                  ${badgesArr.length ? `<div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">${badgesHTML}</div>` : ``}
                 </div>
 
                 <div style="
-                  width:146px;flex:0 0 146px;
+                  width:170px;flex:0 0 170px;
                   background:#dc2626;
-                  border-radius:10px;
+                  border-radius:12px;
                   color:#fff;
-                  padding:9px 10px;
-                  box-shadow:0 6px 14px rgba(0,0,0,.10);
+                  padding:12px 14px;
+                  box-shadow:0 8px 20px rgba(0,0,0,.10);
                   text-align:center;
                 ">
-                  <div style="font-size:10px;font-weight:900;opacity:.95;letter-spacing:.06em;">PREIS</div>
-                  <div style="font-size:24px;font-weight:1100;line-height:1.05;margin-top:4px;">${preis}</div>
+                  <div style="font-size:11px;font-weight:900;opacity:.95;letter-spacing:.06em;">PREIS</div>
+                  <div style="font-size:30px;font-weight:1100;line-height:1.1;margin-top:6px;">${preis}</div>
                 </div>
               </div>
 
               ${images.length ? `
                 <div style="
-                  margin-top:10px;
+                  margin-top:16px;
                   display:flex;
                   justify-content:center;
-                  gap:10px;
+                  gap:18px;
                   flex-wrap:wrap;
                 ">${imagesHTML}</div>
               ` : ``}
 
               ${detailsHTML ? `
                 <div style="
-                  margin-top:10px;
-                  border-radius:12px;
+                  margin-top:18px;
+                  border-radius:14px;
                   border:1px solid #e5e7eb;
                   background:#f8fafc;
-                  padding:10px 12px;
+                  padding:14px 16px;
                 ">
                   <div style="
                     border-left:4px solid #2563eb;
-                    padding-left:10px;
+                    padding-left:12px;
                     color:#0f172a;
-                    font-size:13px;
-                    line-height:1.28;
+                    font-size:14px;
+                    line-height:1.35;
                   ">${detailsHTML}</div>
                 </div>
               ` : ``}
@@ -6700,7 +6708,7 @@ const highResHTML = buildHighResBundleHTML(d);
             );
         };
 
-        const StatsModal = ({ isOpen, onClose }) => {
+        const StatsModal = ({ isOpen, onClose, onOpenAdmin }) => {
             const resolveUserName = (raw) => {
                 const s = (raw == null) ? '' : String(raw).trim();
                 if (!s || s === 'Max Mustermann' || s.toLowerCase() === 'unknown' || s === 'Unbekannt') return '–';
@@ -6890,7 +6898,10 @@ const highResHTML = buildHighResBundleHTML(d);
                                 </div>
                             </div>
                         </div>
-                        <button onClick={onClose} style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.2)',color:'rgba(255,255,255,0.8)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,flexShrink:0}}>✕</button>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                            {typeof onOpenAdmin === 'function' && (<button onClick={onOpenAdmin} title="Admin: Fragen & Links" style={{padding:'5px 12px',borderRadius:'8px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'rgba(255,255,255,0.9)',cursor:'pointer',fontSize:'11px',fontWeight:800,display:'flex',alignItems:'center',gap:'5px',flexShrink:0,letterSpacing:'0.02em'}}>⚙️ Admin</button>)}
+                            <button onClick={onClose} style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.2)',color:'rgba(255,255,255,0.8)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'15px',fontWeight:700,flexShrink:0}}>✕</button>
+                        </div>
                     </div>
 
                     {/* Mitarbeiter Dropdown + Zeitraum + Export */}
@@ -7728,7 +7739,6 @@ const highResHTML = buildHighResBundleHTML(d);
                         <div className="p-6 space-y-3">
                             <div className="text-sm font-bold text-slate-700">Bis wann ist dieses Angebot gültig?</div>
                             <input
-                                id="offer-validity-modal-input"
                                 type="date"
                                 value={value || ''}
                                 onChange={(e) => onValueChange(e.target.value)}
@@ -7740,7 +7750,7 @@ const highResHTML = buildHighResBundleHTML(d);
                         <div className="p-5 border-t border-slate-200 bg-white flex items-center justify-end gap-3">
                             <button onClick={onCancel} className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">Abbrechen</button>
                             <button onClick={onConfirm} className="px-5 py-2 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-500">
-                                Speichern & Weiter
+                                Speichern & Drucken
                             </button>
                         </div>
                     </div>
@@ -8081,7 +8091,6 @@ const handleOpenStats = () => { setShowPinLock(true); };
             const [showEmailKeyboard, setShowEmailKeyboard] = useState(false);
             const [beratungsIdMode, setBeratungsIdMode] = useState('keyboard');
             const [showNumpad, setShowNumpad] = useState(false);
-            const [showSmartphoneFinanzierung, setShowSmartphoneFinanzierung] = useState(false);
             const [scrollMode, setScrollMode] = useState(false);
             const [notesMode, setNotesMode] = useState('keyboard');
 
@@ -8238,36 +8247,6 @@ const handleOpenStats = () => { setShowPinLock(true); };
             const pendingPostSignature = React.useRef(null); // Funktion die nach Folgetermin läuft
             const [showValidityModal, setShowValidityModal] = useState(false);
             const pendingPrintRef = useRef(null);
-
-            // Zentrale Prüfung: Sobald irgendein Angebot ROT/Offen ist, darf kein Druck/PDF starten,
-            // bevor eine Angebotsgültigkeit eingetragen wurde. Bewusst NICHT erst nach Inhalt prüfen:
-            // Der Status "Offen" allein bedeutet: Gültigkeit ist Pflicht.
-            const hasOpenOfferNeedingValidity = useCallback(() => {
-                try {
-                    return ['offer1','offer2','offer3'].some(k => (canvasStatus && canvasStatus[k]) === 'open');
-                } catch(e) { return false; }
-            }, [canvasStatus]);
-
-            // Gültigkeit kann digital im Feld stehen ODER per Stift im Feld geschrieben sein.
-            // Zusätzlich DOM-Fallback, damit der allererste Klick nach frischer Eingabe sicher greift.
-            const hasOfferValidity = useCallback(() => {
-                try {
-                    const textVal = String(getDisplayText('OfferValidUntil') || '').trim();
-                    const modalVal = String((document.getElementById('offer-validity-modal-input') || {}).value || '').trim();
-                    const inkVal = !!(drawnStrokes && drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
-                    return !!textVal || !!modalVal || inkVal;
-                } catch(e) { return false; }
-            }, [getDisplayText, drawnStrokes]);
-
-            const runOnlyWithOfferValidity = useCallback((nextAction) => {
-                if (hasOpenOfferNeedingValidity() && !hasOfferValidity()) {
-                    pendingPrintRef.current = (typeof nextAction === 'function') ? nextAction : null;
-                    setShowValidityModal(true);
-                    try { triggerToast('⚠️ Angebot gültig bis fehlt – Drucken nur mit Angebotsgültigkeit.'); } catch(e) {}
-                    return false;
-                }
-                return true;
-            }, [hasOfferValidity, hasOpenOfferNeedingValidity, triggerToast]);
 const [showSkipReasonModal, setShowSkipReasonModal] = useState(false); 
             const [skipReason, setSkipReason] = useState(''); 
             const [skipReasonMode, setSkipReasonMode] = useState('keyboard'); 
@@ -8938,12 +8917,23 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
             }, [injectPrintBgLayers, cleanupPrintBgLayers]);
 
             const requestPrint = useCallback((doPrint) => {
-                // FIX: Sobald ein Angebotsfeld ROT/Offen ist, darf kein Druck/PDF starten,
-                // bevor eine Angebotsgültigkeit als Datum eingetragen wurde.
-                // Wichtig: nicht mehr nur "nicht leere" Angebote prüfen, weil der rote Status
-                // selbst schon bedeutet: Angebot ist noch offen.
-                const hasOpen = hasOpenOfferNeedingValidity();
-                const hasText = hasOfferValidity();
+                // Angebotsgültigkeit nur abfragen, wenn mindestens ein Bereich auf "Offen" steht.
+                const hasOpen = (() => {
+                    try {
+                        const keys = ['offer1','offer2','offer3'];
+                        const nonEmpty = keys.filter(k => {
+                            const hasText = !!String(getDisplayText(k) || '').trim();
+                            const hasInk = !!(drawnStrokes && drawnStrokes[k] && drawnStrokes[k].length);
+                            const hasImg = !!(canvasImages && canvasImages[k]);
+                            const hasHtml = !!(k === 'offer1' ? window.__canvasHtmlOffer1 : k === 'offer2' ? window.__canvasHtmlOffer2 : window.__canvasHtmlOffer3);
+                            return hasText || hasInk || hasImg || hasHtml;
+                        });
+                        return nonEmpty.some(k => (canvasStatus && canvasStatus[k]) === 'open');
+                    } catch(e){ return false; }
+                })();
+
+                const hasText = !!String(getDisplayText('OfferValidUntil') || '').trim();
+                const hasInk = !!(drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
 
                 // PRINT-HINWEIS (Browser-Setting): Farben/Hintergründe werden nur gedruckt, wenn
                 // im Druckdialog "Hintergrundgrafiken" (bzw. "Hintergrundfarben und -bilder") aktiviert ist.
@@ -8955,7 +8945,7 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                 } catch(e) { /* ignore */ }
 
                 // Nur wenn "offen" UND noch kein Datum vorhanden -> Modal zeigen
-                if (hasOpen && !hasText) {
+                if (hasOpen && !hasText && !hasInk) {
                     pendingPrintRef.current = (typeof doPrint === 'function') ? doPrint : (() => window.print());
                     setShowValidityModal(true);
                     return;
@@ -9089,16 +9079,6 @@ const handleFinishOfferClick = () => {
 
                 // Wenn Kunde unterschrieben hat: PDF-Export (Empfohlen) + danach ReferralModal
                 if (customerSignature) {
-                    if (!runOnlyWithOfferValidity(() => {
-                        triggerToast('PDF wird erstellt… einen Moment.');
-                        createPrintLookPdfBlob(triggerToast, ensurePrintHeaders).then((blob) => {
-                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
-                            const url = URL.createObjectURL(blob);
-                            window.open(url, '_blank');
-                            setTimeout(() => URL.revokeObjectURL(url), 120000);
-                            setTimeout(() => setShowReferralModal(true), 400);
-                        }).catch(e => triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt')));
-                    })) return;
                     backgroundAutoUpload({ type: 'abschluss', triggerToast, ensurePrintHeaders, getAgent: getAgentDisplayNameForUpload, getDsl: getDslFlagForUpload });
                     // Exakt dieselbe Logik wie der "PDF drucken / Empfohlen"-Button im FinishTypeModal
                     (async () => {
@@ -9258,8 +9238,10 @@ const handleFinishOfferClick = () => {
                                 const hasHtml = !!(k === 'offer1' ? window.__canvasHtmlOffer1 : k === 'offer2' ? window.__canvasHtmlOffer2 : window.__canvasHtmlOffer3);
                                 return hasText || hasInk || hasImg || hasHtml;
                             });
-                            const hasOpen = hasOpenOfferNeedingValidity();
-                            return hasOpen && !hasOfferValidity();
+                            const hasOpen = nonEmpty.some(k => (canvasStatus && canvasStatus[k]) === 'open');
+                            const hasValidityText = !!String(getDisplayText('OfferValidUntil') || '').trim();
+                            const hasValidityInk = !!(drawnStrokes.offer_valid_until && drawnStrokes.offer_valid_until.length);
+                            return hasOpen && !hasValidityText && !hasValidityInk;
                         } catch(e) { return false; }
                     })();
 
@@ -10112,7 +10094,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                     // Importierte Bundle-HTML (Verkaufsmappe) kann dadurch zu groß wirken.
                     // Lösung: Im Clone die Overlay-HTML gezielt "shrink-to-fit" + responsive Medien.
                     try{
-                        const EXTRA = 0.92; // v36: kompakter Bundle-Overlay im Share-PDF, damit Bilder/Kennwerte/Bemerkungen in die Karte passen
+                        const EXTRA = 1.18; // v35: enlarge overlay for readability in PDF // zusätzlicher Shrink nur im Share-PDF (nicht Web-Ansicht)
                         doc.querySelectorAll('.offer-html-overlay-wrap').forEach(el=>{
                             try{
                                 // 1) Transform scale(...) innerhalb "scale(x) rotate(...)" anpassen
@@ -10358,72 +10340,6 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
   display:grid !important;
   grid-template-columns:repeat(3, 1fr) !important;
   gap:6px !important;
-}
-
-/* ===== v36: Verkaufsmappe/Bundles im Share-PDF kompakt und 3-spaltig sauber ===== */
-.pdf-share-mode .offer-html-overlay-wrap,
-.pdf-share-mode .bundle-import-wrap{
-  width:100% !important;
-  max-width:100% !important;
-  min-width:0 !important;
-  box-sizing:border-box !important;
-  overflow:hidden !important;
-}
-.pdf-share-mode .bundle-import-wrap{
-  font-size:0.56em !important;
-  line-height:1.05 !important;
-}
-.pdf-share-mode .bundle-import-wrap h1,
-.pdf-share-mode .bundle-import-wrap h2,
-.pdf-share-mode .bundle-import-wrap h3,
-.pdf-share-mode .bundle-import-wrap [class*="text-3xl"],
-.pdf-share-mode .bundle-import-wrap [class*="text-2xl"],
-.pdf-share-mode .bundle-import-wrap [class*="text-xl"]{
-  font-size:16px !important;
-  line-height:1.02 !important;
-  white-space:normal !important;
-}
-.pdf-share-mode .bundle-import-wrap [class*="text-5xl"],
-.pdf-share-mode .bundle-import-wrap [class*="text-4xl"],
-.pdf-share-mode .bundle-import-wrap [style*="font-size: 48"],
-.pdf-share-mode .bundle-import-wrap [style*="font-size:48"],
-.pdf-share-mode .bundle-import-wrap [style*="font-size: 42"],
-.pdf-share-mode .bundle-import-wrap [style*="font-size:42"]{
-  font-size:24px !important;
-  line-height:1 !important;
-}
-.pdf-share-mode .bundle-import-wrap img{
-  max-height:68px !important;
-  max-width:42% !important;
-  width:auto !important;
-  height:auto !important;
-  object-fit:contain !important;
-  display:inline-block !important;
-}
-.pdf-share-mode .bundle-import-wrap div[style*="grid"],
-.pdf-share-mode .bundle-import-wrap div[style*="flex-direction: column"],
-.pdf-share-mode .bundle-import-wrap div[style*="flex-direction:column"],
-.pdf-share-mode .bundle-import-wrap .flex-col{
-  display:flex !important;
-  flex-direction:row !important;
-  flex-wrap:wrap !important;
-  gap:6px !important;
-  align-items:center !important;
-  justify-content:center !important;
-}
-.pdf-share-mode .bundle-import-wrap div:has(> img){
-  display:inline-flex !important;
-  width:calc(50% - 6px) !important;
-  max-width:calc(50% - 6px) !important;
-  min-height:74px !important;
-  align-items:center !important;
-  justify-content:center !important;
-  padding:4px !important;
-  box-sizing:border-box !important;
-}
-
-.pdf-share-mode .bundle-import-wrap [data-ps-hide-tarif="1"]{
-  display:none !important;
 }
 
 /* Seite 4: Outro-Wrapper – Regeln bereits in pdf-share-mode .share-outro (Zeile ~9139) */
@@ -11136,82 +11052,6 @@ const makeAllOffersPage = () => {
             if (ta) {
                 ta.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;padding:12px;font-size:inherit;line-height:1.7;overflow:hidden;resize:none;border:none;outline:none;background:transparent;white-space:pre-wrap;word-wrap:break-word;z-index:20;';
             }
-
-            // v36: Verkaufsmappe-Import im 3-Spalten-PDF kompakt machen
-            // Ziel: Kennwerte/Preis kleiner, Handy+SIM nebeneinander, Bemerkungen bleiben sichtbar.
-            try {
-                const ow = container.querySelector('.offer-html-overlay-wrap');
-                const bw = container.querySelector('.bundle-import-wrap');
-                const root = bw || ow;
-                if (root) {
-                    root.style.width = '100%';
-                    root.style.maxWidth = '100%';
-                    root.style.minWidth = '0';
-                    root.style.boxSizing = 'border-box';
-                    root.style.overflow = 'hidden';
-                    root.style.fontSize = '0.62em';
-                    root.style.lineHeight = '1.08';
-
-                    // Doppelte Gültigkeit oben entfernen (unten bleibt das Angebots-gültig-bis-Feld bestehen).
-                    Array.from(root.querySelectorAll('span,div,b,strong,small')).forEach(n => {
-                        const t = (n.textContent || '').trim();
-                        if (/^(bis|gültig bis)\s*:?/i.test(t) || /^bis\s*[:：]/i.test(t)) {
-                            const box = n.closest('span,div') || n;
-                            box.style.display = 'none';
-                        }
-                    });
-
-                    // Große Titel/Preise verkleinern, damit die Aktionsnamen nicht abgeschnitten werden.
-                    root.querySelectorAll('h1,h2,h3,[class*="text-3xl"],[class*="text-2xl"],[class*="text-xl"]').forEach(n => {
-                        n.style.fontSize = '18px';
-                        n.style.lineHeight = '1.05';
-                        n.style.whiteSpace = 'normal';
-                        n.style.overflow = 'visible';
-                        n.style.textOverflow = 'clip';
-                    });
-                    root.querySelectorAll('[class*="text-5xl"],[class*="text-4xl"],[style*="font-size: 48"],[style*="font-size:48"],[style*="font-size: 42"],[style*="font-size:42"]').forEach(n => {
-                        n.style.fontSize = '30px';
-                        n.style.lineHeight = '1';
-                    });
-
-                    // Medien nebeneinander ausrichten: Bild-Eltern + Großeltern auf Row-Wrap setzen.
-                    root.querySelectorAll('img').forEach(img => {
-                        img.style.maxHeight = '82px';
-                        img.style.maxWidth = '46%';
-                        img.style.width = 'auto';
-                        img.style.height = 'auto';
-                        img.style.objectFit = 'contain';
-                        img.style.display = 'inline-block';
-                        const p = img.parentElement;
-                        if (p) {
-                            p.style.display = 'inline-flex';
-                            p.style.width = 'calc(50% - 5px)';
-                            p.style.maxWidth = 'calc(50% - 5px)';
-                            p.style.minHeight = '92px';
-                            p.style.alignItems = 'center';
-                            p.style.justifyContent = 'center';
-                            p.style.padding = '4px';
-                            p.style.boxSizing = 'border-box';
-                            const gp = p.parentElement;
-                            if (gp && gp !== root) {
-                                gp.style.display = 'flex';
-                                gp.style.flexDirection = 'row';
-                                gp.style.flexWrap = 'wrap';
-                                gp.style.gap = '6px';
-                                gp.style.alignItems = 'center';
-                                gp.style.justifyContent = 'center';
-                            }
-                        }
-                    });
-
-                    if (ow) {
-                        ow.style.transform = 'none';
-                        ow.style.width = '100%';
-                        ow.style.maxWidth = '100%';
-                    }
-                }
-            } catch(e) {}
-
             col.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;';
             card.appendChild(col);
         } else {
@@ -11281,37 +11121,21 @@ if (costBlock) {
     costClone.querySelectorAll('label,[class*="text-[10px]"],[class*="uppercase"]').forEach(el => {
         el.style.fontSize = '8px'; el.style.marginBottom = '1px'; el.style.display = 'block';
     });
-    // Wrapper-Höhe = skalierte Inhalt-Höhe (dynamisch gemessen – passt sich expandierter Finanzierung an)
+    // Wrapper-Höhe = skalierte Inhalt-Höhe (damit kein Whitespace entsteht)
     costWrap.appendChild(costClone);
-    // Temporär ins DOM hängen um scrollHeight zu messen, dann wieder raus
-    costWrap.style.position = 'fixed';
-    costWrap.style.visibility = 'hidden';
-    costWrap.style.top = '-9999px';
-    document.body.appendChild(costWrap);
-    const _rawH = costClone.scrollHeight;
-    document.body.removeChild(costWrap);
-    costWrap.style.position = '';
-    costWrap.style.visibility = '';
-    costWrap.style.top = '';
-    const _visH = Math.max(180, Math.round(_rawH * COST_SCALE));
-    costWrap.style.height = `${_visH}px`;
-    costWrap.style.maxHeight = `${_visH}px`;
+    // Höhe via inline-style nach appendChild schätzen (~180px skaliert = ~137px)
+    costWrap.style.height = `${Math.round(300 * COST_SCALE)}px`;
+    costWrap.style.maxHeight = `${Math.round(300 * COST_SCALE)}px`;
     outroContentWrap.appendChild(costWrap);
 }
 
-// ── Danke & Bonus darunter – Höhe dynamisch aus verbleibendem Platz ──
-const _PAGE_PX   = 794; // 210mm ≈ 794px
-const _WRAP_PAD  = 14;  // outroContentWrap padding top+bottom
-const _GAP       = 6;   // gap between cost and blue box
-const _BLUE_MT   = 80;  // margin-top (war 60px, jetzt +20px)
-const _costH     = costBlock ? Math.max(180, Math.round(
-    (() => { try { return (outroContentWrap.querySelector('[style*="transform:scale"]') || {scrollHeight: 300}).scrollHeight; } catch(e){ return 300; } })() * 0.76
-)) : 0;
-const OUTRO_MAX_H = Math.max(220, Math.min(420, _PAGE_PX - _WRAP_PAD - _costH - _GAP - _BLUE_MT));
+// ── Danke & Bonus darunter – feste Höhe ~60% des Restplatzes ──
+// 210mm≈794px minus costWrap~141px minus padding/gap~22px = ~631px Rest → 60%≈378px
+const OUTRO_MAX_H = 378;
 const outroInner = doc.createElement('div');
 outroInner.style.cssText = [
     'flex:0 0 auto',
-    'margin-top:80px',
+    'margin-top:40px',
     'height:' + OUTRO_MAX_H + 'px',
     'max-height:' + OUTRO_MAX_H + 'px',
     'overflow:hidden',
@@ -11893,15 +11717,6 @@ const backgroundAutoUpload = async ({ type, triggerToast, ensurePrintHeaders, ge
 // Hintergrund: Browser erlauben navigator.share(files) nur bei gültiger "User Activation".
 // Wenn das Rendern zu lange dauert oder Files nicht unterstützt werden, wird automatisch gespeichert.
 const handlePDFShare = async () => {
-    // ── Angebotsgültigkeit prüfen (wie bei requestPrint) ──
-    const _pdfHasOpen = hasOpenOfferNeedingValidity();
-    const _pdfHasValText = hasOfferValidity();
-    if (_pdfHasOpen && !_pdfHasValText) {
-        pendingPrintRef.current = () => { handlePDFShare(); };
-        setShowValidityModal(true);
-        return;
-    }
-
     // FINAL SAFE (ScopeFix + Silent Share):
     // - No blocking alert() (keeps "Offen/Abgeschlossen" Badge/Rand sichtbar)
     // - Try Web Share when possible, otherwise silent download fallback
@@ -12264,44 +12079,6 @@ const handlePDFShare = async () => {
                 </div>`;
             };
 
-
-            const handleRecommendedPdfPrint = async () => {
-                if (!runOnlyWithOfferValidity(() => { handleRecommendedPdfPrint(); })) return;
-
-                try { setShowFinishTypeModal(false); } catch(e) {}
-                triggerToast('PDF wird erstellt… einen Moment.');
-                try {
-                    const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
-                    const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
-                    const pdfFile = new File([blob], pdfFileName, { type: 'application/pdf' });
-
-                    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-                        try {
-                            await navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [pdfFile] });
-                            triggerToast('✅ PDF geteilt.');
-                        } catch(shareErr) {
-                            if (shareErr && shareErr.name === 'AbortError') return;
-                            const url = URL.createObjectURL(blob);
-                            window.open(url, '_blank');
-                            setTimeout(() => URL.revokeObjectURL(url), 120000);
-                            triggerToast('✅ PDF geöffnet – drucken oder speichern.');
-                        }
-                    } else {
-                        const url = URL.createObjectURL(blob);
-                        const pdfTab = window.open(url, '_blank');
-                        if (!pdfTab) {
-                            const a = document.createElement('a');
-                            a.href = url; a.download = pdfFileName;
-                            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                        }
-                        setTimeout(() => URL.revokeObjectURL(url), 120000);
-                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
-                    }
-                } catch(e) {
-                    triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
-                }
-            };
-
             return (
                 <div className="w-full h-full bg-[#f0f6ff] font-sans text-slate-800 flex flex-col overflow-hidden text-sm">
                     <Toast message={toastMessage} />
@@ -12324,8 +12101,84 @@ const handlePDFShare = async () => {
                             try { setTextData(prev => ({ ...prev, OfferValidUntil: '' })); } catch(e) {}
                             try { setDrawnStrokes(prev => ({ ...prev, offer_valid_until: [] })); } catch(e) {}
                         }
-                    }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onPdfPrint={handleRecommendedPdfPrint} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
-                    <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} onPdfPrint={handleRecommendedPdfPrint} />
+                    }} onPrint={() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }} onShare={handlePDFShare} onPdfPrint={async () => {
+                        triggerToast('PDF wird erstellt… einen Moment.');
+                        try {
+                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
+                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                            // Web Share API → natives System-Teilen (WhatsApp, Mail, Drucken, etc.)
+                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
+                                try {
+                                    await navigator.share({
+                                        title: 'Angebot',
+                                        text: 'Ihr persönliches Angebot',
+                                        files: [new File([blob], pdfFileName, { type: 'application/pdf' })]
+                                    });
+                                    triggerToast('✅ PDF geteilt.');
+                                } catch(shareErr) {
+                                    if (shareErr.name !== 'AbortError') {
+                                        // Teilen abgebrochen oder fehlgeschlagen → Tab öffnen als Fallback
+                                        const url = URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                                    }
+                                }
+                            } else {
+                                // Kein Web Share (Desktop Firefox etc.) → neuer Tab
+                                const url = URL.createObjectURL(blob);
+                                const pdfTab = window.open(url, '_blank');
+                                if (!pdfTab) {
+                                    const a = document.createElement('a');
+                                    a.href = url; a.download = pdfFileName;
+                                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                }
+                                setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                            }
+                        } catch(e) {
+                            triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
+                        }
+                    }} onFinish={() => { setShowReferralModal(false); try { handleClearAll(); } catch(e) {} setTimeout(() => { try { window.location.reload(); } catch(e) {} }, 300); }} />
+                    <FinishTypeModal isOpen={showFinishTypeModal} onClose={() => setShowFinishTypeModal(false)} onSelect={handleFinishTypeSelection} onShare={handlePDFShare} onPdfPrint={async () => {
+                        setShowFinishTypeModal(false);
+                        triggerToast('PDF wird erstellt… einen Moment.');
+                        try {
+                            const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
+                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                            // System-Teilen-Sheet (WhatsApp, Mail, AirDrop, Drucken)
+                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
+                                try {
+                                    await navigator.share({
+                                        title: 'Angebot',
+                                        text: 'Ihr persönliches Angebot',
+                                        files: [new File([blob], pdfFileName, { type: 'application/pdf' })]
+                                    });
+                                    triggerToast('✅ PDF geteilt.');
+                                } catch(shareErr) {
+                                    if (shareErr.name !== 'AbortError') {
+                                        const url = URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                                    }
+                                }
+                            } else {
+                                // Fallback: neuer Tab (Desktop)
+                                const url = URL.createObjectURL(blob);
+                                const pdfTab = window.open(url, '_blank');
+                                if (!pdfTab) {
+                                    const a = document.createElement('a');
+                                    a.href = url; a.download = pdfFileName;
+                                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                }
+                                setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                            }
+                        } catch(e) {
+                            triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
+                        }
+                    }} />
 
 
                     <OfferValidityModal
@@ -12337,17 +12190,12 @@ const handlePDFShare = async () => {
                         }}
                         onCancel={() => { setShowValidityModal(false); pendingPrintRef.current = null; }}
                         onConfirm={() => {
-                            const domVal = String((document.getElementById('offer-validity-modal-input') || {}).value || '').trim();
-                            const hasText = !!domVal || hasOfferValidity();
-                            if (domVal) {
-                                try { handleTextChange('OfferValidUntil', domVal); } catch(e) {}
-                                try { digitalTouchedRef.current['offer_valid_until'] = true; } catch(e) {}
-                            }
+                            const hasText = !!String(getDisplayText('OfferValidUntil') || '').trim();
                             if (!hasText) { triggerToast('Bitte Gültigkeitsdatum eingeben.'); return; }
                             setShowValidityModal(false);
                             const fn = pendingPrintRef.current;
                             pendingPrintRef.current = null;
-                            setTimeout(() => { (fn || (() => window.print()))(); }, 80);
+                            (fn || (() => window.print()))();
                         }}
                     />
 
@@ -12421,9 +12269,9 @@ const handlePDFShare = async () => {
         </div>
     );
 })()}
-<AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} />
+<AdminSafeBoundary onClose={()=>setShowAdmin(false)}><AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} /></AdminSafeBoundary>
                     <PinLockModal isOpen={showPinLock} onClose={()=>setShowPinLock(false)} onSuccess={()=>{ setShowPinLock(false); setShowStats(true); }} />
-                    <StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} />
+                    <AdminSafeBoundary onClose={()=>setShowStats(false)}><StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} onOpenAdmin={()=>{ setShowStats(false); setShowAdmin(true); }} /></AdminSafeBoundary>
                     
                     
                     <ImagePlacementModal isOpen={isImageSelectModalOpen} onClose={() => setIsImageSelectModalOpen(false)} onPlace={handleImagePlacement} imageName={currentImagePayload?.name || 'Datei'} />
@@ -12440,7 +12288,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div>{LINK_EMPLOYEE === 'Diego da Silva' && (<button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>)}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik &amp; Admin"><Icon d={ICONS.Lock} size={18}/></button><button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -12452,21 +12300,11 @@ const handlePDFShare = async () => {
                         <div style={{display:'flex',alignItems:'center',gap:'5px',flexShrink:0,marginRight:'4px'}}>
                             <span style={{fontSize:'9px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.05em',whiteSpace:'nowrap'}}>Beratungs-ID</span>
                             <div
-                                onClick={()=>inputMode==='pen'&&setShowNumpad(true)}
-                                style={{position:'relative',height:'32px',width:'160px',border:`1.5px solid ${beratungsId?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',cursor:inputMode==='pen'?'pointer':'text',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
-                                {inputMode==='keyboard'
-                                    ? <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={beratungsId}
-                                        onChange={e=>{ if(e.target.value.length<=15) setBeratungsId(e.target.value.replace(/[^0-9]/g,'')); }}
-                                        placeholder="– – – – –"
-                                        style={{width:'100%',height:'100%',border:'none',outline:'none',background:'transparent',fontFamily:'monospace',fontSize:'11px',fontWeight:700,letterSpacing:'0.08em',color:'#1e293b',padding:'0 22px 0 0',boxSizing:'border-box',cursor:'text'}}
-                                      />
-                                    : <span style={{fontFamily:'monospace',fontSize:'11px',fontWeight:700,letterSpacing:'0.08em',color:beratungsId?'#1e293b':'#cbd5e1'}}>
-                                        {beratungsId||'– – – – –'}
-                                      </span>
-                                }
+                                onClick={()=>setShowNumpad(true)}
+                                style={{position:'relative',height:'32px',width:'160px',border:`1.5px solid ${beratungsId?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',cursor:'pointer',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
+                                <span style={{fontFamily:'monospace',fontSize:'11px',fontWeight:700,letterSpacing:'0.08em',color:beratungsId?'#1e293b':'#cbd5e1'}}>
+                                    {beratungsId||'– – – – –'}
+                                </span>
                                 {beratungsId && (
                                     <button
                                         onClick={e=>{e.stopPropagation();setBeratungsId('');}}
@@ -12821,20 +12659,12 @@ const handlePDFShare = async () => {
                                         <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
                                             {/* E-Mail Display / Trigger */}
                                             <div
-                                                onClick={()=>inputMode==='pen'&&emailMode==='keyboard'&&setShowEmailKeyboard(true)}
-                                                style={{flex:1,position:'relative',height:emailMode==='pen'?'52px':'30px',border:`1.5px solid ${emailText?'#3b82f6':emailMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'height 0.2s ease',cursor:emailMode==='keyboard'&&inputMode==='pen'?'pointer':'default',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
+                                                onClick={()=>emailMode==='keyboard'&&setShowEmailKeyboard(true)}
+                                                style={{flex:1,position:'relative',height:emailMode==='pen'?'52px':'30px',border:`1.5px solid ${emailText?'#3b82f6':emailMode==='pen'?'#3b82f6':'#e2e8f0'}`,borderRadius:'8px',background:'#fff',overflow:'hidden',transition:'height 0.2s ease',cursor:emailMode==='keyboard'?'pointer':'default',display:'flex',alignItems:'center',paddingLeft:'10px',boxSizing:'border-box'}}>
                                                 {emailMode==='keyboard'
-                                                    ? inputMode==='keyboard'
-                                                        ? <input
-                                                            type="email"
-                                                            value={emailText}
-                                                            onChange={e=>setEmailText(e.target.value)}
-                                                            placeholder="E-Mail eingeben…"
-                                                            style={{width:'100%',height:'100%',border:'none',outline:'none',background:'transparent',fontSize:'11px',fontWeight:500,color:'#1e293b',padding:'0 24px 0 0',boxSizing:'border-box',cursor:'text'}}
-                                                          />
-                                                        : <span style={{fontSize:'11px',fontWeight:500,color:emailText?'#1e293b':'#cbd5e1',pointerEvents:'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>
-                                                            {emailText||'E-Mail eingeben…'}
-                                                          </span>
+                                                    ?<span style={{fontSize:'11px',fontWeight:500,color:emailText?'#1e293b':'#cbd5e1',pointerEvents:'none',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%'}}>
+                                                        {emailText||'E-Mail eingeben…'}
+                                                    </span>
                                                     :<canvas ref={emailCanvasRef} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',touchAction:'none',cursor:'crosshair',zIndex:10}} onPointerDown={e=>startDrawing(e,emailCanvasRef,'email')} onPointerMove={e=>draw(e,emailCanvasRef,'email')} onPointerUp={e=>stopDrawing(e,emailCanvasRef)} onPointerLeave={e=>stopDrawing(e,emailCanvasRef)}/>
                                                 }
                                                 {emailText && emailMode==='keyboard' && (
@@ -13518,68 +13348,15 @@ const handlePDFShare = async () => {
                                     </div>
                                 </div>
 
-                                {/* 4) Smartphone Finanzierung – kollabierbar für Transparenz */}
-                                <div className="mt-3">
-                                    <button
-                                        type="button"
-                                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors select-none"
-                                        onClick={() => setShowSmartphoneFinanzierung(v => !v)}
-                                    >
-                                        <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
-                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Smartphone Finanzierung – Transparent aufzeigen</span>
+                                {/* 4) Smartphone Finanzierung – eigenes Feld */}
+                                <div className="grid grid-cols-1 gap-4 mt-3">
+                                    <div style={{position:'relative'}}>
+                                        {renderOfferInput('smartphone', 'CostSmartphone', 'text')}
+                                        <div style={{position:'absolute',top:'50%',right:'10px',transform:'translateY(-50%) translateY(10px)',display:'flex',alignItems:'center',gap:'4px',pointerEvents:'none'}}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                                            <span style={{fontSize:'10px',fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em'}}>mtl. Rate</span>
                                         </div>
-                                        <span className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-black text-lg leading-none">
-                                            {showSmartphoneFinanzierung ? '−' : '+'}
-                                        </span>
-                                    </button>
-                                    {showSmartphoneFinanzierung && (() => {
-                                        const smartphoneVal = parseFloat((offerData.smartphoneRaw||'').replace(',','.')) || 0;
-                                        const m1 = offerData.monatlich1 || 0;
-                                        const m2 = offerData.monatlich2 || 0;
-                                        const tarif1 = Math.max(0, m1 - smartphoneVal);
-                                        const tarif2 = Math.max(0, m2 - smartphoneVal);
-                                        const fmt = v => v > 0 ? v.toFixed(2).replace('.',',') + ' €' : '–';
-                                        return (
-                                            <div style={{marginTop:'8px',padding:'12px 14px',background:'#f0f9ff',border:'1.5px solid #bae6fd',borderRadius:'14px',display:'flex',flexDirection:'column',gap:'10px'}}>
-                                                {/* Eingabe Geräte-Rate */}
-                                                <div style={{display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}}>
-                                                    <div style={{flex:'0 0 auto',minWidth:'140px'}}>
-                                                        {renderOfferInput('smartphone', 'CostSmartphone', 'text')}
-                                                    </div>
-                                                    <div style={{flex:1,minWidth:'160px',background:'#fff',border:'1.5px solid #e2e8f0',borderRadius:'10px',padding:'8px 12px'}}>
-                                                        <div style={{fontSize:'9px',fontWeight:800,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'4px'}}>Aufschlüsselung</div>
-                                                        <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
-                                                            <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'11px',fontWeight:700,color:'#1e293b'}}>
-                                                                <span style={{width:'60px',color:'#64748b',fontWeight:600,fontSize:'10px'}}>1. Jahr</span>
-                                                                <span style={{color:'#1d4ed8',fontFamily:'monospace'}}>{fmt(m1)}</span>
-                                                                <span style={{color:'#94a3b8',fontWeight:500}}>=</span>
-                                                                <span style={{color:'#059669',fontFamily:'monospace'}}>{fmt(tarif1)}</span>
-                                                                <span style={{color:'#94a3b8',fontSize:'9px',fontWeight:500}}>Tarif</span>
-                                                                <span style={{color:'#94a3b8',fontWeight:500}}>+</span>
-                                                                <span style={{color:'#dc2626',fontFamily:'monospace'}}>{fmt(smartphoneVal)}</span>
-                                                                <span style={{color:'#94a3b8',fontSize:'9px',fontWeight:500}}>Gerät</span>
-                                                            </div>
-                                                            {showSecondYear && m2 > 0 && (
-                                                                <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'11px',fontWeight:700,color:'#1e293b'}}>
-                                                                    <span style={{width:'60px',color:'#64748b',fontWeight:600,fontSize:'10px'}}>2. Jahr</span>
-                                                                    <span style={{color:'#1d4ed8',fontFamily:'monospace'}}>{fmt(m2)}</span>
-                                                                    <span style={{color:'#94a3b8',fontWeight:500}}>=</span>
-                                                                    <span style={{color:'#059669',fontFamily:'monospace'}}>{fmt(tarif2)}</span>
-                                                                    <span style={{color:'#94a3b8',fontSize:'9px',fontWeight:500}}>Tarif</span>
-                                                                    <span style={{color:'#94a3b8',fontWeight:500}}>+</span>
-                                                                    <span style={{color:'#dc2626',fontFamily:'monospace'}}>{fmt(smartphoneVal)}</span>
-                                                                    <span style={{color:'#94a3b8',fontSize:'9px',fontWeight:500}}>Gerät</span>
-                                                                    {m2 !== m1 && (<span style={{marginLeft:'4px',fontSize:'9px',fontWeight:800,color:m2>m1?'#dc2626':'#059669',background:m2>m1?'#fef2f2':'#f0fdf4',border:`1px solid ${m2>m1?'#fecaca':'#bbf7d0'}`,borderRadius:'6px',padding:'1px 5px'}}>{m2>m1?'+':''}{(m2-m1).toFixed(2).replace('.',',')} €</span>)}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <p style={{fontSize:'9px',color:'#64748b',fontWeight:600,lineHeight:1.4,margin:0}}>💡 Nach Ablauf der Geräte-Finanzierung entfällt die Rate von <strong style={{color:'#dc2626'}}>{fmt(smartphoneVal)}</strong> – der Tarif bleibt.</p>
-                                            </div>
-                                        );
-                                    })()}
+                                    </div>
                                 </div>
 
                                 {/* Toggle: Kosten im 2. Jahr (ohne Layout-Mehrhöhe, Feld bleibt in der Zeile) */}
@@ -13597,6 +13374,12 @@ const handlePDFShare = async () => {
                                         </span>
                                     </button>
                                 </div>
+                                {beratungsId && (
+                                    <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'6px 12px',background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:'10px',marginBottom:'8px',flexWrap:'wrap'}}>
+                                        <span style={{fontSize:'9px',fontWeight:800,color:'#1d4ed8',textTransform:'uppercase',letterSpacing:'0.08em',flexShrink:0}}>Beratungs-ID</span>
+                                        <span style={{fontFamily:'monospace',fontSize:'14px',fontWeight:900,color:'#1e293b',letterSpacing:'0.12em'}}>{beratungsId}</span>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">{renderOfferInput('agent', 'AgentLabel', 'text')}{renderOfferInput('datum', 'DateLabel', 'text')}{renderOfferInput('gueltig', 'ValidUntilLabel', 'date')}<div className="col-span-2">
   <div className="h-12 w-full bg-white border border-slate-300 rounded-lg overflow-hidden flex items-stretch">
     {/* Shop-Stempel (fix links) */}
@@ -14404,8 +14187,16 @@ const handlePDFShare = async () => {
             }); // end afterprint
             } // end __printListenersRegistered guard
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // Firebase-Guard: warte bis window.firebase bereit ist (verhindert weiße Seite auf GitHub Pages)
+        function __startApp() {
+            if (typeof window.firebase === 'undefined' || !window.firebase.app) {
+                setTimeout(__startApp, 50);
+                return;
+            }
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        }
+        __startApp();
 
       // === v24: Bundle-Laufzeit Dropdown/Badge sichtbar machen (Tailwind-Klassen fehlen im Pencil-Selling) ===
       (function(){
