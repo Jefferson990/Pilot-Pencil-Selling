@@ -3649,6 +3649,98 @@ body.pdf-share-mode .email-mode-buttons { display: none !important; }
 }
 </style>
 
+
+
+<!-- === PATCH: HOCHFORMAT-STAMMDATEN VOLLE BREITE v1 ===
+     Ziel: Im Hochformat rutscht die rechte Pflichtfeld-/Stammdaten-Spalte
+     unter die Kacheln und bekommt die gleiche Breite wie der Kachelbereich.
+     Überschreibt ältere Tablet-Regeln (290/320px). -->
+<style id="portrait-stammdaten-full-width-v1">
+@media screen and (orientation: portrait) {
+  body .situation-view-wrapper {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    height: calc(100dvh - 64px - 56px) !important;
+    max-height: calc(100dvh - 64px - 56px) !important;
+  }
+
+  body .situation-view-wrapper > div.flex-1,
+  body .situation-view-wrapper > div.flex-1.flex.flex-col,
+  body .situation-view-wrapper > .flex-1 {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body .situation-view-wrapper > aside.sit-aside-panel,
+  body aside.sit-aside-panel,
+  html body .sit-aside-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 12px 14px 88px 14px !important;
+    box-sizing: border-box !important;
+    border-left: none !important;
+    border-top: 1.5px solid rgba(148,163,184,0.30) !important;
+    overflow: visible !important;
+    background: linear-gradient(180deg,#f8faff 0%,#f0f6ff 100%) !important;
+  }
+
+  body .sit-aside-panel .sit-aside-inner,
+  html body .sit-aside-inner {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 0 96px 0 !important;
+    gap: 14px !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  body .sit-aside-inner > div,
+  body .sit-aside-inner .bg-white,
+  body .situation-view-wrapper aside .bg-white {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Stammdaten-Felder: Kundentyp + Segment bleiben im Hochformat schön breit nebeneinander,
+     E-Mail nutzt die volle verfügbare Breite. */
+  body .situation-view-wrapper aside .grid.grid-cols-2.gap-2.mb-2.shrink-0 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+  }
+  body .situation-view-wrapper aside select,
+  body .situation-view-wrapper aside input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+</style>
+
 </head>
 <body>
     <div id="root"></div>
