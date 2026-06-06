@@ -432,25 +432,17 @@ textarea:not([readonly]) {
     user-select: none;
     -webkit-touch-callout: none;
 }
-/* === FUSION-BUTTON: Querformat rechts, Hochformat unten mittig === */
-.fusion-btn { display: flex !important; }
-@media (orientation: portrait) {
-    .fusion-btn {
-        top: auto !important;
-        bottom: -20px !important;
-        right: auto !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-    }
+/* === FUSION-BUTTON: nur im Querformat rechts zwischen den Canvases === */
+.fusion-btn {
+    display: flex !important;
+    top: 50% !important;
+    bottom: auto !important;
+    right: -20px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
 }
-@media (orientation: landscape) {
-    .fusion-btn {
-        top: 50% !important;
-        bottom: auto !important;
-        right: -20px !important;
-        left: auto !important;
-        transform: translateY(-50%) !important;
-    }
+@media (orientation: portrait) {
+    .fusion-btn { display: none !important; }
 }
 .sit-card-grid button,
 .sit-card-grid button *,
@@ -8067,7 +8059,7 @@ const PA_UPLOAD_URL = 'PASTE_POWER_AUTOMATE_FLOW_URL_HERE';
             // Daher UI nicht nur nach UA, sondern nach echter WebShare-Fähigkeit anzeigen.
             const showShareButton = canNativeShare;
             // Drawing State
-            const [tool, setTool] = useState('pen');
+            const [tool, setTool] = useState('fountain');
             const [showPenToolPicker, setShowPenToolPicker] = useState(false);
             const [showStrokePicker, setShowStrokePicker] = useState(false);
             const lastPenTapRef = useRef(0);
@@ -12810,7 +12802,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v37.6</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v37.7</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -13502,8 +13494,8 @@ const handlePDFShare = async () => {
                                     }
                                     return (
                                         <div className={orderClass} style={{ position: 'relative', ...(hidden ? {display:'none'} : offerLayoutMode==='step' ? {gridColumn:'1/-1'} : mergeStyle) }}>
-                                            {/* Fusion-Symbol zwischen den Canvases (nur Nebeneinander-Modus, nicht hinter offer3) */}
-                                            {offerLayoutMode !== 'step' && (key === 'offer1' || key === 'offer2') && (() => {
+                                            {/* Fusion-Symbol nur im Querformat (Hochformat: kein Platz, kein Sinn) */}
+                                            {offerLayoutMode !== 'step' && (key === 'offer1' || key === 'offer2') && !window.matchMedia('(orientation: portrait)').matches && (() => {
                                                 const fusionMode = key === 'offer1' ? '1+2' : '2+3';
                                                 const isActive = mergedCanvases === fusionMode;
                                                 if (mergeStyle.display === 'none') return null;
@@ -14337,25 +14329,32 @@ const handlePDFShare = async () => {
                 window.__pencilGuardRegistered = true;
 
                 // === STYLUS GUARD: pointerdown → Text-Selektion/Scribble verhindern ===
+                // WICHTIG: Buttons, Inputs, Labels NICHT mit preventDefault blockieren!
+                // preventDefault auf pointerdown unterdrückt auf iOS auch den nachfolgenden 'click' Event.
+                // → Toolbar-Buttons würden damit nicht mehr funktionieren.
                 document.addEventListener('pointerdown', function(e) {
                     if (e.pointerType !== 'pen') return;
                     const tag = e.target?.tagName?.toLowerCase();
-                    if (tag === 'canvas') return; // Canvas: startDrawing() übernimmt
+                    // Canvas: startDrawing() übernimmt
+                    if (tag === 'canvas') return;
+                    // Interaktive Elemente: preventDefault NICHT aufrufen → click bleibt aktiv
+                    if (tag === 'button' || tag === 'input' || tag === 'select' ||
+                        tag === 'label' || tag === 'a' || tag === 'textarea') return;
+                    // Prüfe ob das Element oder ein Vorfahre ein Button ist (z.B. span inside button)
+                    if (e.target?.closest?.('button, a, input, select, label, textarea')) return;
+                    // Nur reine Text-/Div-Elemente: Selektion verhindern
                     e.preventDefault();
                 }, { passive: false });
 
                 // === STYLUS GUARD: selectstart → iOS Text-Markierung mit Pencil blockieren ===
                 document.addEventListener('selectstart', function(e) {
-                    // Nur blockieren wenn ein Stift gerade aktiv ist ODER das Target kein echtes Eingabefeld ist
                     const tag = e.target?.tagName?.toLowerCase();
-                    if (tag === 'input' || tag === 'textarea') return; // Eingabefelder: erlauben
+                    if (tag === 'input' || tag === 'textarea') return;
                     e.preventDefault();
                 }, { passive: false });
 
                 // === STYLUS GUARD: contextmenu → Langer Tipp mit Pencil öffnet kein Menü ===
                 document.addEventListener('contextmenu', function(e) {
-                    // Nur bei Stylus-Input blockieren (pointerType wird hier nicht direkt übergeben,
-                    // aber wenn activePenCanvasRef gesetzt ist, ist ein Stift aktiv)
                     e.preventDefault();
                 }, { passive: false });
             }
