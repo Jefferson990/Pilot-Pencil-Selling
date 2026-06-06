@@ -432,7 +432,26 @@ textarea:not([readonly]) {
     user-select: none;
     -webkit-touch-callout: none;
 }
-/* === APPLE PENCIL: Sit-Card Labels/Chips nicht selektierbar === */
+/* === FUSION-BUTTON: Querformat rechts, Hochformat unten mittig === */
+.fusion-btn { display: flex !important; }
+@media (orientation: portrait) {
+    .fusion-btn {
+        top: auto !important;
+        bottom: -20px !important;
+        right: auto !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+    }
+}
+@media (orientation: landscape) {
+    .fusion-btn {
+        top: 50% !important;
+        bottom: auto !important;
+        right: -20px !important;
+        left: auto !important;
+        transform: translateY(-50%) !important;
+    }
+}
 .sit-card-grid button,
 .sit-card-grid button *,
 .sit-question-chips,
@@ -7835,7 +7854,7 @@ const highResHTML = buildHighResBundleHTML(d);
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
-</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} onPointerCancel={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
             </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'100%', height:'150px', overflow:'hidden', background:'#f1f5f9', borderTop:'1px solid #e2e8f0', position:'relative', flexShrink:0 }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none' }}/></div>)}</div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
@@ -9862,7 +9881,7 @@ const handleFinishOfferClick = () => {
             // - 2 Finger (touch): Browser darf zoomen (Pinch)
             const getCanvasPointerState = (canvas) => {
                 if (!canvas) return { count: 0 };
-                if (!canvas.__pinchState) canvas.__pinchState = { count: 0 };
+                if (!canvas.__pinchState) canvas.__pinchState = { count: 0, penActive: false, penPointerId: null };
                 return canvas.__pinchState;
             };
             const updateCanvasTouchAction = (canvas, count) => {
@@ -9874,22 +9893,35 @@ const handleFinishOfferClick = () => {
                 canvas.style.touchAction = 'none';
             };
 
+            // ═══════════════════════════════════════════════════════════════
+            // PALM REJECTION SYSTEM
+            // Wenn ein Stift erkannt wird → alle Touch-Inputs blockieren
+            // Global: welcher Canvas hat gerade einen aktiven Stift?
+            // ═══════════════════════════════════════════════════════════════
+            const activePenCanvasRef = useRef(null);  // Canvas mit aktivem Pen
+            const activePenPointerIdRef = useRef(null); // pointerId des aktiven Stifts
+
             // Global Finger-Zähler: erkennt 2-Finger-Gesten zuverlässig
             const globalTouchCountRef = useRef(0);
             useEffect(() => {
                 const onTouchStart = (e) => {
+                    // === PALM REJECTION: Wenn Stift aktiv → alle Touch-Events ignorieren ===
+                    if (activePenCanvasRef.current !== null) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
                     globalTouchCountRef.current = e.touches.length;
                     if (e.touches.length >= 2) {
-                        // Laufenden Stroke sofort abbrechen
                         isDrawingRef.current = false;
                         currentStrokeRef.current = null;
-                        // Alle Canvases: Pinch-Zoom erlauben
                         document.querySelectorAll('canvas.drawing-canvas').forEach(c => {
                             c.style.touchAction = 'pan-x pan-y pinch-zoom';
                         });
                     }
                 };
                 const onTouchEnd = (e) => {
+                    if (activePenCanvasRef.current !== null) return;
                     globalTouchCountRef.current = e.touches.length;
                     if (e.touches.length < 2 && !gestureModeRef?.current) {
                         document.querySelectorAll('canvas.drawing-canvas').forEach(c => {
@@ -9897,13 +9929,21 @@ const handleFinishOfferClick = () => {
                         });
                     }
                 };
-                document.addEventListener('touchstart',  onTouchStart, { passive: true });
+                // Scroll während Stift aktiv → blockieren
+                const onTouchMove = (e) => {
+                    if (activePenCanvasRef.current !== null) {
+                        e.preventDefault();
+                    }
+                };
+                document.addEventListener('touchstart',  onTouchStart, { passive: false });
                 document.addEventListener('touchend',    onTouchEnd,   { passive: true });
                 document.addEventListener('touchcancel', onTouchEnd,   { passive: true });
+                document.addEventListener('touchmove',   onTouchMove,  { passive: false });
                 return () => {
                     document.removeEventListener('touchstart',  onTouchStart);
                     document.removeEventListener('touchend',    onTouchEnd);
                     document.removeEventListener('touchcancel', onTouchEnd);
+                    document.removeEventListener('touchmove',   onTouchMove);
                 };
             }, []);
 
@@ -9911,19 +9951,35 @@ const handleFinishOfferClick = () => {
                 const canvas = ref?.current;
                 if(!canvas) return;
 
-                // === APPLE PENCIL FIX: Sofort preventDefault für Pencil-Input ===
-                // Verhindert iOS Scribble / Text-Selektion bevor irgendein anderer Handler greift
-                if (e.pointerType === 'pen') {
+                const pointerType = e.pointerType; // 'pen' | 'touch' | 'mouse'
+
+                // === PALM REJECTION ===
+                // Wenn ein anderer Pointer gerade zeichnet (pen lock aktiv), Touch komplett ignorieren
+                if (pointerType === 'touch' && activePenCanvasRef.current !== null) {
                     e.preventDefault();
+                    return;
+                }
+                // Wenn bereits ein Stift auf einem anderen Canvas aktiv ist → ignorieren
+                if (pointerType === 'pen' && activePenCanvasRef.current !== null && activePenCanvasRef.current !== canvas) {
+                    return;
                 }
 
-                // Multi-touch erkennen (2 Finger) -> Pinch erlauben
+                // Stift-Input: sofort preventDefault (iOS Scribble/Text-Selektion verhindern)
+                if (pointerType === 'pen') {
+                    e.preventDefault();
+                    // Pen-Lock setzen: ab jetzt werden alle Touch-Events blockiert
+                    activePenCanvasRef.current = canvas;
+                    activePenPointerIdRef.current = e.pointerId;
+                    // touch-action komplett deaktivieren während Pen schreibt
+                    canvas.style.touchAction = 'none';
+                }
+
+                // Multi-touch erkennen (2 Finger) -> Pinch erlauben (nur ohne aktiven Pen)
                 const st = getCanvasPointerState(canvas);
                 st.count = (st.count || 0) + 1;
                 updateCanvasTouchAction(canvas, st.count);
 
-                const pointerType = e.pointerType;
-                // GestureMode: Touch soll immer zoomen/pannen dürfen (auch mit 1 Finger, z.B. beim Verschieben auf gezoomter Seite)
+                // GestureMode: Touch soll zoomen/pannen dürfen
                 if (gestureModeRef.current && pointerType === 'touch') {
                     isDrawingRef.current = false;
                     currentStrokeRef.current = null;
@@ -9931,7 +9987,6 @@ const handleFinishOfferClick = () => {
                 }
 
                 if (pointerType === 'touch' && (st.count >= 2 || globalTouchCountRef.current >= 2)) {
-                    // Kein Zeichnen, keine preventDefault -> Browser-Geste (Zoom/Pan) zulassen
                     isDrawingRef.current = false;
                     currentStrokeRef.current = null;
                     canvas.style.touchAction = 'pan-x pan-y pinch-zoom';
@@ -9949,6 +10004,11 @@ const handleFinishOfferClick = () => {
                 const isOfferInputActive = (ref === offerCost1Ref || ref === offerCost2Ref || ref === offerCost3Ref || ref === offerCostSmartphoneRef || ref === offerAgentRef || ref === offerDateRef || ref === offerValidUntilRef) && inputMode === 'pen';
 
                 if (!isPenInput || (!isMainCanvasPenActive && !isSituationCanvasActive && !isSmallCanvasPenActive && !isOfferCanvasActive && !isOfferInputActive)) {
+                    // Kein gültiger Zeichnen-Fall → Pen-Lock zurücksetzen
+                    if (pointerType === 'pen') {
+                        activePenCanvasRef.current = null;
+                        activePenPointerIdRef.current = null;
+                    }
                     return;
                 }
 
@@ -9996,8 +10056,15 @@ const handleFinishOfferClick = () => {
                 const canvas = ref.current;
                 if(!canvas) return;
 
-                const st = getCanvasPointerState(canvas);
                 const pointerType = e.pointerType;
+
+                // === PALM REJECTION: Touch während aktivem Stift komplett ignorieren ===
+                if (pointerType === 'touch' && activePenCanvasRef.current !== null) {
+                    e.preventDefault();
+                    return;
+                }
+
+                const st = getCanvasPointerState(canvas);
 
                 // GestureMode oder 2 Finger aktiv -> Stroke abbrechen, Pinch erlauben
                 if (pointerType === 'touch' && (globalTouchCountRef.current >= 2 || (st.count || 0) >= 2)) {
@@ -10032,10 +10099,22 @@ const handleFinishOfferClick = () => {
             const stopDrawing = useCallback((e, ref) => {
                 const canvas = ref.current;
                 if (canvas) {
-                    // Pointer-Counter runterzählen (auch wenn nicht gezeichnet wurde)
                     const st = getCanvasPointerState(canvas);
                     st.count = Math.max(0, (st.count || 0) - 1);
                     updateCanvasTouchAction(canvas, st.count);
+                }
+
+                // === PALM REJECTION: Pen-Lock freigeben wenn Stift abgehoben ===
+                if (e && e.pointerType === 'pen') {
+                    if (activePenCanvasRef.current === canvas || activePenPointerIdRef.current === e.pointerId) {
+                        activePenCanvasRef.current = null;
+                        activePenPointerIdRef.current = null;
+                    }
+                }
+                // pointercancel: immer lock freigeben (z.B. bei Systemgeste)
+                if (e && e.type === 'pointercancel') {
+                    activePenCanvasRef.current = null;
+                    activePenPointerIdRef.current = null;
                 }
 
                 if (!isDrawingRef.current) return;
@@ -12705,7 +12784,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v37</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v37.5</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -12874,7 +12953,7 @@ const handlePDFShare = async () => {
     }
   }}
   style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'24px':textSize==='large'?'44px':'32px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',WebkitUserSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} inputMode={inputMode==='pen'?'none':undefined} placeholder="" readOnly={inputMode==='pen'}/>
-                                                        <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen'&&!scrollMode)?'auto':'none',touchAction:scrollMode?'pan-y':'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
+                                                        <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} onPointerCancel={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen'&&!scrollMode)?'auto':'none',touchAction:scrollMode?'pan-y':'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
                                                     </div>
                                                 </div>
                                             );
@@ -13401,14 +13480,28 @@ const handlePDFShare = async () => {
                                             {offerLayoutMode !== 'step' && (key === 'offer1' || key === 'offer2') && (() => {
                                                 const fusionMode = key === 'offer1' ? '1+2' : '2+3';
                                                 const isActive = mergedCanvases === fusionMode;
-                                                // Verstecken wenn dieser Canvas durch andere Fusion ausgeblendet ist
                                                 if (mergeStyle.display === 'none') return null;
+                                                // Im Querformat: rechts zwischen den Canvases
+                                                // Im Hochformat (flex-col): unten mittig unter dem Canvas
                                                 return (
                                                     <button
                                                         onClick={() => setMergedCanvases(isActive ? null : fusionMode)}
                                                         title={isActive ? 'Fusion aufheben' : `Canvas ${fusionMode.replace('+',' und ')} fusionieren`}
-                                                        style={{ position:'absolute', top:'50%', right:'-26px', transform:'translateY(-50%)', zIndex:70, width:'40px', height:'40px', borderRadius:'50%', border:'none', cursor:'pointer', background: isActive ? '#2563eb' : '#fff', color: isActive ? '#fff' : '#2563eb', boxShadow:'0 2px 10px rgba(0,0,0,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', fontWeight:900, transition:'all 0.15s' }}
-                                                        className="hidden md:flex fusion-btn"
+                                                        style={{ position:'absolute',
+                                                            // Querformat: rechts, mittig vertikal
+                                                            // Hochformat (portrait): unten mittig
+                                                            top: window.matchMedia('(orientation: portrait)').matches ? 'auto' : '50%',
+                                                            bottom: window.matchMedia('(orientation: portrait)').matches ? '-20px' : 'auto',
+                                                            right: window.matchMedia('(orientation: portrait)').matches ? 'auto' : '-20px',
+                                                            left: window.matchMedia('(orientation: portrait)').matches ? '50%' : 'auto',
+                                                            transform: window.matchMedia('(orientation: portrait)').matches ? 'translateX(-50%)' : 'translateY(-50%)',
+                                                            zIndex:70, width:'40px', height:'40px', borderRadius:'50%', border:'none', cursor:'pointer',
+                                                            background: isActive ? '#2563eb' : '#fff',
+                                                            color: isActive ? '#fff' : '#2563eb',
+                                                            boxShadow:'0 2px 10px rgba(0,0,0,0.18)',
+                                                            display:'flex', alignItems:'center', justifyContent:'center',
+                                                            fontSize:'18px', fontWeight:900, transition:'all 0.15s' }}
+                                                        className="fusion-btn"
                                                     >
                                                         {isActive ? '✕' : '🔗'}
                                                     </button>
@@ -14216,17 +14309,27 @@ const handlePDFShare = async () => {
             // Nur aktiv wenn inputMode === 'pen'. Toolbar-Buttons (pointerup) bleiben funktionsfähig.
             if (!window.__pencilGuardRegistered) {
                 window.__pencilGuardRegistered = true;
+
+                // === STYLUS GUARD: pointerdown → Text-Selektion/Scribble verhindern ===
                 document.addEventListener('pointerdown', function(e) {
                     if (e.pointerType !== 'pen') return;
                     const tag = e.target?.tagName?.toLowerCase();
-                    // Canvas: wird von startDrawing() gehandelt → nicht hier eingreifen
-                    if (tag === 'canvas') return;
-                    // Buttons/Inputs: pointerdown preventDefault verhindert onClick nicht, aber stoppt Scribble
-                    if (tag === 'button' || tag === 'input' || tag === 'select' || tag === 'label') {
-                        e.preventDefault();
-                        return;
-                    }
-                    // Alles andere (divs, spans, p etc.): Text-Selektion verhindern
+                    if (tag === 'canvas') return; // Canvas: startDrawing() übernimmt
+                    e.preventDefault();
+                }, { passive: false });
+
+                // === STYLUS GUARD: selectstart → iOS Text-Markierung mit Pencil blockieren ===
+                document.addEventListener('selectstart', function(e) {
+                    // Nur blockieren wenn ein Stift gerade aktiv ist ODER das Target kein echtes Eingabefeld ist
+                    const tag = e.target?.tagName?.toLowerCase();
+                    if (tag === 'input' || tag === 'textarea') return; // Eingabefelder: erlauben
+                    e.preventDefault();
+                }, { passive: false });
+
+                // === STYLUS GUARD: contextmenu → Langer Tipp mit Pencil öffnet kein Menü ===
+                document.addEventListener('contextmenu', function(e) {
+                    // Nur bei Stylus-Input blockieren (pointerType wird hier nicht direkt übergeben,
+                    // aber wenn activePenCanvasRef gesetzt ist, ist ein Stift aktiv)
                     e.preventDefault();
                 }, { passive: false });
             }
