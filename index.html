@@ -8121,6 +8121,7 @@ const highResHTML = buildHighResBundleHTML(d);
                     {/* Pen canvas - always rendered, only interactive in pen mode */}
                     <canvas
                         ref={canvasRef}
+                        data-cost-key={inputKey}
                         onPointerDown={isPen ? (e) => startDrawing(e, canvasRef, inputKey) : undefined}
                         onPointerMove={isPen ? (e) => draw(e, canvasRef, inputKey) : undefined}
                         onPointerUp={isPen ? (e) => stopDrawing(e, canvasRef) : undefined}
@@ -10276,23 +10277,21 @@ const handleFinishOfferClick = () => {
                 const x = cssX / zoomLevel;
                 const y = cssY / zoomLevel;
 
-                // Visuelle Basisbreite berechnen (war versehentlich entfernt worden)
+                // Visuelle Basisbreite berechnen
                 const isOfferType = key && key.startsWith('offer');
                 const rawStrokeW = tune.width;
                 let visualBaseW;
                 if (isOfferType) { visualBaseW = rawStrokeW === 2 ? 2.5 : rawStrokeW === 4 ? 5 : 8; }
                 else { visualBaseW = rawStrokeW === 2 ? 2 : rawStrokeW === 4 ? 3 : 5; }
-                const finalLineWidth = visualBaseW / zoomLevel;
 
-                // Druckempfindlichkeit beim ersten Punkt
-                const rawPressure = (e.pressure != null && e.pressure > 0) ? e.pressure : 0.5;
-                const pressure = Math.max(0.15, Math.min(1.0, rawPressure));
+                // Kostenfelder: 55% dünnere Basis (weniger Platz im Eingabefeld)
+                const isCostCanvas = key && (key.startsWith('cost_') || key === 'agent_name' || key === 'date_field' || key === 'offer_valid_until');
+                const widthScale = isCostCanvas ? 0.55 : 1.0;
+                const finalLineWidth = (visualBaseW / zoomLevel) * widthScale;
 
-                // initWidth ohne Velocity → verhindert "dünner Strich am Anfang"
-                let initWidth = finalLineWidth;
-                if (currentTool === 'fountain') initWidth = finalLineWidth * (0.5 + pressure * 0.8);
-                else if (currentTool === 'ballpen') initWidth = finalLineWidth * (0.8 + pressure * 0.2);
-                else if (currentTool === 'pen') initWidth = finalLineWidth * (0.7 + pressure * 0.3);
+                // initWidth: KONSTANT = finalLineWidth (keine Druckvariation beim Start)
+                // → verhindert "dünner/dicker am Anfang" komplett
+                const initWidth = finalLineWidth;
 
                 const newStroke = {
                     tool: currentTool,
@@ -10393,52 +10392,23 @@ const handleFinishOfferClick = () => {
                     const x = cssX;
                     const y = cssY;
 
-                    // Druckempfindlichkeit
+                    // === GLEICHMÄSSIGE LINIENSTÄRKE ===
+                    // Velocity: komplett entfernt (war Ursache für "erst dünn dann dick")
+                    // Druck: nur 8% Variation (kaum spürbar, aber gibt subtiles Fühl)
                     const rawPressure = (ev.pressure != null && ev.pressure > 0) ? ev.pressure : 0.5;
-                    const pressure = Math.max(0.15, Math.min(1.0, rawPressure));
+                    const pressure = Math.max(0.2, Math.min(1.0, rawPressure));
 
-                    // Geschwindigkeit: exponentieller Durchschnitt (EMA) statt Momentanwert
-                    // → verhindert den "dünner Strich am Anfang" Bug
                     const pts = stroke.points;
-                    let smoothedVelocity = stroke.smoothedVelocity || 0;
-                    if (pts.length > 0) {
-                        const last = pts[pts.length - 1];
-                        const dx = x - last.x;
-                        const dy = y - last.y;
-                        const dt = Math.max(4, ev.timeStamp - (stroke.lastTime || ev.timeStamp));
-                        const instantVelocity = Math.sqrt(dx * dx + dy * dy) / dt;
-                        // EMA α=0.25: träge Anpassung → keine Sprünge bei Richtungswechsel
-                        smoothedVelocity = smoothedVelocity * 0.75 + instantVelocity * 0.25;
-                        stroke.smoothedVelocity = smoothedVelocity;
-                        stroke.lastTime = ev.timeStamp;
-                    } else {
-                        stroke.lastTime = ev.timeStamp;
-                    }
-
-                    // Ramp-Up: erste 8 Punkte ignorieren Geschwindigkeit komplett
-                    // → Strich startet mit vollem Druck, nicht dünn
-                    const pointIndex = pts.length;
-                    const velocityInfluence = Math.min(1.0, pointIndex / 8);
-                    const velocityFactor = 1.0 - velocityInfluence * Math.min(smoothedVelocity * 0.5, 0.35);
-
-                    // Breite: Druck primär, Geschwindigkeit sekundär
                     const baseLW = stroke.baseLineWidth || 2;
-                    let dynamicWidth;
+                    // Einheitliche Formel für alle Werkzeuge: Basis ± 8% durch Druck
+                    const dynamicWidth = baseLW * (0.92 + pressure * 0.08);
 
-                    if (currentTool === 'fountain') {
-                        dynamicWidth = baseLW * (0.5 + pressure * 0.8) * velocityFactor;
-                    } else if (currentTool === 'ballpen') {
-                        dynamicWidth = baseLW * (0.8 + pressure * 0.2);
-                    } else if (currentTool === 'pen') {
-                        dynamicWidth = baseLW * (0.7 + pressure * 0.3);
-                    } else {
-                        dynamicWidth = baseLW;
-                    }
-
-                    // Breiten-Überblendung: responsiver (65% neu, 35% alt) statt träge
+                    // Starkes Smoothing für absolut ruhige Linien (85% alt, 15% neu)
                     const prevWidth = stroke.lastWidth || dynamicWidth;
-                    const smoothedWidth = prevWidth * 0.35 + dynamicWidth * 0.65;
+                    const smoothedWidth = prevWidth * 0.85 + dynamicWidth * 0.15;
                     stroke.lastWidth = smoothedWidth;
+
+                    if (pts.length > 0) stroke.lastTime = ev.timeStamp;
 
                     pts.push({ x, y, pressure, width: smoothedWidth });
 
@@ -11332,32 +11302,56 @@ const wrapSharePage = (titleText, contentEl, opts = {}) => {
 const bakeCanvasesIntoClone = (srcRoot, cloneRoot) => {
     try {
         if (!srcRoot || !cloneRoot) return;
-        const src = Array.from(srcRoot.querySelectorAll('canvas'));
-        const dst = Array.from(cloneRoot.querySelectorAll('canvas'));
+
+        // === METHODE 1: Index-basiert (für Haupt-Offer/Situation Canvases) ===
+        const src = Array.from(srcRoot.querySelectorAll('canvas:not([data-cost-key])'));
+        const dst = Array.from(cloneRoot.querySelectorAll('canvas:not([data-cost-key])'));
         const n = Math.min(src.length, dst.length);
         for (let i = 0; i < n; i++) {
             const sc = src[i];
             const dc = dst[i];
             if (!sc || !dc) continue;
-
-            // Versuche Bitmap zu exportieren
             let dataUrl = null;
             try { dataUrl = sc.toDataURL('image/png'); } catch(e) { dataUrl = null; }
             if (!dataUrl || dataUrl.length < 50) continue;
-
             const img = doc.createElement('img');
             img.src = dataUrl;
             img.alt = 'canvas';
             img.className = (dc.className || '') + ' canvas-baked-image';
-            // Übernimm die wichtigsten Layout-Eigenschaften des Canvas
             img.style.cssText = (dc.getAttribute('style') || '') + ';' +
                 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;touch-action:none;';
-            // Canvas im Clone ausblenden, Image darüber legen
             try { dc.style.visibility = 'hidden'; } catch(e){}
             try { dc.parentNode && dc.parentNode.insertBefore(img, dc.nextSibling); } catch(e){}
         }
+
+        // === METHODE 2: Key-basiert (für Kosten/Input Canvases mit data-cost-key) ===
+        // Diese Canvases haben IMMER Pixel im Original, aber leeren Clone
+        // → direkt aus srcRoot per data-cost-key übernehmen
+        const srcKeyed = Array.from(srcRoot.querySelectorAll('canvas[data-cost-key]'));
+        srcKeyed.forEach(sc => {
+            const key = sc.getAttribute('data-cost-key');
+            if (!key) return;
+            let dataUrl = null;
+            try { dataUrl = sc.toDataURL('image/png'); } catch(e) { return; }
+            if (!dataUrl || dataUrl.length < 50) return;
+
+            // Ziel-Canvas im Clone per data-cost-key finden
+            const dc = cloneRoot.querySelector(`canvas[data-cost-key="${key}"]`);
+            if (!dc) return;
+
+            const img = doc.createElement('img');
+            img.src = dataUrl;
+            img.alt = key;
+            img.setAttribute('data-cost-key-baked', key);
+            img.style.cssText =
+                'position:absolute;inset:0;width:100%;height:100%;' +
+                'object-fit:contain;pointer-events:none;touch-action:none;z-index:15;';
+            try { dc.style.visibility = 'hidden'; } catch(e){}
+            try { dc.parentNode && dc.parentNode.insertBefore(img, dc.nextSibling); } catch(e){}
+        });
+
     } catch(e) {
-        // silent (Share muss immer funktionieren)
+        // silent
     }
 };
 
@@ -11787,9 +11781,28 @@ const offerTitles = (() => {
 // Kostenblock separat für letzte Seite sichern
 let costBlock = null;
 try {
-    costBlock = sourceOffer.querySelector('.cost-overview-print')
-        ? sourceOffer.querySelector('.cost-overview-print').cloneNode(true)
-        : null;
+    costBlock = (() => {
+        const src = sourceOffer.querySelector('.cost-overview-print');
+        if (!src) return null;
+        const clone = src.cloneNode(true);
+        // Kosten-Canvases explizit bakken (data-cost-key Methode)
+        const srcKeyed = Array.from(src.querySelectorAll('canvas[data-cost-key]'));
+        srcKeyed.forEach(sc => {
+            const key = sc.getAttribute('data-cost-key');
+            if (!key) return;
+            let dataUrl = null;
+            try { dataUrl = sc.toDataURL('image/png'); } catch(e) { return; }
+            if (!dataUrl || dataUrl.length < 50) return;
+            const dc = clone.querySelector(`canvas[data-cost-key="${key}"]`);
+            if (!dc) return;
+            const img = doc.createElement('img');
+            img.src = dataUrl;
+            img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:15;';
+            try { dc.style.visibility = 'hidden'; } catch(e){}
+            try { dc.parentNode && dc.parentNode.insertBefore(img, dc.nextSibling); } catch(e){}
+        });
+        return clone;
+    })();
 } catch(e){}
 
 // ===== SEITE 2: Alle 3 Angebotskarten nebeneinander (1:1 wie Bildschirm) + Kostenübersicht =====
@@ -13176,7 +13189,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v38.5</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v38.7</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
