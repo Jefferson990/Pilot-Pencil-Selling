@@ -628,11 +628,12 @@ html, body{
         .cost-overview-print input,
         .cost-overview-print select,
         .cost-overview-print textarea {
-            height: 48px !important;
-            min-height: 48px !important;
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-            font-size: 15px !important;
+            height: 64px !important;
+            min-height: 64px !important;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+            font-size: 18px !important;
+            font-weight: 700 !important;
         }
         .cost-overview-print .cost-grid-years {
             gap: 16px !important;
@@ -1747,6 +1748,33 @@ body.pdf-share-mode .share-page:last-child{
         height: 100% !important;
     }
 
+    /* === PORTRAIT FIX: Sidebar unter den Kacheln, volle Breite === */
+    @media (orientation: portrait) {
+        .situation-view-wrapper {
+            flex-direction: column !important;
+        }
+        .situation-view-wrapper > aside,
+        .situation-view-wrapper > aside.sit-aside-panel {
+            width: 100% !important;
+            flex: 0 0 auto !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            border-left: none !important;
+            border-top: 1px solid rgba(148,163,184,0.3) !important;
+            overflow-y: auto !important;
+            padding: 8px 12px !important;
+        }
+        .situation-view-wrapper > aside .sit-aside-inner {
+            padding-bottom: 80px !important;
+        }
+        /* Kachel-Bereich: scrollbar im Hochformat */
+        .situation-view-wrapper > div:first-child {
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
+        }
+    }
+
     /* Scroll-Container in Sidebar */
     .situation-view-wrapper > aside > div.flex-1 {
         overflow: hidden !important;
@@ -1886,6 +1914,18 @@ body.pdf-share-mode .share-page:last-child{
     grid-template-columns: repeat(3, 1fr) !important; /* 3 Spalten IMMER vorhanden */
     gap: 1rem !important;
     transition: none !important;
+}
+
+/* Kostenübersicht Inputs: ~50% breiter/höher für bessere Bedienbarkeit */
+.cost-overview-print .offer-cost-input,
+.cost-overview-print input[type="text"],
+.cost-overview-print textarea {
+    min-height: 64px !important;
+    height: 64px !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
 }
 
 /* 2. Jahr: Container bleibt im Layout, wird nur unsichtbar geschaltet */
@@ -10075,21 +10115,14 @@ const handleFinishOfferClick = () => {
 
                 // Druckempfindlichkeit beim ersten Punkt
                 const rawPressure = (e.pressure != null && e.pressure > 0) ? e.pressure : 0.5;
-                const pressure = Math.max(0.1, Math.min(1.0, rawPressure));
+                const pressure = Math.max(0.15, Math.min(1.0, rawPressure));
 
-                // Visueller Basisbreite (pixel auf Canvas)
-                const isOfferType = key.startsWith('offer');
-                const rawStrokeW = tune.width;
-                let visualBaseW;
-                if (isOfferType) { visualBaseW = rawStrokeW === 2 ? 2.5 : rawStrokeW === 4 ? 5 : 8; }
-                else { visualBaseW = rawStrokeW === 2 ? 2 : rawStrokeW === 4 ? 3 : 5; }
-                const finalLineWidth = visualBaseW / zoomLevel;
-
-                // Initialer Druckwert für smooth-Start
+                // initWidth: volles Druck-Gewicht, KEIN Velocity-Effekt am Start
+                // → verhindert "dünner Strich am Anfang"
                 let initWidth = finalLineWidth;
-                if (currentTool === 'fountain') initWidth = finalLineWidth * pressure * 1.4;
-                else if (currentTool === 'ballpen') initWidth = finalLineWidth * (0.7 + pressure * 0.3);
-                else if (currentTool === 'pen') initWidth = finalLineWidth * (0.6 + pressure * 0.4);
+                if (currentTool === 'fountain') initWidth = finalLineWidth * (0.5 + pressure * 0.8);
+                else if (currentTool === 'ballpen') initWidth = finalLineWidth * (0.8 + pressure * 0.2);
+                else if (currentTool === 'pen') initWidth = finalLineWidth * (0.7 + pressure * 0.3);
 
                 const newStroke = {
                     tool: currentTool,
@@ -10099,10 +10132,10 @@ const handleFinishOfferClick = () => {
                     points: [{ x, y, pressure, width: initWidth }],
                     baseWidth: strokeBaseWidth,
                     baseHeight: strokeBaseHeight,
-                    // baseLineWidth: die VISUELLE Strichbreite in Canvas-Pixeln (nicht die Canvas-Breite!)
                     baseLineWidth: finalLineWidth,
-                    lastWidth: initWidth,    // für smooth-Überblendung in draw()
-                    lastTime: e.timeStamp    // für Geschwindigkeitsberechnung
+                    lastWidth: initWidth,
+                    lastTime: e.timeStamp,
+                    smoothedVelocity: 0   // startet bei 0 → Ramp-Up greift in draw()
                 };
 
                 // setPointerCapture: Pencil/Stylus-Events auch außerhalb des Canvas empfangen
@@ -10190,48 +10223,51 @@ const handleFinishOfferClick = () => {
                     const x = cssX;
                     const y = cssY;
 
-                    // Druckempfindlichkeit: Apple Pencil / S-Pen liefern 0.0–1.0
-                    // Finger/Maus liefern 0.5 (neutral) oder 0
+                    // Druckempfindlichkeit
                     const rawPressure = (ev.pressure != null && ev.pressure > 0) ? ev.pressure : 0.5;
-                    const pressure = Math.max(0.1, Math.min(1.0, rawPressure));
+                    const pressure = Math.max(0.15, Math.min(1.0, rawPressure));
 
-                    // Geschwindigkeit berechnen (px/ms) für Velocity-basierte Breite
+                    // Geschwindigkeit: exponentieller Durchschnitt (EMA) statt Momentanwert
+                    // → verhindert den "dünner Strich am Anfang" Bug
                     const pts = stroke.points;
-                    let velocity = 0;
+                    let smoothedVelocity = stroke.smoothedVelocity || 0;
                     if (pts.length > 0) {
                         const last = pts[pts.length - 1];
                         const dx = x - last.x;
                         const dy = y - last.y;
-                        const dt = Math.max(1, ev.timeStamp - (stroke.lastTime || ev.timeStamp));
-                        velocity = Math.sqrt(dx * dx + dy * dy) / dt;
+                        const dt = Math.max(4, ev.timeStamp - (stroke.lastTime || ev.timeStamp));
+                        const instantVelocity = Math.sqrt(dx * dx + dy * dy) / dt;
+                        // EMA α=0.25: träge Anpassung → keine Sprünge bei Richtungswechsel
+                        smoothedVelocity = smoothedVelocity * 0.75 + instantVelocity * 0.25;
+                        stroke.smoothedVelocity = smoothedVelocity;
                         stroke.lastTime = ev.timeStamp;
                     } else {
                         stroke.lastTime = ev.timeStamp;
                     }
 
-                    // Strichbreite: Basis × Druck × Geschwindigkeitsfaktor
-                    // Schnell → dünner (Samsung Notes Gefühl), langsam → dicker
-                    const velocityFactor = Math.max(0.4, 1.0 - Math.min(velocity * 0.8, 0.6));
-                    // baseLineWidth = visuelle Strichbreite in px (iOS + Android korrekt)
+                    // Ramp-Up: erste 8 Punkte ignorieren Geschwindigkeit komplett
+                    // → Strich startet mit vollem Druck, nicht dünn
+                    const pointIndex = pts.length;
+                    const velocityInfluence = Math.min(1.0, pointIndex / 8);
+                    const velocityFactor = 1.0 - velocityInfluence * Math.min(smoothedVelocity * 0.5, 0.35);
+
+                    // Breite: Druck primär, Geschwindigkeit sekundär
                     const baseLW = stroke.baseLineWidth || 2;
                     let dynamicWidth;
 
                     if (currentTool === 'fountain') {
-                        // Füller: Druck + Geschwindigkeit (wie echter Füller)
-                        dynamicWidth = baseLW * pressure * velocityFactor * 1.4;
+                        dynamicWidth = baseLW * (0.5 + pressure * 0.8) * velocityFactor;
                     } else if (currentTool === 'ballpen') {
-                        // Kugelschreiber: weniger Druckvariation, gleichmäßiger
-                        dynamicWidth = baseLW * (0.7 + pressure * 0.3);
+                        dynamicWidth = baseLW * (0.8 + pressure * 0.2);
                     } else if (currentTool === 'pen') {
-                        // Stift: leichte Druckvariation
-                        dynamicWidth = baseLW * (0.6 + pressure * 0.4);
+                        dynamicWidth = baseLW * (0.7 + pressure * 0.3);
                     } else {
                         dynamicWidth = baseLW;
                     }
 
-                    // Sanftes Überblenden zur neuen Breite (verhindert abrupte Sprünge)
+                    // Breiten-Überblendung: responsiver (65% neu, 35% alt) statt träge
                     const prevWidth = stroke.lastWidth || dynamicWidth;
-                    const smoothedWidth = prevWidth * 0.6 + dynamicWidth * 0.4;
+                    const smoothedWidth = prevWidth * 0.35 + dynamicWidth * 0.65;
                     stroke.lastWidth = smoothedWidth;
 
                     pts.push({ x, y, pressure, width: smoothedWidth });
@@ -12970,7 +13006,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v38.2</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v38.4</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
