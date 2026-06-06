@@ -2548,6 +2548,69 @@ body.pdf-share-mode .offer-toolbar-icons{ display:none !important; }
   .print-recs-toggle-btn{ box-shadow:0 10px 30px rgba(15,23,42,.18); }
 }
 
+
+
+/* =====================================================================
+   PATCH Diego – Kostenblock luftiger für Stift-Eingabe auf Tablet
+   Ziel: Einmalig/Monatlich mehr Schreibfläche, besonders im Hochformat.
+   Nur Bildschirm/App – Druck/PDF bleibt unverändert.
+   ===================================================================== */
+@media screen {
+  /* Wenn das 2.-Jahr-Feld eingeklappt ist: nur 2 sichtbare Spalten statt leerer 3. Spalte */
+  .cost-overview-print .cost-grid-years:has(.year-2-container.hidden-layer) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+  }
+  .cost-overview-print .cost-grid-years:has(.year-2-container.hidden-layer) .year-2-container.hidden-layer {
+    display: none !important;
+  }
+
+  /* Kostenfelder deutlich höher: mehr Platz für dicke Stift-Schrift */
+  .cost-overview-print .cost-grid-years > div > .relative,
+  .cost-overview-print .cost-grid-years .h-12 {
+    height: 92px !important;
+    min-height: 92px !important;
+    border-radius: 14px !important;
+  }
+
+  /* Der echte Eingabebereich/Canvas soll die volle Höhe nutzen */
+  .cost-overview-print .cost-grid-years .small-canvas-wrapper,
+  .cost-overview-print .cost-grid-years canvas,
+  .cost-overview-print .cost-grid-years input,
+  .cost-overview-print .cost-grid-years textarea {
+    height: 92px !important;
+    min-height: 92px !important;
+    line-height: 92px !important;
+    font-size: 24px !important;
+    font-weight: 800 !important;
+  }
+
+  /* Labels etwas kompakter, damit die zusätzliche Höhe wirklich im Schreibfeld landet */
+  .cost-overview-print .cost-grid-years label {
+    margin-bottom: 6px !important;
+    font-size: 11px !important;
+    letter-spacing: 0.09em !important;
+  }
+
+  /* Auf Hochformat-Tablets noch etwas mehr Schreibhöhe */
+  @media (orientation: portrait) {
+    .cost-overview-print {
+      padding-top: 24px !important;
+      padding-bottom: 24px !important;
+    }
+    .cost-overview-print .cost-grid-years > div > .relative,
+    .cost-overview-print .cost-grid-years .h-12,
+    .cost-overview-print .cost-grid-years .small-canvas-wrapper,
+    .cost-overview-print .cost-grid-years canvas,
+    .cost-overview-print .cost-grid-years input,
+    .cost-overview-print .cost-grid-years textarea {
+      height: 104px !important;
+      min-height: 104px !important;
+      line-height: 104px !important;
+    }
+  }
+}
+
 </style>
 
 <style id="export-hardlock-patch-v1">
