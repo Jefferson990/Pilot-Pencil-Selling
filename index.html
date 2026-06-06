@@ -2180,6 +2180,13 @@ body.pdf-share-mode .share-outro,
     margin-left: var(--PORTRAIT_SHIFT_PX) !important;
     will-change: transform;
   }
+  /* Tastatur-Modus: Transform deaktivieren → iOS zeigt volle Tastatur statt Mini-Floating-Keyboard */
+  body.keyboard-mode-active .situation-view-wrapper,
+  body.keyboard-mode-active .print-situation-view,
+  body.keyboard-mode-active .print-offer-view {
+    transform: none !important;
+    margin-left: 0 !important;
+  }
   /* Formulare etwas weiter links (wie vorher) */
   .situation-view-wrapper .grid,
   .print-offer-view .grid{
@@ -8699,6 +8706,18 @@ const fileInputRef = useRef(null);
                 window.__canvasHtmlOffer3 = canvasHtml.offer3 || null;
             }, [canvasHtml.offer1, canvasHtml.offer2, canvasHtml.offer3]);
 
+            // iOS Floating-Keyboard Fix:
+            // transform: translateX() auf dem Content-Wrapper lässt iOS die schwebende Mini-Tastatur anzeigen.
+            // Lösung: body.keyboard-mode-active setzen → CSS schaltet den Transform ab.
+            React.useEffect(() => {
+                if (inputMode === 'keyboard') {
+                    document.body.classList.add('keyboard-mode-active');
+                } else {
+                    document.body.classList.remove('keyboard-mode-active');
+                }
+                return () => document.body.classList.remove('keyboard-mode-active');
+            }, [inputMode]);
+
             // Brücke: Canvas-Fusion-Modus für PDF-Export
             React.useEffect(() => {
                 window.__mergedCanvases = mergedCanvases || null;
@@ -10054,19 +10073,65 @@ const handleFinishOfferClick = () => {
                 const x = cssX / zoomLevel;
                 const y = cssY / zoomLevel;
 
-                const newStroke = { tool: currentTool, color: currentColor, width: tune.width, opacity: currentOpacity, points: [{ x, y }], baseWidth: strokeBaseWidth, baseHeight: strokeBaseHeight };
+                // Druckempfindlichkeit beim ersten Punkt
+                const rawPressure = (e.pressure != null && e.pressure > 0) ? e.pressure : 0.5;
+                const pressure = Math.max(0.1, Math.min(1.0, rawPressure));
 
-                ctx.save();
+                // Visueller Basisbreite (pixel auf Canvas)
                 const isOfferType = key.startsWith('offer');
                 const rawStrokeW = tune.width;
                 let visualBaseW;
                 if (isOfferType) { visualBaseW = rawStrokeW === 2 ? 2.5 : rawStrokeW === 4 ? 5 : 8; }
                 else { visualBaseW = rawStrokeW === 2 ? 2 : rawStrokeW === 4 ? 3 : 5; }
-
                 const finalLineWidth = visualBaseW / zoomLevel;
-                if (currentTool === 'eraser') { ctx.lineWidth = finalLineWidth * 4; ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; }
-                else if (currentTool === 'highlighter') { ctx.lineWidth = finalLineWidth * 3; ctx.strokeStyle = currentColor; ctx.globalAlpha = currentOpacity; ctx.globalCompositeOperation = 'destination-over'; }
-                else { ctx.lineWidth = finalLineWidth; ctx.strokeStyle = currentColor; ctx.globalAlpha = currentOpacity; ctx.globalCompositeOperation = 'source-over'; }
+
+                // Initialer Druckwert für smooth-Start
+                let initWidth = finalLineWidth;
+                if (currentTool === 'fountain') initWidth = finalLineWidth * pressure * 1.4;
+                else if (currentTool === 'ballpen') initWidth = finalLineWidth * (0.7 + pressure * 0.3);
+                else if (currentTool === 'pen') initWidth = finalLineWidth * (0.6 + pressure * 0.4);
+
+                const newStroke = {
+                    tool: currentTool,
+                    color: currentColor,
+                    width: tune.width,
+                    opacity: currentOpacity,
+                    points: [{ x, y, pressure, width: initWidth }],
+                    baseWidth: strokeBaseWidth,
+                    baseHeight: strokeBaseHeight,
+                    // baseLineWidth: die VISUELLE Strichbreite in Canvas-Pixeln (nicht die Canvas-Breite!)
+                    baseLineWidth: finalLineWidth,
+                    lastWidth: initWidth,    // für smooth-Überblendung in draw()
+                    lastTime: e.timeStamp    // für Geschwindigkeitsberechnung
+                };
+
+                // setPointerCapture: Pencil/Stylus-Events auch außerhalb des Canvas empfangen
+                // Kritisch für iOS (Apple Pencil) wenn Stift Canvas-Rand streift
+                try {
+                    if (canvas.setPointerCapture && e.pointerId != null) {
+                        canvas.setPointerCapture(e.pointerId);
+                    }
+                } catch(_) {}
+
+                ctx.save();
+
+                // Canvas-Context für Live-Drawing einrichten
+                ctx.strokeStyle = currentColor;
+                ctx.globalAlpha = currentOpacity;
+                ctx.lineWidth = Math.max(0.5, initWidth);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                if (currentTool === 'eraser') {
+                    ctx.lineWidth = finalLineWidth * 4;
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.globalAlpha = 1;
+                } else if (currentTool === 'highlighter') {
+                    ctx.lineWidth = finalLineWidth * 3;
+                    ctx.globalCompositeOperation = 'destination-over';
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                }
 
                 ctx.beginPath();
                 ctx.moveTo(x, y);
@@ -10104,19 +10169,110 @@ const handleFinishOfferClick = () => {
 
                 e.preventDefault();
 
-                const { x: cssX, y: cssY } = getRelativeCoords(e, canvas) || {};
-                if (cssX == null || cssY == null) return;
-
-                const zoomLevel = 1.0;
-                const x = cssX / zoomLevel;
-                const y = cssY / zoomLevel;
+                // Coalesced Events: alle Zwischenpunkte seit letztem Frame nutzen (minimiert Latenz)
+                // iOS Safari: getCoalescedEvents kann leeres Array zurückgeben → Fallback auf [e]
+                let events = [e];
+                try {
+                    if (e.getCoalescedEvents) {
+                        const coalesced = e.getCoalescedEvents();
+                        if (coalesced && coalesced.length > 0) events = coalesced;
+                    }
+                } catch(_) {}
 
                 const ctx = canvas.getContext('2d');
-                currentStrokeRef.current.points.push({ x, y });
-                ctx.save();
-                ctx.lineTo(x, y);
-                ctx.stroke();
-                ctx.restore();
+                const stroke = currentStrokeRef.current;
+                const currentTool = stroke.tool;
+
+                for (const ev of events) {
+                    const { x: cssX, y: cssY } = getRelativeCoords(ev, canvas) || {};
+                    if (cssX == null || cssY == null) continue;
+
+                    const x = cssX;
+                    const y = cssY;
+
+                    // Druckempfindlichkeit: Apple Pencil / S-Pen liefern 0.0–1.0
+                    // Finger/Maus liefern 0.5 (neutral) oder 0
+                    const rawPressure = (ev.pressure != null && ev.pressure > 0) ? ev.pressure : 0.5;
+                    const pressure = Math.max(0.1, Math.min(1.0, rawPressure));
+
+                    // Geschwindigkeit berechnen (px/ms) für Velocity-basierte Breite
+                    const pts = stroke.points;
+                    let velocity = 0;
+                    if (pts.length > 0) {
+                        const last = pts[pts.length - 1];
+                        const dx = x - last.x;
+                        const dy = y - last.y;
+                        const dt = Math.max(1, ev.timeStamp - (stroke.lastTime || ev.timeStamp));
+                        velocity = Math.sqrt(dx * dx + dy * dy) / dt;
+                        stroke.lastTime = ev.timeStamp;
+                    } else {
+                        stroke.lastTime = ev.timeStamp;
+                    }
+
+                    // Strichbreite: Basis × Druck × Geschwindigkeitsfaktor
+                    // Schnell → dünner (Samsung Notes Gefühl), langsam → dicker
+                    const velocityFactor = Math.max(0.4, 1.0 - Math.min(velocity * 0.8, 0.6));
+                    // baseLineWidth = visuelle Strichbreite in px (iOS + Android korrekt)
+                    const baseLW = stroke.baseLineWidth || 2;
+                    let dynamicWidth;
+
+                    if (currentTool === 'fountain') {
+                        // Füller: Druck + Geschwindigkeit (wie echter Füller)
+                        dynamicWidth = baseLW * pressure * velocityFactor * 1.4;
+                    } else if (currentTool === 'ballpen') {
+                        // Kugelschreiber: weniger Druckvariation, gleichmäßiger
+                        dynamicWidth = baseLW * (0.7 + pressure * 0.3);
+                    } else if (currentTool === 'pen') {
+                        // Stift: leichte Druckvariation
+                        dynamicWidth = baseLW * (0.6 + pressure * 0.4);
+                    } else {
+                        dynamicWidth = baseLW;
+                    }
+
+                    // Sanftes Überblenden zur neuen Breite (verhindert abrupte Sprünge)
+                    const prevWidth = stroke.lastWidth || dynamicWidth;
+                    const smoothedWidth = prevWidth * 0.6 + dynamicWidth * 0.4;
+                    stroke.lastWidth = smoothedWidth;
+
+                    pts.push({ x, y, pressure, width: smoothedWidth });
+
+                    // Live-Bezier-Rendering: Quadratic Curve für flüssige Linien
+                    if (pts.length >= 3) {
+                        const p0 = pts[pts.length - 3];
+                        const p1 = pts[pts.length - 2];
+                        const p2 = pts[pts.length - 1];
+
+                        // Mittelpunkt zwischen p1 und p2 → Kontrollpunkt der Kurve
+                        const mx = (p1.x + p2.x) / 2;
+                        const my = (p1.y + p2.y) / 2;
+
+                        ctx.save();
+                        ctx.lineWidth = Math.max(0.5, smoothedWidth);
+                        ctx.beginPath();
+                        ctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+                        ctx.quadraticCurveTo(p1.x, p1.y, mx, my);
+                        ctx.stroke();
+                        ctx.restore();
+                    } else if (pts.length === 2) {
+                        // Erster Strich: einfache Linie
+                        const p0 = pts[0];
+                        const p1 = pts[1];
+                        ctx.save();
+                        ctx.lineWidth = Math.max(0.5, smoothedWidth);
+                        ctx.beginPath();
+                        ctx.moveTo(p0.x, p0.y);
+                        ctx.lineTo(p1.x, p1.y);
+                        ctx.stroke();
+                        ctx.restore();
+                    } else if (pts.length === 1) {
+                        // Einzelner Punkt: kleiner Kreis (für Punkte/Tüpfel)
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(x, y, Math.max(0.5, smoothedWidth / 2), 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
             }, []);
 
             const stopDrawing = useCallback((e, ref) => {
@@ -12814,7 +12970,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v37.9</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v38.2</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -12982,7 +13138,7 @@ const handlePDFShare = async () => {
       }
     }
   }}
-  style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'24px':textSize==='large'?'44px':'32px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',WebkitUserSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} inputMode={inputMode==='pen'?'none':undefined} placeholder="" readOnly={inputMode==='pen'}/>
+  style={{position:'absolute',inset:0,width:'100%',height:'100%',padding:'10px 14px',fontSize:textSize==='small'?'24px':textSize==='large'?'44px':'32px',fontWeight:textStyle.bold?800:500,fontStyle:textStyle.italic?'italic':'normal',color:'#1e293b',background:'transparent',border:'none',outline:'none',userSelect:(inputMode==='keyboard')?'text':'none',WebkitUserSelect:(inputMode==='keyboard')?'text':'none',zIndex:(inputMode==='keyboard')?40:5,pointerEvents:(inputMode==='keyboard')?'auto':'none',boxSizing:'border-box',cursor:(inputMode==='keyboard')?'text':'default'}} inputMode={inputMode==='pen'?'none':undefined} placeholder="" readOnly={inputMode==='pen'} onFocus={()=>document.body.classList.add('keyboard-mode-active')} onBlur={()=>{ if(inputMode!=='keyboard') document.body.classList.remove('keyboard-mode-active'); }}/>
                                                         <canvas ref={sitRef} data-sit-key={sitKey} onPointerDown={(e)=>startDrawing(e,sitRef,sitKey)} onPointerMove={(e)=>draw(e,sitRef,sitKey)} onPointerUp={(e)=>stopDrawing(e,sitRef)} onPointerLeave={(e)=>stopDrawing(e,sitRef)} onPointerCancel={(e)=>stopDrawing(e,sitRef)} className="drawing-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:(isWritingEnabled&&inputMode==='pen'&&!scrollMode)?'auto':'none',touchAction:scrollMode?'pan-y':'none',background:'transparent',zIndex:(inputMode==='pen')?30:0}}/>
                                                     </div>
                                                 </div>
