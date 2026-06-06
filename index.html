@@ -7694,7 +7694,9 @@ const highResHTML = buildHighResBundleHTML(d);
                 const normalizedBaseLineWidth = (visualBaseWidth * responsiveScaleFactor);
                 // Sit-Kacheln: Mindestlinienstärke + volle Deckkraft damit Striche nicht blass wirken
                 const isSitCanvas = key.startsWith('sit_');
-                const finalLineWidth = isSitCanvas ? Math.max(1.8, normalizedBaseLineWidth) : normalizedBaseLineWidth;
+                const isCostKey = key.startsWith('cost_') || key === 'agent_name' || key === 'date_field' || key === 'offer_valid_until';
+                const costWidthScale = isCostKey ? 0.55 : 1.0; // gleiche Reduzierung wie in startDrawing
+                const finalLineWidth = isSitCanvas ? Math.max(1.8, normalizedBaseLineWidth) : normalizedBaseLineWidth * costWidthScale;
                 const finalOpacity  = isSitCanvas && stroke.tool !== 'eraser' && stroke.tool !== 'highlighter'
                     ? Math.min(1, stroke.opacity * 1.35)  // ~35% kräftiger in kleinen Kacheln
                     : stroke.opacity;
@@ -8207,25 +8209,32 @@ function App() {
             // === Mitarbeiter-Link-System (Variante A) ===
             // LINK_EMPLOYEE ist global definiert, damit Admin/Stats außerhalb von App() nicht crashen.
             try { window.__LINK_EMPLOYEE = LINK_EMPLOYEE || ''; } catch(e) {}
-            // PATCH (Stylus Year-2 Costs): When the 2nd-year cost field becomes visible, force a DPR-correct resize
-            // to prevent "jump lines" caused by a 0x0 canvas being drawn before layout settles.
+            // PATCH: Wenn 2. Jahr wieder sichtbar wird → Canvas sofort neu zeichnen (kein Flash)
             useEffect(() => {
                 if (!showSecondYear) return;
-                const raf = requestAnimationFrame(() => {
+
+                const doRedraw = () => {
                     const canvas = offerCost3Ref?.current;
                     if (!canvas) return;
                     const rect = canvas.getBoundingClientRect();
                     if (!rect.width || !rect.height) return;
                     const dpr = window.devicePixelRatio || 1;
-                    canvas.width = Math.round(rect.width * dpr);
-                    canvas.height = Math.round(rect.height * dpr);
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) return;
-                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                    // Redraw existing strokes if any
-                    try { redrawCanvas(canvas, drawnStrokes['cost_monatlich2'], 1, 'cost_monatlich2'); } catch (e) {}
-                    try { redrawCanvas(canvas, drawnStrokes['cost_smartphone'], 1, 'cost_smartphone'); } catch (e) {}
-                });
+                    const w = Math.round(rect.width * dpr);
+                    const h = Math.round(rect.height * dpr);
+                    if (canvas.width !== w || canvas.height !== h) {
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    }
+                    try { redrawCanvas(canvas, drawnStrokes['cost_monatlich2'], 1, 'cost_monatlich2'); } catch(e) {}
+                    try { redrawCanvas(canvas, drawnStrokes['cost_smartphone'], 1, 'cost_smartphone'); } catch(e) {}
+                };
+
+                // Sofort zeichnen (verhindert das weiße Aufblitzen)
+                doRedraw();
+                // + nochmal nach Layout-Berechnung als Sicherheitsnetz
+                const raf = requestAnimationFrame(doRedraw);
                 return () => cancelAnimationFrame(raf);
             }, [showSecondYear, drawnStrokes]);
  
@@ -13189,7 +13198,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v38.8</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v38.9</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
