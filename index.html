@@ -2304,6 +2304,13 @@ body.pdf-share-mode .share-outro,
     transform: translateX(var(--FULLSCREEN_SHIFT_X)) !important;
     will-change: transform;
   }
+  /* Tastatur-Modus: Transform abschalten → iOS zeigt volle Tastatur statt Mini-Floating */
+  body.keyboard-mode-active .situation-view-wrapper,
+  body.keyboard-mode-active .print-situation-view,
+  body.keyboard-mode-active .print-offer-view{
+    transform: none !important;
+    margin-left: 0 !important;
+  }
   .situation-view-wrapper .grid,
   .print-offer-view .grid{
     margin-left: calc(var(--FULLSCREEN_SHIFT_X) * 0.5) !important;
@@ -3344,6 +3351,10 @@ html.device-android-tablet .sit-aside-panel {
     padding-bottom: env(safe-area-inset-bottom, 0px) !important;
     overflow: visible !important;
 }
+/* Picker-Popups (Dicke/Radierer/Farbe) dürfen in JEDER Orientierung aus der Toolbar ragen */
+.footer-bar, .footer-bar * , .tool-row-host, .pen-tool-picker-host { overflow: visible !important; }
+.footer-bar [class*="bottom-full"] { z-index: 99999 !important; }
+.tool-row-host > div[class*="bottom-full"] { z-index: 99999 !important; }
 </style>
 
 
@@ -5673,7 +5684,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 
 
         const TvPriceModal = ({ isOpen, onClose, onUebernehmen }) => {
-            const [provider, setProvider] = useState('telekom');
+            const [provider, setProvider] = useState('o2');
             const [prevTV,     setPrevTV]     = useState('');
             const [prevHD,     setPrevHD]     = useState('');
             const [prevStream, setPrevStream] = useState('');
@@ -5705,20 +5716,20 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 
             const providerData = {
                 o2: {
-                    label: 'o2 TV XL', color: '#003CA6', colorLight: '#EEF3FF',
-                    tagline: 'Bei o2 TV XL immer dabei:',
-                    features: ['Über 150 Sender in HD','Kostenlose Mediathek','Für zuhause und unterwegs','Sendung neu starten & aufnehmen'],
+                    label: 'o2 TV', color: '#003CA6', colorLight: '#EEF3FF',
+                    tagline: 'Bei o2 TV immer dabei:',
+                    features: ['Über 100 Sender, viele in HD','Kostenlose O2 TV App','Für zuhause und unterwegs','Sendung neu starten & aufnehmen'],
                     rows: [
-                        { icon:'🔌', label:'Tarif- & Anschlusskosten', range:'7 – 17 €',      tarif:{ s:7.99,  m:12.99, xl:17.99 } },
-                        { icon:'📡', label:'HD+',                      range:'6 €',            tarif:{ s:0,     m:0,     xl:6.00  } },
-                        { icon:'🎬', label:'Netflix',                   range:'4,99 – 19,99 €', tarif:{ s:4.99,  m:4.99,  xl:6.99  } },
+                        { icon:'🔌', label:'O2 TV Paket',  range:'4,99 – 14,99 €', tarif:{ classic:4.99, smart:9.99, prem:14.99 } },
+                        { icon:'🎬', label:'Netflix',       range:'inkl. / 4,99 €', tarif:{ classic:0,    smart:0,    prem:0     } },
+                        { icon:'🎥', label:'Disney+',       range:'inkl.',          tarif:{ classic:0,    smart:0,    prem:0     } },
                     ],
                     cols: [
-                        { id:'s',  label:'Standard', sub:'mit Werbung',    checks:[true,false,true],  badge:null },
-                        { id:'m',  label:'Standard', sub:'ohne Werbung',   checks:[true,false,true],  badge:null },
-                        { id:'xl', label:'Premium',  sub:'Netflix Premium',checks:[true,true, true],  badge:'⭐ Empfohlen' },
+                        { id:'classic', label:'TV Classic', sub:'24M · HD-TV & Aufnahme',      checks:[true,false,false], badge:'⭐ Beliebt' },
+                        { id:'smart',   label:'TV Smart Flex', sub:'monatl. kündbar',          checks:[true,false,false], badge:null },
+                        { id:'prem',    label:'TV Premium', sub:'24M · Netflix & Disney+ inkl.', checks:[true,true, true],  badge:null },
                     ],
-                    totals:{ s:12.99, m:19.99, xl:24.99 }, recommended:'xl',
+                    totals:{ classic:4.99, smart:9.99, prem:14.99 }, recommended:'classic',
                 },
                 telekom: {
                     label: 'MagentaTV', color: '#E2007A', colorLight: '#FFF0F8',
@@ -5836,11 +5847,15 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 
                         {/* Bisherige Kosten Spalte */}
                         <div style={{borderRadius:'14px',border:'2px dashed #e2e8f0',padding:'14px',display:'flex',flexDirection:'column',background:'#f8fafc',gap:'8px'}}>
-                          <div style={{fontSize:'10px',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em',textAlign:'center'}}>Bisherige Ausgaben</div>
-                          {pd.rows.map((row,ri) => (
+                          <div style={{fontSize:'10px',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.08em',textAlign:'center'}}>TV Ausgaben (Allgemein)</div>
+                          {[
+                            {icon:'📺', label:'TV / Anschluss'},
+                            {icon:'🎬', label:'Streaming 1'},
+                            {icon:'🎥', label:'Streaming 2'},
+                          ].map((fld,ri) => (
                             <div key={ri} style={{display:'flex',flexDirection:'column',gap:'3px'}}>
                               <div style={{fontSize:'9px',color:'#94a3b8',fontWeight:700,display:'flex',alignItems:'center',gap:'4px'}}>
-                                <span>{row.icon}</span>{row.label}
+                                <span>{fld.icon}</span>{fld.label}
                               </div>
                               <input type="text" inputMode="decimal" placeholder="0 €"
                                 value={ri===0 ? prevTV : ri===1 ? prevHD : prevStream}
@@ -8910,15 +8925,49 @@ const fileInputRef = useRef(null);
             }, [canvasHtml.offer1, canvasHtml.offer2, canvasHtml.offer3]);
 
             // iOS Floating-Keyboard Fix:
-            // transform: translateX() auf dem Content-Wrapper lässt iOS die schwebende Mini-Tastatur anzeigen.
-            // Lösung: body.keyboard-mode-active setzen → CSS schaltet den Transform ab.
+            // transform auf dem Content-Wrapper lässt iOS die schwebende Mini-Tastatur anzeigen.
+            // Lösung: body.keyboard-mode-active setzen → CSS schaltet ALLE Transforms ab,
+            // solange ein echtes Eingabefeld (input/textarea, nicht readonly) den Fokus hat.
             React.useEffect(() => {
+                // Modus-basiert (sofort beim Umschalten)
                 if (inputMode === 'keyboard') {
                     document.body.classList.add('keyboard-mode-active');
                 } else {
                     document.body.classList.remove('keyboard-mode-active');
                 }
-                return () => document.body.classList.remove('keyboard-mode-active');
+
+                // Zusätzlich: globaler Fokus-Listener als Sicherheitsnetz für JEDES Eingabefeld
+                const isRealInput = (el) => {
+                    if (!el) return false;
+                    const tag = el.tagName ? el.tagName.toLowerCase() : '';
+                    if (tag === 'textarea') return !el.readOnly;
+                    if (tag === 'input') {
+                        const t = (el.type || 'text').toLowerCase();
+                        // keine readonly-Felder und keine Nicht-Text-Inputs (range/checkbox/etc.)
+                        if (el.readOnly) return false;
+                        return ['text','email','number','search','tel','url','password',''].includes(t);
+                    }
+                    return false;
+                };
+                const onFocusIn = (e) => {
+                    if (isRealInput(e.target)) document.body.classList.add('keyboard-mode-active');
+                };
+                const onFocusOut = (e) => {
+                    // kurz warten – evtl. springt Fokus direkt auf ein anderes Eingabefeld
+                    setTimeout(() => {
+                        const a = document.activeElement;
+                        if (!isRealInput(a) && inputMode !== 'keyboard') {
+                            document.body.classList.remove('keyboard-mode-active');
+                        }
+                    }, 50);
+                };
+                document.addEventListener('focusin', onFocusIn);
+                document.addEventListener('focusout', onFocusOut);
+                return () => {
+                    document.removeEventListener('focusin', onFocusIn);
+                    document.removeEventListener('focusout', onFocusOut);
+                    if (inputMode !== 'keyboard') document.body.classList.remove('keyboard-mode-active');
+                };
             }, [inputMode]);
 
             // Brücke: Canvas-Fusion-Modus für PDF-Export
@@ -10416,20 +10465,14 @@ const handleFinishOfferClick = () => {
                     const y = cssY;
 
                     // === GLEICHMÄSSIGE LINIENSTÄRKE ===
-                    // Velocity: komplett entfernt (war Ursache für "erst dünn dann dick")
-                    // Druck: nur 8% Variation (kaum spürbar, aber gibt subtiles Fühl)
-                    const rawPressure = (ev.pressure != null && ev.pressure > 0) ? ev.pressure : 0.5;
-                    const pressure = Math.max(0.2, Math.min(1.0, rawPressure));
+                    // KONSTANTE Breite: exakt die eingestellte Dicke, sofort und gleichbleibend.
+                    // Kein Druck-Faktor, kein Smoothing-Aufbau → Live-Linie = Redraw-Linie (kein "wird dicker").
+                    const pressure = 0.5; // nur für Punkt-Speicherung, beeinflusst Breite NICHT
 
                     const pts = stroke.points;
                     const baseLW = stroke.baseLineWidth || 2;
-                    // Einheitliche Formel für alle Werkzeuge: Basis ± 8% durch Druck
-                    const dynamicWidth = baseLW * (0.92 + pressure * 0.08);
-
-                    // Starkes Smoothing für absolut ruhige Linien (85% alt, 15% neu)
-                    const prevWidth = stroke.lastWidth || dynamicWidth;
-                    const smoothedWidth = prevWidth * 0.85 + dynamicWidth * 0.15;
-                    stroke.lastWidth = smoothedWidth;
+                    const smoothedWidth = baseLW;   // konstant
+                    stroke.lastWidth = baseLW;
 
                     if (pts.length > 0) stroke.lastTime = ev.timeStamp;
 
@@ -10650,7 +10693,7 @@ const renderPenToolButtons = () => {
 
     {/* Dicke-Regler (Slider) für Stift/Füller/Kugel/Marker — öffnet bei Tipp auf aktives Werkzeug */}
     {showStrokePicker && (tool === 'pen' || tool === 'fountain' || tool === 'ballpen' || tool === 'highlighter') && (
-      <div className="absolute bottom-full left-0 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 z-[99999]" style={{width:'220px'}}>
+      <div className="bg-white p-3 rounded-xl shadow-2xl border border-slate-200" style={{position:'fixed', left:'12px', bottom:'70px', width:'240px', zIndex:999999}}>
         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2">
           {tool==='fountain'?'Füller':tool==='ballpen'?'Kugelschreiber':tool==='highlighter'?'Marker':'Stift'} — Dicke
         </div>
@@ -10658,7 +10701,7 @@ const renderPenToolButtons = () => {
           <div style={{width: Math.max(4, strokeWidth*1.5)+'px', height: Math.max(4, strokeWidth*1.5)+'px', background:'#2563eb', borderRadius:'50%', flexShrink:0}}/>
           <input type="range" min="1" max="12" step="1" value={strokeWidth}
             onChange={(e)=>setStrokeWidth(parseInt(e.target.value,10))}
-            style={{flex:1, accentColor:'#2563eb', height:'24px'}} />
+            style={{flex:1, accentColor:'#2563eb', height:'28px'}} />
           <span style={{fontSize:'13px',fontWeight:800,color:'#1d4ed8',minWidth:'22px',textAlign:'center'}}>{strokeWidth}</span>
         </div>
         {/* Vorschau-Linie */}
@@ -10666,23 +10709,23 @@ const renderPenToolButtons = () => {
           <div style={{width:'80%', height: strokeWidth+'px', background:'#1e293b', borderRadius:'99px'}}/>
         </div>
         <button onClick={()=>setShowStrokePicker(false)} onPointerUp={(e)=>{if(e.pointerType==='pen'){e.preventDefault();e.stopPropagation();setShowStrokePicker(false);}}}
-          style={{marginTop:'8px',width:'100%',padding:'7px',borderRadius:'8px',background:'#2563eb',color:'#fff',border:'none',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>Fertig</button>
+          style={{marginTop:'8px',width:'100%',padding:'9px',borderRadius:'8px',background:'#2563eb',color:'#fff',border:'none',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>Fertig</button>
       </div>
     )}
 
     {/* Radierer-Größe Slider */}
     {showEraserPicker && tool === 'eraser' && (
-      <div className="absolute bottom-full right-0 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 z-[99999]" style={{width:'200px'}}>
+      <div className="bg-white p-3 rounded-xl shadow-2xl border border-slate-200" style={{position:'fixed', left:'12px', bottom:'70px', width:'240px', zIndex:999999}}>
         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-2">Radierer-Größe</div>
         <div className="flex items-center gap-2">
           <div style={{width: Math.max(6, eraserSize*2.5)+'px', height: Math.max(6, eraserSize*2.5)+'px', background:'#ef4444', borderRadius:'50%', flexShrink:0}}/>
           <input type="range" min="1" max="12" step="1" value={eraserSize}
             onChange={(e)=>setEraserSize(parseInt(e.target.value,10))}
-            style={{flex:1, accentColor:'#ef4444', height:'24px'}} />
+            style={{flex:1, accentColor:'#ef4444', height:'28px'}} />
           <span style={{fontSize:'13px',fontWeight:800,color:'#dc2626',minWidth:'22px',textAlign:'center'}}>{eraserSize}</span>
         </div>
         <button onClick={()=>setShowEraserPicker(false)} onPointerUp={(e)=>{if(e.pointerType==='pen'){e.preventDefault();e.stopPropagation();setShowEraserPicker(false);}}}
-          style={{marginTop:'8px',width:'100%',padding:'7px',borderRadius:'8px',background:'#ef4444',color:'#fff',border:'none',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>Fertig</button>
+          style={{marginTop:'8px',width:'100%',padding:'9px',borderRadius:'8px',background:'#ef4444',color:'#fff',border:'none',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>Fertig</button>
       </div>
     )}
   </div>
@@ -13231,7 +13274,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v39.6</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v40.1</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
