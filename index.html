@@ -2286,20 +2286,18 @@ body.pdf-share-mode .share-outro,
     overflow: visible !important;
     flex-wrap: nowrap !important;
   }
-/* Portrait: Toolbar-Elemente komprimieren damit alle 5 Stifte in 42vw passen */
-  /* Opacity-Slider + Farb-Picker + Divider im Hochformat ausblenden (sparen ~160px) */
+/* Portrait: Toolbar-Elemente komprimieren damit alles passt */
+  /* Nur den selten genutzten Deckkraft-Slider ausblenden; Helligkeit + Farbe bleiben sichtbar */
   .footer-bar .opacity-slider-group { display: none !important; }
-  .footer-bar .color-picker-group { display: none !important; }
-  .footer-bar .toolbar-divider { display: none !important; }
-  /* Tool-Buttons noch etwas kompakter */
+  /* Tool-Buttons kompakter */
   .footer-bar .tool-row-host button {
-    min-width: 30px !important;
-    padding: 3px 4px !important;
+    min-width: 28px !important;
+    padding: 3px 3px !important;
   }
-  /* Pen-Tool-Gruppe: Breite begrenzen damit rechts Platz für Buttons bleibt */
+  /* Pen-Tool-Gruppe: Breite begrenzen damit rechts Platz für Farbe/Helligkeit bleibt */
   /* WICHTIG: overflow NICHT auf hidden/auto setzen → schneidet Picker-Popups (bottom-full) ab! */
   .footer-bar > div:first-child {
-    max-width: 42vw !important;
+    max-width: 38vw !important;
     flex-shrink: 1 !important;
     overflow: visible !important;
   }
@@ -7775,15 +7773,12 @@ const highResHTML = buildHighResBundleHTML(d);
                 if (currentCssHeight === 0) currentCssHeight = stroke.baseHeight || (stroke.baseWidth ? (stroke.baseWidth * 0.66) : 100); // best-effort fallback
                 const scaleW = currentCssWidth / (stroke.baseWidth || currentCssWidth);
                 const scaleH = (stroke.baseHeight ? (currentCssHeight / stroke.baseHeight) : scaleW);
-                // ✅ Uniform scaling: prevents "overstretching" when aspect ratio changes (tablet rotate/fullscreen)
-                // Orientierungswechsel-Fix: Hochformat→Querformat → 2× größer
-                const wasPortrait = (stroke.baseHeight || 0) > (stroke.baseWidth || 1) * 1.1;
-                const isNowLandscape = currentCssWidth > currentCssHeight * 1.2;
-                const orientationMultiplier = (wasPortrait && isNowLandscape) ? 2.0 : 1.0;
+                // ✅ Uniform scaling (Math.min) skaliert beim Drehen korrekt – KEIN zusätzlicher
+                // orientationMultiplier mehr (der hat die Schrift beim Hoch→Quer-Wechsel verdoppelt/verzogen).
                 // Schritt-Modus-Fix: Striche die auf großem Step-Canvas gemalt wurden, in kleinen Grid-Kacheln 4× größer zeigen
                 const isStepStrokeInGrid = (stroke.baseWidth || 0) > 500 && currentCssWidth < 450;
                 const stepBoost = isStepStrokeInGrid ? 4.0 : 1.0;
-                let responsiveScaleFactor = Math.min(scaleW, scaleH) * orientationMultiplier * stepBoost;
+                let responsiveScaleFactor = Math.min(scaleW, scaleH) * stepBoost;
                 // Kostenfelder / Agent / Datum: feste kleine Eingabefelder, die NICHT rotieren.
                 // Hier KEINE Skalierung → verhindert dass sich Geschriebenes nach kurzem Warten
                 // verzieht (Layout-Reflow ändert minimal die Breite → sonst Verschiebung).
@@ -11492,7 +11487,7 @@ const bakeCanvasesIntoClone = (srcRoot, cloneRoot) => {
             img.alt = 'canvas';
             img.className = (dc.className || '') + ' canvas-baked-image';
             img.style.cssText = (dc.getAttribute('style') || '') + ';' +
-                'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;touch-action:none;';
+                'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top;pointer-events:none;touch-action:none;';
             try { dc.style.visibility = 'hidden'; } catch(e){}
             try { dc.parentNode && dc.parentNode.insertBefore(img, dc.nextSibling); } catch(e){}
         }
@@ -11545,9 +11540,9 @@ try {
     // Canvas/Eingabe-Bereich jeder Kachel (letztes Kind = Zeichenfläche)
     cloneSituation.querySelectorAll('.sit-card-canvas').forEach(area => {
         area.style.flex = 'none';
-        area.style.height = '42px';
+        area.style.height = '70px';
         area.style.minHeight = '0';
-        area.style.maxHeight = '42px';
+        area.style.maxHeight = '70px';
         area.style.overflow = 'hidden';
     });
     // Kachel-Header Button: etwas kompakter
@@ -12448,6 +12443,8 @@ const opt = {
                                     'position:absolute',
                                     'top:0', 'left:0',
                                     'width:100%', 'height:100%',
+                                    'object-fit:contain',
+                                    'object-position:left top',
                                     'pointer-events:none',
                                     'z-index:' + (cloneCanvas.style.zIndex || 10),
                                     'image-rendering:crisp-edges',
@@ -13362,7 +13359,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.1</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.3</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
