@@ -67,6 +67,7 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSI5NiIgZmlsbD0iIzAwMUU1MCIvPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDI1NiwyNTYpIj48Y2lyY2xlIHI9IjE1MCIgZmlsbD0iIzAwNTBGRiIvPjxwYXRoIGQ9Ik0tNjAtNDAgTDQwLTgwIEw4MC00MCBMLTIwIDYwIEwtODAgODAgWiIgZmlsbD0iI2ZmZiIgdHJhbnNmb3JtPSJyb3RhdGUoMTUpIi8+PC9nPjwvc3ZnPg==">
     <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjogIlBlbmNpbCBTZWxsaW5nIFRvb2wiLCAic2hvcnRfbmFtZSI6ICJQZW5jaWwgVG9vbCIsICJzdGFydF91cmwiOiAiLiIsICJzY29wZSI6ICIuIiwgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsICJkaXNwbGF5X292ZXJyaWRlIjogWyJmdWxsc2NyZWVuIiwgInN0YW5kYWxvbmUiXSwgIm9yaWVudGF0aW9uIjogImFueSIsICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwMDFFNTAiLCAidGhlbWVfY29sb3IiOiAiIzAwMUU1MCIsICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSGRwWkhSb1BTSTFNVElpSUdobGFXZG9kRDBpTlRFeUlpQjJhV1YzUW05NFBTSXdJREFnTlRFeUlEVXhNaUkrUEhKbFkzUWdkMmxrZEdnOUlqVXhNaUlnYUdWcFoyaDBQU0kxTVRJaUlISjRQU0k1TmlJZ1ptbHNiRDBpSXpBd01VVTFNQ0l2UGp4bklIUnlZVzV6Wm05eWJUMGlkSEpoYm5Oc1lYUmxLREkxTml3eU5UWXBJajQ4WTJseVkyeGxJSEk5SWpFMU1DSWdabWxzYkQwaUl6QXdOVEJHUmlJdlBqeHdZWFJvSUdROUlrMHROakF0TkRBZ1REUXdMVGd3SUV3NE1DMDBNQ0JNTFRJd0lEWXdJRXd0T0RBZ09EQWdXaUlnWm1sc2JEMGlJMlptWmlJZ2RISmhibk5tYjNKdFBTSnliM1JoZEdVb01UVXBJaTgrUEhCaGRHZ2daRDBpVFMwMk1DMDBNQ0JNTFRRd0xUWXdJRXcyTUNBME1DQk1OREFnTmpBZ1dpSWdabWxzYkQwaUkyWm1aaUlnZEhKaGJuTm1iM0p0UFNKeWIzUmhkR1VvTVRVcElIUnlZVzV6YkdGMFpTZ3RNVEFzTXpBcElpOCtQQzluUGp3dmMzWm5QZz09IiwgInNpemVzIjogIjUxMng1MTIiLCAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIn1dfQ==">
     <title>Vertriebs-Dashboard – o2 Edition</title>
+    <!-- PATCH v44: iPad Hochformat->Querformat Offer-Canvas Safe-Y-Scaling -->
     
     <!-- ===== DEVICE DETECTION ===== -->
     <script>
@@ -7790,6 +7791,7 @@ const highResHTML = buildHighResBundleHTML(d);
                 // Sit-Kacheln: Mindestlinienstärke + volle Deckkraft damit Striche nicht blass wirken
                 const isSitCanvas = key.startsWith('sit_');
                 const isCostKey = key.startsWith('cost_') || key === 'agent_name' || key === 'date_field' || key === 'offer_valid_until';
+                const isMainOfferCanvas = key === 'offer1' || key === 'offer2' || key === 'offer3';
                 const costWidthScale = isCostKey ? 0.55 : 1.0; // gleiche Reduzierung wie in startDrawing
                 const finalLineWidth = isSitCanvas ? Math.max(1.8, normalizedBaseLineWidth) : normalizedBaseLineWidth * costWidthScale;
                 const finalOpacity  = isSitCanvas && stroke.tool !== 'eraser' && stroke.tool !== 'highlighter'
@@ -7799,10 +7801,38 @@ const highResHTML = buildHighResBundleHTML(d);
                 if (stroke.points.length > 0) {
                     const ptScaleX = isFixedSmallField ? 1 : (scaleW * stepBoost);
                     const ptScaleY = isFixedSmallField ? 1 : (scaleH * stepBoost);
-                    const pts = stroke.points.map(p => ({
-                        x: Math.min(p.x * ptScaleX, currentCssWidth),
-                        y: Math.min(p.y * ptScaleY, currentCssHeight)
-                    }));
+                    const pts = stroke.points.map(p => {
+                        // iPad-Rotation-Fix: neue Striche speichern zusätzlich nx/ny (0..1).
+                        // Dadurch bleibt die Handschrift relativ zur Karte korrekt, auch wenn Safari beim
+                        // Drehen die Canvas-Höhe/Breite stark verändert. Alte Striche bleiben kompatibel.
+                        let drawX;
+                        let drawY;
+                        if (!isFixedSmallField && Number.isFinite(p.nx) && Number.isFinite(p.ny)) {
+                            drawX = p.nx * currentCssWidth;
+                            drawY = p.ny * currentCssHeight;
+
+                            // iPad Spezialfall: Hochformat -> Querformat auf Seite 2.
+                            // Safari meldet beim Wechsel kurz eine falsche/zu große Höhe.
+                            // Wenn das Angebotsfeld im Querformat deutlich schmaler wird, darf Y NICHT
+                            // mit der neuen Höhe hochskaliert werden, sonst landet die Schrift unten als Punkt.
+                            if (isMainOfferCanvas && stroke.baseWidth && currentCssWidth < (stroke.baseWidth * 0.85)) {
+                                const safeUniformScale = Math.min(scaleW, scaleH);
+                                drawY = p.y * safeUniformScale;
+                            }
+                        } else {
+                            drawX = p.x * ptScaleX;
+                            drawY = p.y * ptScaleY;
+
+                            if (isMainOfferCanvas && stroke.baseWidth && currentCssWidth < (stroke.baseWidth * 0.85)) {
+                                const safeUniformScale = Math.min(scaleW, scaleH);
+                                drawY = p.y * safeUniformScale;
+                            }
+                        }
+                        return {
+                            x: Math.max(0, Math.min(drawX, currentCssWidth)),
+                            y: Math.max(0, Math.min(drawY, currentCssHeight))
+                        };
+                    });
                     const isSmooth = (stroke.tool === 'fountain' || stroke.tool === 'ballpen');
                     if (isSmooth && pts.length >= 3) {
                         // IDENTISCHE Mittelpunkt-Logik wie im Live-Drawing (draw())
@@ -7926,7 +7956,23 @@ const highResHTML = buildHighResBundleHTML(d);
                     }
                 };
 
-                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '24px' : textSize === 'large' ? '44px' : '32px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; if (currentWidth < 5) return; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (currentWidth >= 10 && Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '24px' : textSize === 'large' ? '44px' : '32px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; if (currentWidth < 5) return; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (currentWidth >= 10 && Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]);
+                // iPad-Rotation-Fix Seite 2: Card/Canvas nach Layout-Änderungen automatisch neu zeichnen.
+                // ResizeObserver ist wichtig, weil iOS nicht immer ein klassisches window.resize auslöst.
+                useEffect(() => {
+                    const canvas = canvasRef.current;
+                    if (!canvas || typeof ResizeObserver === 'undefined') return;
+                    const ro = new ResizeObserver(() => {
+                        const redrawSettled = () => redrawCanvas(canvas, drawnStrokes || [], 1, statusKey);
+                        requestAnimationFrame(redrawSettled);
+                        setTimeout(redrawSettled, 120);
+                        setTimeout(redrawSettled, 350);
+                        setTimeout(redrawSettled, 800);
+                    });
+                    try { ro.observe(canvas); } catch(_) {}
+                    try { if (canvas.parentElement) ro.observe(canvas.parentElement); } catch(_) {}
+                    return () => { try { ro.disconnect(); } catch(_) {} };
+                }, [canvasRef, drawnStrokes, statusKey]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
         const overlayWrapRef = useRef(null);
         const overlayOuterRef = useRef(null);
         const [overlayFitScale, setOverlayFitScale] = useState(1);
@@ -10136,8 +10182,25 @@ const handleFinishOfferClick = () => {
                 }
 
                 resizeAll(); 
-                window.addEventListener('resize', resizeAll); 
-                return () => window.removeEventListener('resize', resizeAll); 
+                // iPad Safari/PWA: Beim Drehen kommt das finale Layout oft erst nach mehreren Frames.
+                // Deshalb nicht nur resize, sondern auch orientationchange + visualViewport mit verzögerten Redraws.
+                const resizeAllSettled = () => {
+                    resizeAll();
+                    setTimeout(resizeAll, 80);
+                    setTimeout(resizeAll, 250);
+                    setTimeout(resizeAll, 600);
+                    setTimeout(resizeAll, 1000);
+                    setTimeout(resizeAll, 1500);
+                };
+                window.addEventListener('resize', resizeAllSettled); 
+                window.addEventListener('orientationchange', resizeAllSettled);
+                const vv = window.visualViewport;
+                if (vv && vv.addEventListener) vv.addEventListener('resize', resizeAllSettled);
+                return () => {
+                    window.removeEventListener('resize', resizeAllSettled);
+                    window.removeEventListener('orientationchange', resizeAllSettled);
+                    if (vv && vv.removeEventListener) vv.removeEventListener('resize', resizeAllSettled);
+                }; 
             }, [emailMode, beratungsIdMode, providerMode, isCustomProvider, notesMode, skipReasonMode, view, inputMode, sitLayoutMode, currentSitStep]); 
             useEffect(() => { 
                 if (view !== 'situation') return; 
@@ -10461,7 +10524,7 @@ const handleFinishOfferClick = () => {
                     color: currentColor,
                     width: tune.width,
                     opacity: currentOpacity,
-                    points: [{ x, y, pressure, width: initWidth }],
+                    points: [{ x, y, nx: strokeBaseWidth ? (x / strokeBaseWidth) : 0, ny: strokeBaseHeight ? (y / strokeBaseHeight) : 0, pressure, width: initWidth }],
                     baseWidth: strokeBaseWidth,
                     baseHeight: strokeBaseHeight,
                     baseLineWidth: finalLineWidth,
@@ -10570,7 +10633,7 @@ const handleFinishOfferClick = () => {
 
                     if (pts.length > 0) stroke.lastTime = ev.timeStamp;
 
-                    pts.push({ x, y, pressure, width: smoothedWidth });
+                    pts.push({ x, y, nx: stroke.baseWidth ? (x / stroke.baseWidth) : 0, ny: stroke.baseHeight ? (y / stroke.baseHeight) : 0, pressure, width: smoothedWidth });
 
                     // Live-Bezier-Rendering: Quadratic Curve für flüssige Linien
                     if (pts.length >= 3) {
