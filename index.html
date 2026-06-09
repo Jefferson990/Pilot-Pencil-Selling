@@ -7745,8 +7745,16 @@ const highResHTML = buildHighResBundleHTML(d);
             const dpr = window.devicePixelRatio || 1;
             try {
                 const r = canvas.getBoundingClientRect();
-                const w = Math.max(1, Math.round(r.width || 0));
-                const h = Math.max(1, Math.round(r.height || 0));
+                const rawW = r.width || 0;
+                const rawH = r.height || 0;
+                // iPad/Safari Rotation-Fix:
+                // Beim Drehen liefert Safari kurzzeitig 0px/1px oder Zwischenwerte. Früher wurde der
+                // Canvas dann auf 1px gesetzt und dabei komplett geleert. Danach wirkte die Schrift weg.
+                // Deshalb: bei instabiler Größe NICHT clearen und NICHT resize'n. Der ResizeObserver
+                // unten zeichnet erneut, sobald die echte finale Größe da ist.
+                if (rawW < 20 || rawH < 20) return;
+                const w = Math.max(1, Math.round(rawW));
+                const h = Math.max(1, Math.round(rawH));
                 const targetW = Math.round(w * dpr);
                 const targetH = Math.round(h * dpr);
                 if (w && h && (canvas.width !== targetW || canvas.height !== targetH)) {
