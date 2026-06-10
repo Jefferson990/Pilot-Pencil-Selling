@@ -7766,6 +7766,25 @@ const highResHTML = buildHighResBundleHTML(d);
                 try { setTimeout(() => { try { redrawCanvas(canvas, strokes, scaleFactor, key); } catch(e){} }, 120); } catch(e){}
                 return;
             }
+            // Stabilitaets-Check fuer Offer-Canvase waehrend Orientierungswechsel:
+            // getBoundingClientRect() liefert Zwischenwerte solange CSS-Layout noch umbaut.
+            // Loesung: aktuelle Maße mit letztem bekannten Wert vergleichen. Haben sie sich
+            // gerade geaendert (delta > 2px) → Layout noch in Bewegung → einen Frame warten
+            // und nochmal messen. Maximal 10 Versuche (~160ms), dann trotzdem zeichnen.
+            if (key && key.startsWith('offer')) {
+                const __prevW = canvas.__stableW;
+                const __prevH = canvas.__stableH;
+                const __tries = canvas.__stableTries || 0;
+                canvas.__stableW = __rectW;
+                canvas.__stableH = __rectH;
+                if (__tries < 10 && __prevW !== undefined &&
+                    (Math.abs(__rectW - __prevW) > 2 || Math.abs(__rectH - __prevH) > 2)) {
+                    canvas.__stableTries = __tries + 1;
+                    requestAnimationFrame(() => { try { redrawCanvas(canvas, strokes, scaleFactor, key); } catch(e){} });
+                    return;
+                }
+                canvas.__stableTries = 0; // reset nach erfolgreichem Zeichnen
+            }
             // Offscreen-Puffer: verhindert Flackern beim Orientierungswechsel.
             // canvas.width = x loescht den Canvas sofort (Browser-Verhalten) → leerer Frame sichtbar.
             // Loesung: alles auf Offscreen-Canvas zeichnen, dann in einem drawImage-Aufruf auf den
