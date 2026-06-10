@@ -7825,6 +7825,11 @@ const highResHTML = buildHighResBundleHTML(d);
                 // kuerzer) zu kleiner Schrift fuehren. Math.min wuerde springen wenn scaleH < scaleW.
                 // scaleW ist stabil: beide Orientierungen haben aehnliche Kartenbreite.
                 const isOfferKey = key.startsWith('offer');
+                // Getrennte X/Y-Skalierung für Offer-Canvas: Punkte werden relativ zur
+                // Kartengröße gezeichnet → Schrift füllt IMMER denselben relativen Bereich,
+                // kann beim Drehen nicht überlaufen oder verschwinden (unabhängig vom Timing).
+                const offerScaleX = isOfferKey ? (currentCssWidth / (stroke.baseWidth || currentCssWidth)) : null;
+                const offerScaleY = isOfferKey ? (currentCssHeight / (stroke.baseHeight || currentCssHeight)) : null;
                 let responsiveScaleFactor = (isOfferKey ? scaleW : Math.min(scaleW, scaleH)) * stepBoost;
                 const isFixedSmallField = key.startsWith('cost_') || key === 'agent_name' || key === 'date_field' || key === 'offer_valid_until';
                 if (isFixedSmallField) responsiveScaleFactor = 1;
@@ -7840,7 +7845,9 @@ const highResHTML = buildHighResBundleHTML(d);
                     : stroke.opacity;
                 if (stroke.tool === 'eraser') { ctx.lineWidth = finalLineWidth * (stroke.eraserMult || 4); ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; } else if (stroke.tool === 'highlighter') { ctx.lineWidth = finalLineWidth * 3; ctx.strokeStyle = stroke.color; ctx.globalAlpha = stroke.opacity; ctx.globalCompositeOperation = 'destination-over'; } else { ctx.lineWidth = finalLineWidth; ctx.strokeStyle = stroke.color; ctx.globalAlpha = finalOpacity; ctx.globalCompositeOperation = 'source-over'; }
                 if (stroke.points.length > 0) {
-                    const pts = stroke.points.map(p => ({ x: p.x * responsiveScaleFactor, y: p.y * responsiveScaleFactor }));
+                    const pts = (isOfferKey && offerScaleX != null)
+                        ? stroke.points.map(p => ({ x: p.x * offerScaleX, y: p.y * offerScaleY }))
+                        : stroke.points.map(p => ({ x: p.x * responsiveScaleFactor, y: p.y * responsiveScaleFactor }));
                     const isSmooth = (stroke.tool === 'fountain' || stroke.tool === 'ballpen');
                     if (isSmooth && pts.length >= 3) {
                         ctx.moveTo(pts[0].x, pts[0].y);
@@ -13460,7 +13467,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.6</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.7</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
