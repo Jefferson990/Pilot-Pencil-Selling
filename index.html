@@ -57,21 +57,10 @@
         function fireCanvasRecalc() {
             try { window.dispatchEvent(new Event('ps-canvas-recalc')); } catch(e) {}
         }
-        // Orientierungswechsel: applyScale einmalig frühzeitig (damit Viewport stimmt),
-        // dann nur EINEN finalen ps-canvas-recalc nach 700ms (Debounce).
-        // Vorher: 5x feuern → 5 Redraws → Flackern. Jetzt: 1x Redraw nach stabilem Layout.
-        var _recalcDebounce = null;
         window.addEventListener('orientationchange', function() {
-            // Viewport so früh wie möglich korrigieren (mehrfach nötig wegen Safari-Delay)
-            setTimeout(applyScale, 80);
-            setTimeout(applyScale, 300);
-            // Einziger Canvas-Redraw erst wenn Viewport wirklich fertig ist
-            if (_recalcDebounce) clearTimeout(_recalcDebounce);
-            _recalcDebounce = setTimeout(function() {
-                applyScale();
-                fireCanvasRecalc();
-                _recalcDebounce = null;
-            }, 700);
+            [120, 280, 500, 800, 1100].forEach(function(ms){
+                setTimeout(function(){ applyScale(); fireCanvasRecalc(); }, ms);
+            });
         });
     })();
     </script>
@@ -7777,22 +7766,33 @@ const highResHTML = buildHighResBundleHTML(d);
                 try { setTimeout(() => { try { redrawCanvas(canvas, strokes, scaleFactor, key); } catch(e){} }, 120); } catch(e){}
                 return;
             }
+            // Offscreen-Puffer: verhindert Flackern beim Orientierungswechsel.
+            // canvas.width = x loescht den Canvas sofort (Browser-Verhalten) → leerer Frame sichtbar.
+            // Loesung: alles auf Offscreen-Canvas zeichnen, dann in einem drawImage-Aufruf auf den
+            // sichtbaren Canvas uebertragen → kein leerer Zwischenframe, kein Flackern.
+            let offscreen, octx;
+            const w = Math.max(1, Math.round(__rectW));
+            const h = Math.max(1, Math.round(__rectH));
+            const targetW = Math.round(w * dpr);
+            const targetH = Math.round(h * dpr);
             try {
-                const w = Math.max(1, Math.round(__rectW));
-                const h = Math.max(1, Math.round(__rectH));
-                const targetW = Math.round(w * dpr);
-                const targetH = Math.round(h * dpr);
-                if (w && h && (canvas.width !== targetW || canvas.height !== targetH)) {
-                    canvas.width = targetW;
-                    canvas.height = targetH;
+                if (typeof OffscreenCanvas !== 'undefined') {
+                    offscreen = new OffscreenCanvas(targetW, targetH);
+                } else {
+                    offscreen = document.createElement('canvas');
+                    offscreen.width = targetW;
+                    offscreen.height = targetH;
                 }
+                octx = offscreen.getContext('2d');
             } catch(_) {}
-            const ctx = canvas.getContext('2d'); 
+            // Fallback: kein Offscreen-Support → direkt auf sichtbaren Canvas (altes Verhalten)
+            const useOffscreen = !!(offscreen && octx);
+            const ctx = useOffscreen ? octx : canvas.getContext('2d');
             if (!ctx) return;
             // DPR-Transform: ab hier in CSS-Pixeln rechnen (identisch zu startDrawing/draw)
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            const cssW = canvas.width / dpr;
-            const cssH = canvas.height / dpr;
+            const cssW = targetW / dpr;
+            const cssH = targetH / dpr;
             ctx.clearRect(0, 0, cssW, cssH); 
             ctx.save(); 
             // Schutz: strokes kann undefined sein (nicht-initialisierter Key) → leeres Array
@@ -7857,6 +7857,20 @@ const highResHTML = buildHighResBundleHTML(d);
             ctx.restore(); 
             ctx.globalCompositeOperation = 'source-over'; 
             ctx.globalAlpha = 1; 
+            // Offscreen → sichtbaren Canvas in einem Schritt uebertragen (kein leerer Frame)
+            if (useOffscreen) {
+                const visCtx = canvas.getContext('2d');
+                if (visCtx) {
+                    // Canvas-Dimensionen erst JETZT aendern (nicht vorher → kein Loeschen sichtbar)
+                    if (canvas.width !== targetW || canvas.height !== targetH) {
+                        canvas.width = targetW;
+                        canvas.height = targetH;
+                    }
+                    visCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    visCtx.clearRect(0, 0, targetW, targetH);
+                    visCtx.drawImage(offscreen, 0, 0);
+                }
+            }
         };
 
         const OfferCanvas = React.memo(({
@@ -8563,21 +8577,18 @@ const toolRef = useRef('pen');
                         }
                     });
                 };
-                // Debounce-Timer: verhindert Flackern durch mehrfache gestaffelte Redraws.
-                // Beim Orientierungswechsel feuern resize + orientationchange + ps-canvas-recalc
-                // mehrfach in kurzer Folge. Ohne Debounce → Canvas wird 4-8x geleert+neu gezeichnet
-                // → sichtbares Flackern. Mit Debounce: nur EIN Redraw, sobald das Layout stabil ist.
-                let _handleDebounceTimer = null;
                 const handle = () => {
-                    applyPortraitShift(); // Shift sofort (kein visueller Effekt, nur Layout-Var)
-                    if (_handleDebounceTimer) clearTimeout(_handleDebounceTimer);
-                    // 650ms reichen für Safari/iPad um den Viewport final zu berechnen.
-                    // Kein Zwischenredraw → kein Flackern.
-                    _handleDebounceTimer = setTimeout(() => {
-                        applyPortraitShift();
-                        setRedrawCounter(r => r + 1);
-                        _handleDebounceTimer = null;
-                    }, 650);
+                    // doppelt rAF: erst Layout settle, dann Shift + Redraw
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            applyPortraitShift();
+                            setRedrawCounter(r => r + 1);
+                        });
+                    });
+                    // iPad-FIX: Layout-Umbau (3 Karten unter->nebeneinander) braucht länger als 2 Frames.
+                    setTimeout(() => { applyPortraitShift(); setRedrawCounter(r => r + 1); }, 150);
+                    setTimeout(() => { applyPortraitShift(); setRedrawCounter(r => r + 1); }, 400);
+                    setTimeout(() => { applyPortraitShift(); setRedrawCounter(r => r + 1); }, 750);
                 };
 
                 // initial
@@ -10145,22 +10156,15 @@ const handleFinishOfferClick = () => {
                     } 
                 }; 
 
-                let _resizeAllTimer = null;
-                const resizeAll = () => {
-                    canvasMap.forEach(map => {
-                        const shouldResize = map.mode === 'pen' && (map.condition === undefined || map.condition);
-                        if (shouldResize) { resizeCanvas(map.ref, map.key); }
-                    });
-                    if (view === 'offer') {
-                        offerCanvasMap.forEach(({ ref, key }) => { resizeCanvas(ref, key); });
+                const resizeAll = () => { 
+                    canvasMap.forEach(map => { 
+                        const shouldResize = map.mode === 'pen' && (map.condition === undefined || map.condition); 
+                        if (shouldResize) { resizeCanvas(map.ref, map.key); } 
+                    }); 
+                    if (view === 'offer') { 
+                        offerCanvasMap.forEach(({ ref, key }) => { resizeCanvas(ref, key); }); 
                     }
-                    // Debounced Redraw: resize + ps-canvas-recalc feuern oft gleichzeitig.
-                    // Nur ein einziger Redraw am Ende verhindert Flackern.
-                    if (_resizeAllTimer) clearTimeout(_resizeAllTimer);
-                    _resizeAllTimer = setTimeout(() => {
-                        setRedrawCounter(r => r + 1);
-                        _resizeAllTimer = null;
-                    }, 650);
+                    setRedrawCounter(r => r + 1); 
                 };
 
                 // FIX Bug 2: E-Mail-Canvas — nach CSS-Transition (200ms height anim) neu skalieren
