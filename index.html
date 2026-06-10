@@ -11837,10 +11837,14 @@ const isOfferEmpty = (sourceOfferEl, offerIndex) => {
         const ta = col.querySelector('textarea');
         const hasText = ta && (ta.value || '').trim().length > 0;
 
-        // 2) Canvas mit gezeichneten Strokes? (nur prüfen wenn Canvas sichtbar ist)
-        const canvas = col.querySelector('canvas.drawing-canvas');
+        // 2) Canvas mit gezeichneten Strokes? — zuverlässigste Quelle: globale Stroke-Daten
         let hasCanvas = false;
-        if (canvas && canvas.width > 0 && canvas.height > 0) {
+        try {
+            const ks = 'offer' + (offerIndex + 1);
+            hasCanvas = !!(window.__psStrokes && Array.isArray(window.__psStrokes[ks]) && window.__psStrokes[ks].length > 0);
+        } catch(e) {}
+        const canvas = col.querySelector('canvas.drawing-canvas');
+        if (!hasCanvas && canvas && canvas.width > 0 && canvas.height > 0) {
             try {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
@@ -11961,6 +11965,33 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
     if (cvs) {
         cvs.style.cssText = (cvs.getAttribute('style') || '') + ';position:absolute;inset:0;width:100%;height:100%;';
     }
+
+    // === HANDSCHRIFT FÜR VOLLE SEITE NEU RENDERN (v42.4) ===
+    // Statt das Bildschirm-Bitmap (evtl. Hochformat-Form) zu quetschen, werden die Striche
+    // frisch für die Ganzseiten-Kachel gezeichnet → kein Verziehen, viel Platz.
+    try {
+        const strokeKey = 'offer' + (offerIndex + 1);
+        const strokes = (window.__psStrokes && window.__psStrokes[strokeKey]) || null;
+        if (Array.isArray(strokes) && strokes.length > 0 && typeof renderStrokesForPrint === 'function') {
+            // Ganzseiten-Kachel: ~1060×540 px Zeichenfläche (A4 quer abzgl. Header/Rahmen)
+            const re = renderStrokesForPrint(strokes, 1060, 540, strokeKey);
+            if (re) {
+                const bakedImg = container.querySelector('img.canvas-baked-image');
+                if (bakedImg) {
+                    bakedImg.src = re;
+                    bakedImg.style.objectFit = 'contain';
+                    bakedImg.style.objectPosition = 'left top';
+                } else if (cvs) {
+                    const im = doc.createElement('img');
+                    im.src = re;
+                    im.className = 'canvas-baked-image';
+                    im.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top;pointer-events:none;z-index:10;';
+                    try { cvs.style.visibility = 'hidden'; } catch(e){}
+                    try { cvs.parentNode && cvs.parentNode.insertBefore(im, cvs.nextSibling); } catch(e){}
+                }
+            }
+        }
+    } catch(e) {}
 
     // ===== PDF-FIX: eingefügte Fotos 1:1 wie am Bildschirm übernehmen =====
     // Problem: Im Share-PDF bekommt die Offer-Karte eine andere Höhe als am Screen.
@@ -12300,9 +12331,27 @@ const makeAllOffersPage = () => {
     return wrapper;
 };
 
-const allOffersPage = wrapSharePage('Ihr Persönliches Angebot', makeAllOffersPage());
-stage.appendChild(allOffersPage);
-let offerPageCount = 1; // Alle Angebote = 1 Seite
+// === v42.4: JEDES ANGEBOT BEKOMMT EINE EIGENE SEITE ===
+// Leere Angebote werden übersprungen (dynamische Seitenzahl). Die Handschrift hat damit
+// eine ganze A4-Querformat-Seite Platz → kein Quetschen in schmale Spalten mehr.
+let offerPageCount = 0;
+try {
+    for (let oi = 0; oi < 3; oi++) {
+        let empty = true;
+        try { empty = isOfferEmpty(sourceOffer, oi); } catch(e) { empty = false; }
+        if (empty) continue;
+        const pageTitle = (offerTitles[oi] && offerTitles[oi].trim()) ? offerTitles[oi].trim() : ((oi + 1) + '. Angebot');
+        const offerPage = wrapSharePage(pageTitle, makeOfferPage(sourceOffer, oi, offerTitles));
+        stage.appendChild(offerPage);
+        offerPageCount++;
+    }
+} catch(e) {}
+// Fallback: keine Einzelseite erzeugt (alles leer oder Fehler) → bewährte Sammel-Seite
+if (offerPageCount === 0) {
+    const allOffersPage = wrapSharePage('Ihr Persönliches Angebot', makeAllOffersPage());
+    stage.appendChild(allOffersPage);
+    offerPageCount = 1;
+}
 
 // Letzte Seite: Kostenübersicht OBEN (kompakt) + Danke & Bonus darunter
 // Ziel: Kosten nimmt ~42% der Höhe, Danke ~58% — beide vollständig sichtbar
@@ -13576,7 +13625,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.3</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.4</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
