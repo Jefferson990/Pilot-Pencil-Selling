@@ -8248,7 +8248,7 @@ const highResHTML = buildHighResBundleHTML(d);
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
-</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} onPointerCancel={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} data-stroke-key={statusKey} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} onPointerCancel={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
             </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'100%', height:'150px', overflow:'hidden', background:'#f1f5f9', borderTop:'1px solid #e2e8f0', position:'relative', flexShrink:0 }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none' }}/></div>)}</div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
@@ -8482,6 +8482,9 @@ const PA_UPLOAD_URL = 'PASTE_POWER_AUTOMATE_FLOW_URL_HERE';
                 offer1: [], offer2: [], offer3: [],
                 cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], cost_smartphone: [], agent_name: [], date_field: [], offer_valid_until: []
             });
+            // PDF-Druck: Strokes global verfügbar machen, damit der Export die Handschrift
+            // passend für die Druck-Kachelgröße NEU rendern kann (statt Bitmap zu verzerren).
+            window.__psStrokes = drawnStrokes;
 
             const isDrawingRef = useRef(false);
             const currentStrokeRef = useRef(null); 
@@ -10941,18 +10944,74 @@ const renderPenToolButtons = () => {
 // PDF im "Print-Look" als Blob erzeugen (ohne Print-Dialog). Wiederverwendet von Share + Auto-Upload.
 
 // PDF im "Print-Look" als Blob erzeugen (ohne Print-Dialog). Wiederverwendet von Share + Auto-Upload.
+// === PDF-DRUCK: Handschrift passend für Ziel-Kachelgröße neu rendern ===
+// Statt das Bildschirm-Bitmap (z.B. Hochformat-Form) in die Druck-Kachel zu quetschen,
+// werden die Striche mit derselben X/Y-Logik wie beim Geräte-Drehen neu gezeichnet.
+// → Schrift füllt die Druck-Kachel proportional, kein Verziehen mehr.
+const renderStrokesForPrint = (strokes, targetW, targetH, key) => {
+    try {
+        if (!Array.isArray(strokes) || strokes.length === 0) return null;
+        if (!targetW || !targetH || targetW < 2 || targetH < 2) return null;
+        const off = document.createElement('canvas');
+        const sharp = 2; // 2× für scharfen Druck
+        off.width = Math.max(1, Math.round(targetW * sharp));
+        off.height = Math.max(1, Math.round(targetH * sharp));
+        const ctx = off.getContext('2d');
+        if (!ctx) return null;
+        ctx.setTransform(sharp, 0, 0, sharp, 0, 0);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const isOfferKey = (key || '').startsWith('offer');
+        strokes.forEach(stroke => {
+            if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) return;
+            const bw = stroke.baseWidth || targetW;
+            const bh = stroke.baseHeight || targetH;
+            const sx = targetW / bw;
+            const sy = targetH / bh;
+            const uni = Math.min(sx, sy);
+            const useX = isOfferKey ? sx : uni;
+            const useY = isOfferKey ? sy : uni;
+            const visualBase = Math.max(1, Math.min(12, stroke.width || 3));
+            const geo = Math.sqrt(Math.max(0.01, sx) * Math.max(0.01, sy));
+            const lw = visualBase * Math.min(1.05, Math.max(0.5, geo));
+            ctx.beginPath();
+            if (stroke.tool === 'eraser') {
+                ctx.lineWidth = lw * (stroke.eraserMult || 4);
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.globalAlpha = 1;
+            } else if (stroke.tool === 'highlighter') {
+                ctx.lineWidth = lw * 3;
+                ctx.strokeStyle = stroke.color;
+                ctx.globalAlpha = stroke.opacity != null ? stroke.opacity : 1;
+                ctx.globalCompositeOperation = 'destination-over';
+            } else {
+                ctx.lineWidth = lw;
+                ctx.strokeStyle = stroke.color || '#1d4ed8';
+                ctx.globalAlpha = stroke.opacity != null ? stroke.opacity : 1;
+                ctx.globalCompositeOperation = 'source-over';
+            }
+            const pts = stroke.points.map(p => ({ x: p.x * useX, y: p.y * useY }));
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+            ctx.stroke();
+        });
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+        return off.toDataURL('image/png');
+    } catch (e) { return null; }
+};
+
 const createPrintLookPdfBlob = async (triggerToast, ensurePrintHeaders, opts = {}) => {
     if (!window.html2pdf) throw new Error('html2pdf missing');
 
     const addPageNumbers = false; // FIX: kein "Seite X / N" im Share-PDF
 
-    // === ORIENTIERUNG FOLGT DEM SCHREIBEN (v42) ===
-    // Erfasst, ob der Nutzer gerade im Hoch- oder Querformat arbeitet, und erzeugt das PDF
-    // in derselben Ausrichtung. So wird die Handschrift NICHT in eine fremde Form gezwungen.
-    // opts.forceOrientation kann 'portrait'/'landscape' erzwingen (z.B. nach Nutzer-Abfrage).
-    const __isPortrait = opts.forceOrientation
-        ? (opts.forceOrientation === 'portrait')
-        : !!(window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
+    // === ORIENTIERUNG (v42.2) ===
+    // RELEASE-STAND: Export ist IMMER Querformat (das bewährte, getestete Layout).
+    // Hochformat-Export braucht ein eigenes Seitenlayout (Titelseite, Umbrüche, Kachelbreiten)
+    // → kommt als späteres Feature. Die Infrastruktur bleibt: opts.forceOrientation='portrait'
+    // aktiviert es, sobald das Hochformat-Layout gebaut ist.
+    const __isPortrait = opts.forceOrientation === 'portrait';
     const PDF_ORIENTATION = __isPortrait ? 'portrait' : 'landscape';
 
     // --- SHARE HARD-LOCK (v50_52): exakt links/rechts bündig, kein Cut ---
@@ -12532,12 +12591,39 @@ const opt = {
                                 if (!ctx) return;
                                 const w = liveCanvas.width, h = liveCanvas.height;
                                 if (!w || !h) return;
-                                // Snapshot als PNG DataURL
-                                const dataUrl = liveCanvas.toDataURL('image/png');
-                                if (!dataUrl || dataUrl === 'data:,') return;
-                                // Clone-Canvas durch <img> ersetzen damit html2canvas es sieht
                                 const cloneCanvas = cloneCanvases[idx];
                                 if (!cloneCanvas) return;
+
+                                // === OFFER-HANDSCHRIFT: für Druck-Kachelgröße NEU rendern ===
+                                // (verhindert Verziehen wenn im Hochformat geschrieben wurde)
+                                let dataUrl = null;
+                                try {
+                                    const strokeKey = liveCanvas.getAttribute('data-stroke-key');
+                                    if (strokeKey && strokeKey.startsWith('offer') && window.__psStrokes && Array.isArray(window.__psStrokes[strokeKey]) && window.__psStrokes[strokeKey].length > 0) {
+                                        // Ziel-Maße aus dem Druck-Klon lesen (Print-Layout)
+                                        let tw = 0, th = 0;
+                                        try {
+                                            const cr = cloneCanvas.getBoundingClientRect();
+                                            tw = cr.width || 0; th = cr.height || 0;
+                                        } catch(e) {}
+                                        if ((tw < 2 || th < 2) && cloneCanvas.parentNode) {
+                                            try {
+                                                const pr = cloneCanvas.parentNode.getBoundingClientRect();
+                                                tw = pr.width || 0; th = pr.height || 0;
+                                            } catch(e) {}
+                                        }
+                                        if (tw >= 2 && th >= 2 && typeof renderStrokesForPrint === 'function') {
+                                            dataUrl = renderStrokesForPrint(window.__psStrokes[strokeKey], tw, th, strokeKey);
+                                        }
+                                    }
+                                } catch(e) {}
+
+                                // Fallback: Bitmap-Snapshot des Live-Canvas
+                                if (!dataUrl) {
+                                    dataUrl = liveCanvas.toDataURL('image/png');
+                                }
+                                if (!dataUrl || dataUrl === 'data:,') return;
+                                // Clone-Canvas durch <img> ersetzen damit html2canvas es sieht
                                 const img = clonedDoc.createElement('img');
                                 img.src = dataUrl;
                                 img.style.cssText = [
@@ -13490,7 +13576,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.1</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.3</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
