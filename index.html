@@ -7798,17 +7798,12 @@ const highResHTML = buildHighResBundleHTML(d);
                 // Schritt-Modus-Fix: Striche die auf großem Step-Canvas gemalt wurden, in kleinen Grid-Kacheln 4× größer zeigen
                 const isStepStrokeInGrid = (stroke.baseWidth || 0) > 500 && currentCssWidth < 450;
                 const stepBoost = isStepStrokeInGrid ? 4.0 : 1.0;
-                // PATCH 2026-06-10: iPad Rotation/Fusion – Schrift darf bei Offer-Karten NICHT größer werden.
-                // Ursache: Beim Wechsel Hochformat → Querformat bzw. beim Fusionieren kann currentCssWidth
-                // größer als stroke.baseWidth werden (iPad Viewport-/Grid-Reflow). Die alte Logik nutzte für
-                // offer* nur scaleW und vergrößerte dadurch Punkte + Linienstärke massiv.
-                // Neuer Ansatz: Offer-Striche werden nur verkleinert, wenn der Ziel-Canvas wirklich kleiner ist.
-                // Niemals vergrößern (>1), damit ein im Hochformat geschriebenes Wort beim Drehen/Fusion nicht wächst.
-                // Position und Strichstärke nutzen denselben gekappten Uniform-Scale, damit nichts verzerrt.
-                const isOfferStroke = key.startsWith('offer');
-                const uniformScale = Math.min(scaleW || 1, scaleH || 1);
-                const offerSafeScale = Math.min(1, uniformScale);
-                let responsiveScaleFactor = (isOfferStroke ? offerSafeScale : uniformScale) * stepBoost;
+                // Offer-Canvas (Seite 2): Math.min(scaleW, scaleH) verwenden.
+                // Hintergrund: Wenn die Karte im Querformat breiter wird, würde scaleW allein die
+                // Schrift aufblasen und über den Kartenrand treiben. Math.min begrenzt auf den
+                // kleineren der beiden Faktoren – Schrift bleibt sauber in der Karte, ohne zu
+                // schrumpfen (da die Karte in beiden Orientierungen mindestens so hoch ist wie breit).
+                let responsiveScaleFactor = Math.min(scaleW, scaleH) * stepBoost;
                 // Kostenfelder / Agent / Datum: feste kleine Eingabefelder, die NICHT rotieren.
                 // Hier KEINE Skalierung → verhindert dass sich Geschriebenes nach kurzem Warten
                 // verzieht (Layout-Reflow ändert minimal die Breite → sonst Verschiebung).
