@@ -49,9 +49,18 @@
             }
         }
         applyScale();
-        // Neu berechnen wenn Orientierung wechselt
+        // Neu berechnen wenn Orientierung wechselt.
+        // WICHTIG (iPad): applyScale ändert den Viewport → alle Canvas-Maße ändern sich.
+        // Nach JEDER Anpassung ein Event feuern, damit die Zeichenflächen ERST DANACH
+        // (mit korrekten, stabilen Maßen) neu gezeichnet werden. Mehrfach gestaffelt,
+        // weil Safari den Viewport asynchron und träge neu berechnet.
+        function fireCanvasRecalc() {
+            try { window.dispatchEvent(new Event('ps-canvas-recalc')); } catch(e) {}
+        }
         window.addEventListener('orientationchange', function() {
-            setTimeout(applyScale, 150);
+            [120, 280, 500, 800, 1100].forEach(function(ms){
+                setTimeout(function(){ applyScale(); fireCanvasRecalc(); }, ms);
+            });
         });
     })();
     </script>
@@ -7743,10 +7752,23 @@ const highResHTML = buildHighResBundleHTML(d);
             // Canvas-Pixelgröße an CSS-Größe anpassen — IMMER mit DPR (wie resizeCanvas),
             // damit der Stift exakt "on point" zeichnet (kein Versatz) und nichts sich verzieht.
             const dpr = window.devicePixelRatio || 1;
+            // iPad-Schutz: Nach Orientierungswechsel kann getBoundingClientRect() kurzzeitig
+            // STALE/0 sein. Dann NICHT mit falschen Maßen neu dimensionieren (sonst verschwindet
+            // die Schrift). Stattdessen Redraw überspringen und kurz später erneut versuchen.
+            let __rectW = 0, __rectH = 0;
             try {
-                const r = canvas.getBoundingClientRect();
-                const w = Math.max(1, Math.round(r.width || 0));
-                const h = Math.max(1, Math.round(r.height || 0));
+                const r0 = canvas.getBoundingClientRect();
+                __rectW = r0.width || 0;
+                __rectH = r0.height || 0;
+            } catch(_) {}
+            if (__rectW < 2 || __rectH < 2) {
+                // Maße noch nicht bereit → später erneut zeichnen, aber nichts zerstören
+                try { setTimeout(() => { try { redrawCanvas(canvas, strokes, scaleFactor, key); } catch(e){} }, 120); } catch(e){}
+                return;
+            }
+            try {
+                const w = Math.max(1, Math.round(__rectW));
+                const h = Math.max(1, Math.round(__rectH));
                 const targetW = Math.round(w * dpr);
                 const targetH = Math.round(h * dpr);
                 if (w && h && (canvas.width !== targetW || canvas.height !== targetH)) {
@@ -7767,8 +7789,8 @@ const highResHTML = buildHighResBundleHTML(d);
             const isOfferCanvas = key.startsWith('offer') || key.startsWith('cost_') || key.startsWith('agent_') || key.startsWith('date_') || key.startsWith('signature'); 
             strokes.forEach(stroke => { 
                 ctx.beginPath(); 
-                let currentCssWidth = canvas.getBoundingClientRect().width;
-                let currentCssHeight = canvas.getBoundingClientRect().height;
+                let currentCssWidth = __rectW;
+                let currentCssHeight = __rectH;
                 if (currentCssWidth === 0) currentCssWidth = stroke.baseWidth || 100; // FIX: Print Fallback
                 if (currentCssHeight === 0) currentCssHeight = stroke.baseHeight || (stroke.baseWidth ? (stroke.baseWidth * 0.66) : 100); // best-effort fallback
                 const scaleW = currentCssWidth / (stroke.baseWidth || currentCssWidth);
@@ -8551,6 +8573,8 @@ const toolRef = useRef('pen');
                 window.addEventListener('resize', handle);
                 window.addEventListener('orientationchange', handle);
                 document.addEventListener('fullscreenchange', handle);
+                // iPad: nach Viewport-Anpassung (applyScale) neu zeichnen mit stabilen Maßen
+                window.addEventListener('ps-canvas-recalc', handle);
 
                 // Mobile: visualViewport kann bei Vollbild/Browser-UI ändern ohne klassisches resize
                 const vv = window.visualViewport;
@@ -8560,6 +8584,7 @@ const toolRef = useRef('pen');
                     window.removeEventListener('resize', handle);
                     window.removeEventListener('orientationchange', handle);
                     document.removeEventListener('fullscreenchange', handle);
+                    window.removeEventListener('ps-canvas-recalc', handle);
                     if (vv && vv.removeEventListener) vv.removeEventListener('resize', handle);
                 };
             }, []);
@@ -10136,7 +10161,8 @@ const handleFinishOfferClick = () => {
 
                 resizeAll(); 
                 window.addEventListener('resize', resizeAll); 
-                return () => window.removeEventListener('resize', resizeAll); 
+                window.addEventListener('ps-canvas-recalc', resizeAll);
+                return () => { window.removeEventListener('resize', resizeAll); window.removeEventListener('ps-canvas-recalc', resizeAll); }; 
             }, [emailMode, beratungsIdMode, providerMode, isCustomProvider, notesMode, skipReasonMode, view, inputMode, sitLayoutMode, currentSitStep]); 
             useEffect(() => { 
                 if (view !== 'situation') return; 
@@ -13399,7 +13425,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.5</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.6</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
