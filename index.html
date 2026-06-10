@@ -7766,33 +7766,22 @@ const highResHTML = buildHighResBundleHTML(d);
                 try { setTimeout(() => { try { redrawCanvas(canvas, strokes, scaleFactor, key); } catch(e){} }, 120); } catch(e){}
                 return;
             }
-            // Offscreen-Puffer: verhindert Flackern beim Orientierungswechsel.
-            // canvas.width = x loescht den Canvas sofort (Browser-Verhalten) → leerer Frame sichtbar.
-            // Loesung: alles auf Offscreen-Canvas zeichnen, dann in einem drawImage-Aufruf auf den
-            // sichtbaren Canvas uebertragen → kein leerer Zwischenframe, kein Flackern.
-            let offscreen, octx;
-            const w = Math.max(1, Math.round(__rectW));
-            const h = Math.max(1, Math.round(__rectH));
-            const targetW = Math.round(w * dpr);
-            const targetH = Math.round(h * dpr);
             try {
-                if (typeof OffscreenCanvas !== 'undefined') {
-                    offscreen = new OffscreenCanvas(targetW, targetH);
-                } else {
-                    offscreen = document.createElement('canvas');
-                    offscreen.width = targetW;
-                    offscreen.height = targetH;
+                const w = Math.max(1, Math.round(__rectW));
+                const h = Math.max(1, Math.round(__rectH));
+                const targetW = Math.round(w * dpr);
+                const targetH = Math.round(h * dpr);
+                if (w && h && (canvas.width !== targetW || canvas.height !== targetH)) {
+                    canvas.width = targetW;
+                    canvas.height = targetH;
                 }
-                octx = offscreen.getContext('2d');
             } catch(_) {}
-            // Fallback: kein Offscreen-Support → direkt auf sichtbaren Canvas (altes Verhalten)
-            const useOffscreen = !!(offscreen && octx);
-            const ctx = useOffscreen ? octx : canvas.getContext('2d');
+            const ctx = canvas.getContext('2d'); 
             if (!ctx) return;
             // DPR-Transform: ab hier in CSS-Pixeln rechnen (identisch zu startDrawing/draw)
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            const cssW = targetW / dpr;
-            const cssH = targetH / dpr;
+            const cssW = canvas.width / dpr;
+            const cssH = canvas.height / dpr;
             ctx.clearRect(0, 0, cssW, cssH); 
             ctx.save(); 
             // Schutz: strokes kann undefined sein (nicht-initialisierter Key) → leeres Array
@@ -7857,20 +7846,6 @@ const highResHTML = buildHighResBundleHTML(d);
             ctx.restore(); 
             ctx.globalCompositeOperation = 'source-over'; 
             ctx.globalAlpha = 1; 
-            // Offscreen → sichtbaren Canvas in einem Schritt uebertragen (kein leerer Frame)
-            if (useOffscreen) {
-                const visCtx = canvas.getContext('2d');
-                if (visCtx) {
-                    // Canvas-Dimensionen erst JETZT aendern (nicht vorher → kein Loeschen sichtbar)
-                    if (canvas.width !== targetW || canvas.height !== targetH) {
-                        canvas.width = targetW;
-                        canvas.height = targetH;
-                    }
-                    visCtx.setTransform(1, 0, 0, 1, 0, 0);
-                    visCtx.clearRect(0, 0, targetW, targetH);
-                    visCtx.drawImage(offscreen, 0, 0);
-                }
-            }
         };
 
         const OfferCanvas = React.memo(({
@@ -8585,7 +8560,9 @@ const toolRef = useRef('pen');
                             setRedrawCounter(r => r + 1);
                         });
                     });
-                    // iPad-FIX: Layout-Umbau (3 Karten unter->nebeneinander) braucht länger als 2 Frames.
+                    // iPad-FIX: Layout-Umbau (3 Karten unter→nebeneinander) braucht länger als 2 Frames.
+                    // Gestaffelte Redraws stellen sicher, dass die Canvas ihre FINALE Größe haben,
+                    // bevor die Handschrift neu skaliert gezeichnet wird (sonst schrumpft/verschiebt sie sich).
                     setTimeout(() => { applyPortraitShift(); setRedrawCounter(r => r + 1); }, 150);
                     setTimeout(() => { applyPortraitShift(); setRedrawCounter(r => r + 1); }, 400);
                     setTimeout(() => { applyPortraitShift(); setRedrawCounter(r => r + 1); }, 750);
