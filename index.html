@@ -7798,12 +7798,11 @@ const highResHTML = buildHighResBundleHTML(d);
                 // Schritt-Modus-Fix: Striche die auf großem Step-Canvas gemalt wurden, in kleinen Grid-Kacheln 4× größer zeigen
                 const isStepStrokeInGrid = (stroke.baseWidth || 0) > 500 && currentCssWidth < 450;
                 const stepBoost = isStepStrokeInGrid ? 4.0 : 1.0;
-                // Offer-Canvas (Seite 2): Math.min(scaleW, scaleH) verwenden.
-                // Hintergrund: Wenn die Karte im Querformat breiter wird, würde scaleW allein die
-                // Schrift aufblasen und über den Kartenrand treiben. Math.min begrenzt auf den
-                // kleineren der beiden Faktoren – Schrift bleibt sauber in der Karte, ohne zu
-                // schrumpfen (da die Karte in beiden Orientierungen mindestens so hoch ist wie breit).
-                let responsiveScaleFactor = Math.min(scaleW, scaleH) * stepBoost;
+                // Offer-Canvas (Seite 2): nur nach BREITE skalieren. Text fließt horizontal und die
+                // Karte ist in beiden Orientierungen hoch genug → Schrift passt proportional in die
+                // Kartenbreite (wie Seite 1), statt mit Math.min auf einen winzigen Bereich zu schrumpfen.
+                const isOfferStroke = key.startsWith('offer');
+                let responsiveScaleFactor = (isOfferStroke ? scaleW : Math.min(scaleW, scaleH)) * stepBoost;
                 // Kostenfelder / Agent / Datum: feste kleine Eingabefelder, die NICHT rotieren.
                 // Hier KEINE Skalierung → verhindert dass sich Geschriebenes nach kurzem Warten
                 // verzieht (Layout-Reflow ändert minimal die Breite → sonst Verschiebung).
