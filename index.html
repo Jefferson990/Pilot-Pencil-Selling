@@ -7773,12 +7773,14 @@ const highResHTML = buildHighResBundleHTML(d);
                 if (currentCssHeight === 0) currentCssHeight = stroke.baseHeight || (stroke.baseWidth ? (stroke.baseWidth * 0.66) : 100); // best-effort fallback
                 const scaleW = currentCssWidth / (stroke.baseWidth || currentCssWidth);
                 const scaleH = (stroke.baseHeight ? (currentCssHeight / stroke.baseHeight) : scaleW);
-                // ✅ Uniform scaling (Math.min) skaliert beim Drehen korrekt – KEIN zusätzlicher
-                // orientationMultiplier mehr (der hat die Schrift beim Hoch→Quer-Wechsel verdoppelt/verzogen).
                 // Schritt-Modus-Fix: Striche die auf großem Step-Canvas gemalt wurden, in kleinen Grid-Kacheln 4× größer zeigen
                 const isStepStrokeInGrid = (stroke.baseWidth || 0) > 500 && currentCssWidth < 450;
                 const stepBoost = isStepStrokeInGrid ? 4.0 : 1.0;
-                let responsiveScaleFactor = Math.min(scaleW, scaleH) * stepBoost;
+                // Offer-Canvas (Seite 2): nur nach BREITE skalieren. Text fließt horizontal und die
+                // Karte ist in beiden Orientierungen hoch genug → Schrift passt proportional in die
+                // Kartenbreite (wie Seite 1), statt mit Math.min auf einen winzigen Bereich zu schrumpfen.
+                const isOfferStroke = key.startsWith('offer');
+                let responsiveScaleFactor = (isOfferStroke ? scaleW : Math.min(scaleW, scaleH)) * stepBoost;
                 // Kostenfelder / Agent / Datum: feste kleine Eingabefelder, die NICHT rotieren.
                 // Hier KEINE Skalierung → verhindert dass sich Geschriebenes nach kurzem Warten
                 // verzieht (Layout-Reflow ändert minimal die Breite → sonst Verschiebung).
@@ -7921,7 +7923,7 @@ const highResHTML = buildHighResBundleHTML(d);
                     }
                 };
 
-                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '24px' : textSize === 'large' ? '44px' : '32px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; const rect = canvas.getBoundingClientRect(); const currentWidth = rect.width; let baseWidth = scaleRef.current.baseWidth; if (baseWidth === 0) { scaleRef.current.baseWidth = currentWidth; baseWidth = currentWidth; } const scaleFactor = currentWidth / baseWidth; redrawCanvas(canvas, drawnStrokes, scaleFactor, statusKey); if (Math.abs(currentWidth - baseWidth) > SIZE_DIFFERENCE_THRESHOLD) { scaleRef.current.baseWidth = currentWidth; } }, [canvasRef, drawnStrokes, triggerRedraw]); useEffect(() => { const canvas = canvasRef.current; if (canvas && scaleRef.current.baseWidth === 0) { const rect = canvas.getBoundingClientRect(); scaleRef.current.baseWidth = rect.width; } }, [canvasRef]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
+                const isOpen = status === 'open'; const isClosed = status === 'closed'; let statusClass = 'border-slate-300'; if (isOpen) statusClass = 'border-red-500 ring-4 ring-red-100/50'; else if (isClosed) statusClass = 'border-green-500 ring-4 ring-green-100/50'; const containerClasses = `offer-canvas-container ${statusClass} flex flex-col h-full min-h-[600px]`; const getOfferTextClasses = () => { let classes = "absolute inset-0 w-full h-full p-4 bg-transparent resize-none focus:ring-0 focus:outline-none z-20 leading-relaxed "; classes += inputMode === 'pen' ? 'pointer-events-none offer-canvas-textarea' : 'pointer-events-auto offer-canvas-textarea'; return classes; }; const getOfferTextStyle = () => { const fontSize = textSize === 'small' ? '24px' : textSize === 'large' ? '44px' : '32px'; return { fontSize, fontWeight: textStyle.bold ? '800' : '500', fontStyle: textStyle.italic ? 'italic' : 'normal', color: 'var(--dm-text, #1e293b)', lineHeight: 1.7 }; }; useEffect(() => { const canvas = canvasRef.current; if (!canvas || !drawnStrokes) return; redrawCanvas(canvas, drawnStrokes, 1, statusKey); }, [canvasRef, drawnStrokes, triggerRedraw]); const isPenMode = inputMode === 'pen'; const { x, y, scale, rotation } = imageTransform; const [overlayEditEnabled, setOverlayEditEnabled] = useState(true);
         const overlayWrapRef = useRef(null);
         const overlayOuterRef = useRef(null);
         const [overlayFitScale, setOverlayFitScale] = useState(1);
@@ -9824,6 +9826,8 @@ const handleFinishOfferClick = () => {
                 if (type === 'quote') {
                     // Direkt drucken — Headers sicherstellen dann drucken
                     setTimeout(() => { try { ensurePrintHeaders(); } catch(e) {} handlePrint(); }, 300);
+                    // Gleiche "fertig & neu starten"-Meldung wie nach Unterschrift
+                    setTimeout(() => setShowReferralModal(true), 1200);
                     return;
                 }
             };
@@ -13187,6 +13191,29 @@ const handlePDFShare = async () => {
             };
 
 
+            // Loggt ein (nicht abgeschlossenes) Angebot in die Statistik — für Coaching/Auswertung.
+            // Wird beim PDF-Export/Ausdrucken aufgerufen, damit auch reine Angebote gezählt werden.
+            const logQuoteToStatistics = () => {
+                try {
+                    const computedResult = computeResultFromActivity(drawnStrokes, textData, false);
+                    appendAnalyticsRow({
+                        ts: new Date().toISOString(),
+                        user: (() => {
+                            const raw = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
+                            if (!raw) return '–';
+                            if (raw === 'Max Mustermann' || raw.toLowerCase() === 'unknown') return '–';
+                            return raw;
+                        })(),
+                        shop: 'Telekom',
+                        beratungsId: beratungsId || '',
+                        result: computedResult,
+                        skipReasonText: (typeof skipReason === 'string' && skipReason.trim() && skipReason !== 'Übersprungen (Admin)') ? skipReason.trim().slice(0, 200) : '',
+                        canvasStats: buildCanvasStatsFromDrawnStrokes(drawnStrokes, textData, { skipReason, offerData })
+                    });
+                    if (window.psCloseSession) window.psCloseSession(sessionIdRef.current);
+                } catch(e) { /* ignore */ }
+            };
+
             const handleRecommendedPdfPrint = async () => {
                 if (!runOnlyWithOfferValidity(() => { handleRecommendedPdfPrint(); })) return;
 
@@ -13219,6 +13246,13 @@ const handlePDFShare = async () => {
                         setTimeout(() => URL.revokeObjectURL(url), 120000);
                         triggerToast('✅ PDF geöffnet – drucken oder speichern.');
                     }
+
+                    // ── Statistik loggen (auch nicht-abgeschlossene Angebote zählen!) ──
+                    // Ein PDF-Export ohne Unterschrift = "Angebot" (nicht abgeschlossen) → für Coaching sichtbar.
+                    logQuoteToStatistics();
+
+                    // ── Gleiche "fertig & neu starten"-Meldung wie nach Unterschrift ──
+                    setTimeout(() => setShowReferralModal(true), 400);
                 } catch(e) {
                     triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                 }
@@ -13365,7 +13399,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.4</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v41.5</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
