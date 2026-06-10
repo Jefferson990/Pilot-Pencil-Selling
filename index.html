@@ -11176,6 +11176,19 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                     __centerStyle.textContent = `
                       @page { size: A4 ${__isPortrait ? 'portrait' : 'landscape'}; margin: 0; }
                       body.pdf-share-mode{ --FULLSCREEN_SHIFT_X: 0px !important; }
+                      /* iPad-Fix: Rechte Sidebar (Stammdaten etc.) im PDF IMMER zeigen,
+                         egal welche (orientation)-Media-Query im Render-Viewport greift */
+                      body.pdf-share-mode .situation-view-wrapper{
+                        display: flex !important;
+                        flex-direction: row !important;
+                      }
+                      body.pdf-share-mode .situation-view-wrapper > aside.sit-aside-panel{
+                        display: flex !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        position: relative !important;
+                        flex-shrink: 0 !important;
+                      }
                       @media (orientation: landscape) and (min-width: 1100px){
                         body.pdf-share-mode .situation-view-wrapper,
                         body.pdf-share-mode .print-situation-view,
@@ -12529,6 +12542,10 @@ const opt = {
             // A4 @ 96dpi als stabiler "virtueller Viewport" – Breite folgt der Orientierung
             width: SHARE_PAGE_WIDTH_PX,
             windowWidth: SHARE_PAGE_WIDTH_PX,
+            // WICHTIG (iPad-Fix): Höhe ebenfalls pinnen! Ohne windowHeight nimmt html2canvas die
+            // Geräte-Fensterhöhe → auf iPad-Hochformat ist der Render-Viewport dann "portrait"
+            // und die Hochformat-CSS versteckt die rechte Sidebar (Stammdaten) im PDF.
+            windowHeight: SHARE_PAGE_HEIGHT_PX,
             scrollX: 0,
             scrollY: 0,
             x: 0,
@@ -13625,7 +13642,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.4</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.5</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
