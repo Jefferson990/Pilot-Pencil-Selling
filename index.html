@@ -10946,10 +10946,20 @@ const createPrintLookPdfBlob = async (triggerToast, ensurePrintHeaders, opts = {
 
     const addPageNumbers = false; // FIX: kein "Seite X / N" im Share-PDF
 
+    // === ORIENTIERUNG FOLGT DEM SCHREIBEN (v42) ===
+    // Erfasst, ob der Nutzer gerade im Hoch- oder Querformat arbeitet, und erzeugt das PDF
+    // in derselben Ausrichtung. So wird die Handschrift NICHT in eine fremde Form gezwungen.
+    // opts.forceOrientation kann 'portrait'/'landscape' erzwingen (z.B. nach Nutzer-Abfrage).
+    const __isPortrait = opts.forceOrientation
+        ? (opts.forceOrientation === 'portrait')
+        : !!(window.matchMedia && window.matchMedia('(orientation: portrait)').matches);
+    const PDF_ORIENTATION = __isPortrait ? 'portrait' : 'landscape';
+
     // --- SHARE HARD-LOCK (v50_52): exakt links/rechts bündig, kein Cut ---
 // Ziel: Share-PDF soll exakt die Inhaltsbreite nutzen (keine Offsets, kein Extra-Padding, keine Skalierung)
-const SHARE_PAGE_WIDTH_PX  = 1122; // Share-safe width (A4 landscape @ 96dpi) // Share-safe width (prevents right-edge cut)
-const SHARE_PAGE_HEIGHT_PX = 794;
+// Breite/Höhe je nach Orientierung getauscht (A4 @ 96dpi): Querformat 1122×794, Hochformat 794×1122.
+const SHARE_PAGE_WIDTH_PX  = __isPortrait ? 794 : 1122;
+const SHARE_PAGE_HEIGHT_PX = __isPortrait ? 1122 : 794;
 const SHARE_DOC_WIDTH_PX   = SHARE_PAGE_WIDTH_PX;
 const SHARE_SAFE_SCALE     = 1.0; // keep size; CSS share-mode adds its own safety // extra safety to prevent any right-edge clipping
 const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: pushes PDF content down (px). Increase if top is too tight.
@@ -11105,6 +11115,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                     // Hard-override gegen Landscape-Fullscreen-Shift (nur Share-PDF)
                     const __centerStyle = doc.createElement('style');
                     __centerStyle.textContent = `
+                      @page { size: A4 ${__isPortrait ? 'portrait' : 'landscape'}; margin: 0; }
                       body.pdf-share-mode{ --FULLSCREEN_SHIFT_X: 0px !important; }
                       @media (orientation: landscape) and (min-width: 1100px){
                         body.pdf-share-mode .situation-view-wrapper,
@@ -11113,8 +11124,8 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                       }
                       body.pdf-share-mode .print-page,
                       body.pdf-share-mode .page{
-                        width: ${1122}px !important;
-                        max-width: ${1122}px !important;
+                        width: ${SHARE_PAGE_WIDTH_PX}px !important;
+                        max-width: ${SHARE_PAGE_WIDTH_PX}px !important;
                         margin-left: auto !important;
                         margin-right: auto !important;
                       }
@@ -12407,9 +12418,9 @@ const opt = {
             allowTaint: true,
             imageTimeout: 20000,
             backgroundColor: '#ffffff',
-            // A4-Querformat @ 96dpi als stabiler "virtueller Viewport"
-            width: 1122,
-            windowWidth: 1122,
+            // A4 @ 96dpi als stabiler "virtueller Viewport" – Breite folgt der Orientierung
+            width: SHARE_PAGE_WIDTH_PX,
+            windowWidth: SHARE_PAGE_WIDTH_PX,
             scrollX: 0,
             scrollY: 0,
             x: 0,
@@ -12475,8 +12486,9 @@ const opt = {
 
                     // Share-PDF: komplett von echter Fenstergröße/Zoom entkoppeln
                     // WICHTIG: html2canvas arbeitet in PX. mm-Werte führen hier leicht zu Versatz/Cropping.
-                    const PAGE_W = 1122; // A4 landscape @96dpi (dein bewährtes Setup)
-                    const PAGE_H = 794;
+                    // Maße folgen der Schreib-Orientierung (Hoch-/Querformat).
+                    const PAGE_W = SHARE_PAGE_WIDTH_PX; // A4 @96dpi, orientierungsabhängig
+                    const PAGE_H = SHARE_PAGE_HEIGHT_PX;
 
                     html.style.width = PAGE_W + 'px';
                     html.style.minWidth = PAGE_W + 'px';
@@ -12743,8 +12755,8 @@ const opt = {
                 }catch(e){}
             }
         },
-        // echte Papiermaße: A4 Landscape in mm (immer korrekt skaliert)
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape', compress: true }
+        // echte Papiermaße: A4 in mm, Orientierung folgt dem Schreiben (Hoch-/Querformat)
+        jsPDF: { unit: 'mm', format: 'a4', orientation: PDF_ORIENTATION, compress: true }
     };
     try {
         // --- HARD LIMIT: keep ONLY first 4 pages in the generated PDF (Share) ---
@@ -13478,7 +13490,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.0</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.1</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
