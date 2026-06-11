@@ -561,14 +561,17 @@ body.pdf-share-mode .canvas-image-lock{
     user-select: none;
 }
 body.pdf-share-mode .foto-frame-fixed {
-    height: 170px !important;
+    width: min(320px, 85%) !important;
+    height: auto !important;
+    aspect-ratio: 13 / 9 !important;
+    margin-left: auto !important;
     overflow: hidden !important;
     flex-shrink: 0 !important;
 }
 body.pdf-share-mode .canvas-image-fixed {
     width: 100% !important;
     height: 100% !important;
-    object-fit: contain !important;
+    object-fit: cover !important;
     object-position: center center !important;
     opacity: 1 !important;
     filter: none !important;
@@ -576,14 +579,17 @@ body.pdf-share-mode .canvas-image-fixed {
 }
 @media print {
     .foto-frame-fixed {
-        height: 170px !important;
+        width: min(320px, 85%) !important;
+        height: auto !important;
+        aspect-ratio: 13 / 9 !important;
+        margin-left: auto !important;
         overflow: hidden !important;
         page-break-inside: avoid !important;
     }
     .canvas-image-fixed {
         width: 100% !important;
         height: 100% !important;
-        object-fit: contain !important;
+        object-fit: cover !important;
     }
     .offer-overlay-outer {
         position: relative !important;
@@ -4935,6 +4941,16 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
   );};
 
         const SpeedModal=({isOpen,onClose,triggerToast,onRecommendation})=>{
+          // === SCHRITT 1: WLAN-Breitband an der Adresse abfragen ===
+          const[maxBroadband,setMaxBroadband]=useState(null);
+          const broadbandOptions=[
+            {dl:16,label:'16 Mbit/s',sub:'DSL Basic'},
+            {dl:50,label:'50 Mbit/s',sub:'DSL / VDSL'},
+            {dl:100,label:'100 Mbit/s',sub:'VDSL / Kabel'},
+            {dl:250,label:'250 Mbit/s',sub:'VDSL Vectoring / Kabel'},
+            {dl:500,label:'500 Mbit/s',sub:'Glasfaser / Kabel'},
+            {dl:1000,label:'1000 Mbit/s',sub:'Glasfaser FTTH'}
+          ];
           const[simDl,setSimDl]=useState(100);
           const[simUl,setSimUl]=useState(40);
           const[tiers,setTiers]=useState([{dl:16,ul:2.4,on:true},{dl:50,ul:10,on:true},{dl:100,ul:40,on:true},{dl:250,ul:40,on:true},{dl:1000,ul:100,on:true}]);
@@ -4960,8 +4976,9 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
           useEffect(()=>{if(rec){setSimDl(rec.dl);setSimUl(Math.max(rec.ul,1));}},[rec]);
           const toggleTier=(i)=>{const newT=[...tiers];newT[i].on=!newT[i].on;setTiers(newT);};
           const updateAct=(k,delta)=>{setActivities(prev=>prev.map(a=>a.k===k?{...a,n:Math.max(0,a.n+delta)}:a));};
-          const addCustomTier=()=>{const val=parseInt(customDl);if(!isNaN(val)&&val>0){const newTier={dl:val,ul:Math.round(val/5),on:true};if(!tiers.find(t=>t.dl===val))setTiers(prev=>[...prev,newTier].sort((a,b)=>a.dl-b.dl));setCustomDl('');}};
-          const handleCopy=()=>{const recText=`${rec?.dl}/${rec?.ul} MBit/s`;copyToClipboard(`Empfehlung: ${recText}`);if(typeof onRecommendation==='function'){onRecommendation(recText);}triggerToast('Speed-Empfehlung kopiert!');if(typeof onClose==='function'){onClose();}};
+          const addCustomTier=()=>{const val=parseInt(customDl);if(!isNaN(val)&&val>0&&(!maxBroadband||val<=maxBroadband)){const newTier={dl:val,ul:Math.round(val/5),on:true};if(!tiers.find(t=>t.dl===val))setTiers(prev=>[...prev,newTier].sort((a,b)=>a.dl-b.dl));setCustomDl('');}};
+          const handleClose=()=>{setMaxBroadband(null);if(typeof onClose==='function')onClose();};
+          const handleCopy=()=>{const recText=`${rec?.dl}/${rec?.ul} MBit/s`;copyToClipboard(`Empfehlung: ${recText}`);if(typeof onRecommendation==='function'){onRecommendation(recText);}triggerToast('Speed-Empfehlung kopiert!');handleClose();};
           const speedPct=Math.max(0,Math.min(100,gaugePct));
           const totalAct=activities.reduce((s,a)=>s+a.n,0);
           if(!isOpen)return null;
@@ -4974,6 +4991,50 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
           const ACCENT='#3b82f6';
           const CHIP_ON_BG=dm?'#1e3a5f':'#dbeafe';
           const CHIP_ON_CLR=dm?'#60a5fa':'#1d4ed8';
+
+          // === SCHRITT 1: Breitband-Abfrage ===
+          if(maxBroadband === null) {
+            return(
+            <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.75)',backdropFilter:'blur(8px)',padding:'16px'}}>
+              <div style={{background:BG,width:'100%',maxWidth:'480px',borderRadius:'24px',border:`1px solid ${BORDER}`,boxShadow:'0 32px 80px rgba(0,0,0,0.4)',overflow:'hidden',fontFamily:"system-ui,sans-serif"}}>
+                <div style={{background:'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)',padding:'28px 28px 22px',position:'relative'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'14px'}}>
+                    <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'linear-gradient(135deg,#3b82f6,#6366f1)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 16px rgba(99,102,241,0.5)',flexShrink:0}}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+                    </div>
+                    <div>
+                      <div style={{fontSize:'10px',fontWeight:'700',color:'rgba(148,163,184,1)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'2px'}}>Zuerst prüfen</div>
+                      <h1 style={{margin:0,fontSize:'22px',fontWeight:'900',color:'#ffffff',letterSpacing:'-0.03em',lineHeight:1}}>Breitband an der Adresse?</h1>
+                    </div>
+                  </div>
+                  <button onClick={()=>{setMaxBroadband(null);onClose();}} style={{position:'absolute',top:'16px',right:'16px',width:'32px',height:'32px',borderRadius:'50%',border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'#fff',fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+                </div>
+                <div style={{padding:'20px 24px 28px'}}>
+                  <p style={{margin:'0 0 16px',fontSize:'14px',color:TEXT2,lineHeight:1.5}}>Welche maximale Bandbreite ist an der Adresse des Kunden verfügbar? So wird die Simulation realistisch.</p>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                    {broadbandOptions.map(opt=>(
+                      <button key={opt.dl} onClick={()=>{
+                        setMaxBroadband(opt.dl);
+                        // Tiers automatisch generieren: alle Standard-Stufen bis max
+                        const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:40},{dl:500,ul:50},{dl:1000,ul:100}];
+                        setTiers(allT.filter(t=>t.dl<=opt.dl).map(t=>({...t,on:true})));
+                      }} style={{padding:'14px 12px',borderRadius:'14px',border:`1.5px solid ${BORDER}`,background:PANEL,cursor:'pointer',textAlign:'center',transition:'all 0.15s'}}>
+                        <div style={{fontSize:'20px',fontWeight:'900',color:TEXT,lineHeight:1}}>{opt.label}</div>
+                        <div style={{fontSize:'11px',color:TEXT2,marginTop:'4px',fontWeight:'600'}}>{opt.sub}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:'8px',marginTop:'14px'}}>
+                    <input type="number" placeholder="z.B. 150" min="1" max="10000" style={{flex:1,padding:'12px 14px',borderRadius:'12px',border:`1.5px solid ${BORDER}`,background:PANEL,fontSize:'16px',fontWeight:'700',color:TEXT,outline:'none'}}
+                      onKeyDown={(e)=>{if(e.key==='Enter'){const v=parseInt(e.target.value);if(v>0){setMaxBroadband(v);const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:40},{dl:500,ul:50},{dl:1000,ul:100}];const filtered=allT.filter(t=>t.dl<=v);if(!filtered.find(t=>t.dl===v))filtered.push({dl:v,ul:Math.round(v/5)});setTiers(filtered.sort((a,b)=>a.dl-b.dl).map(t=>({...t,on:true})));}}}}
+                    />
+                    <button onClick={(e)=>{const inp=e.target.closest('div').querySelector('input');const v=parseInt(inp?.value);if(v>0){setMaxBroadband(v);const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:40},{dl:500,ul:50},{dl:1000,ul:100}];const filtered=allT.filter(t=>t.dl<=v);if(!filtered.find(t=>t.dl===v))filtered.push({dl:v,ul:Math.round(v/5)});setTiers(filtered.sort((a,b)=>a.dl-b.dl).map(t=>({...t,on:true})));}}} style={{padding:'12px 20px',borderRadius:'12px',border:'none',background:ACCENT,color:'#fff',fontWeight:'800',fontSize:'14px',cursor:'pointer',whiteSpace:'nowrap'}}>Mbit/s →</button>
+                  </div>
+                  <p style={{margin:'8px 0 0',fontSize:'11px',color:TEXT2}}>Eigenen Wert eingeben, falls nicht in der Liste (z.B. 150, 175, 300…)</p>
+                </div>
+              </div>
+            </div>);
+          }
           return(
           <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.75)',backdropFilter:'blur(8px)',padding:'16px'}}>
             <style>{`
@@ -5001,6 +5062,10 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                     <div>
                       <div style={{fontSize:'10px',fontWeight:'700',color:'rgba(148,163,184,1)',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:'1px'}}>Interaktiver</div>
                       <h1 style={{margin:0,fontSize:'24px',fontWeight:'900',color:'#ffffff',letterSpacing:'-0.03em',lineHeight:1}}>Speed-Rechner</h1>
+                      {maxBroadband && <div style={{display:'flex',alignItems:'center',gap:'6px',marginTop:'4px'}}>
+                        <span style={{fontSize:'11px',color:'rgba(148,163,184,0.9)',fontWeight:'600'}}>📡 Max. {maxBroadband} Mbit/s an der Adresse</span>
+                        <button onClick={()=>setMaxBroadband(null)} style={{fontSize:'10px',color:'#60a5fa',background:'none',border:'none',cursor:'pointer',textDecoration:'underline',padding:0}}>ändern</button>
+                      </div>}
                     </div>
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
@@ -5008,7 +5073,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                       <div style={{fontSize:'9px',color:'rgba(148,163,184,1)',fontWeight:'700',letterSpacing:'0.1em',textTransform:'uppercase'}}>Empfehlung</div>
                       <div style={{fontSize:'20px',fontWeight:'900',color:'#60a5fa',letterSpacing:'-0.02em',lineHeight:1.1}}>{rec.dl} <span style={{fontSize:'10px',color:'rgba(148,163,184,0.8)'}}>Mbit/s</span></div>
                     </div>}
-                    <button onClick={onClose} style={{width:'34px',height:'34px',borderRadius:'10px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',lineHeight:1,flexShrink:0}}>✕</button>
+                    <button onClick={handleClose} style={{width:'34px',height:'34px',borderRadius:'10px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',lineHeight:1,flexShrink:0}}>✕</button>
                   </div>
                 </div>
               </div>
@@ -5036,7 +5101,8 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                       </div>
                     ))}
                   </div>
-                  <div style={{marginTop:'16px',paddingTop:'14px',borderTop:`1px solid ${BORDER}`}}>
+                  {/* Tarif-Auswahl nur zeigen wenn KEIN Breitband vorab gewählt wurde (Fallback) */}
+                  {!maxBroadband && <div style={{marginTop:'16px',paddingTop:'14px',borderTop:`1px solid ${BORDER}`}}>
                     <h3 style={{margin:'0 0 8px 0',fontSize:'11px',fontWeight:'800',color:TEXT,letterSpacing:'0.08em',textTransform:'uppercase'}}>Verfügbare Tarife</h3>
                     <div style={{display:'flex',flexWrap:'wrap',gap:'5px'}}>
                       {tiers.map((t,i)=>(
@@ -5047,7 +5113,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                         <button onClick={addCustomTier} style={{width:'18px',height:'18px',borderRadius:'50%',background:ACCENT,color:'white',border:'none',cursor:'pointer',fontSize:'13px',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'900',lineHeight:1}}>+</button>
                       </div>
                     </div>
-                  </div>
+                  </div>}
                 </div>
                 <div style={{padding:'20px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:'12px',borderRight:`1px solid ${BORDER}`}}>
                   <div style={{position:'relative',width:'200px',height:'200px',flexShrink:0}}>
@@ -5369,7 +5435,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
               <div style={{fontSize:'9px',color:'rgba(148,163,184,1)',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>{z.flag} {z.label}</div>
               <div style={{fontSize:'14px',fontWeight:900,color:z.status==='ok'?'#6ee7b7':z.status==='warn'?'#fde68a':'#fca5a5',letterSpacing:'-0.02em',lineHeight:1.1,marginTop:'2px'}}>{z.badge}</div>
             </div>
-            <button onClick={onClose} style={{width:'34px',height:'34px',borderRadius:'10px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',lineHeight:1,flexShrink:0}}>✕</button>
+            <button onClick={handleClose} style={{width:'34px',height:'34px',borderRadius:'10px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',lineHeight:1,flexShrink:0}}>✕</button>
           </div>
         </div>
       </div>
@@ -8249,7 +8315,7 @@ const highResHTML = buildHighResBundleHTML(d);
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
 </div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} data-stroke-key={statusKey} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} onPointerCancel={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
-            </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'100%', height:'150px', overflow:'hidden', background:'#f1f5f9', borderTop:'1px solid #e2e8f0', position:'relative', flexShrink:0 }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none' }}/></div>)}</div>); });
+            </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'min(470px, 72%)', aspectRatio:'13 / 9', minHeight:'200px', overflow:'hidden', background:'#ffffff', border:'6px solid #ffffff', borderRadius:'10px', boxShadow:'0 8px 22px rgba(15,23,42,0.20)', position:'relative', flexShrink:0, marginLeft:'auto', marginRight:'14px', marginBottom:'12px' }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none', borderRadius:'4px' }}/></div>)}</div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
         
@@ -13706,7 +13772,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.8</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v43.1</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
