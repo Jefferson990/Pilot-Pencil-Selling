@@ -568,7 +568,7 @@ body.pdf-share-mode .foto-frame-fixed {
 body.pdf-share-mode .canvas-image-fixed {
     width: 100% !important;
     height: 100% !important;
-    object-fit: cover !important;
+    object-fit: contain !important;
     object-position: center center !important;
     opacity: 1 !important;
     filter: none !important;
@@ -583,7 +583,7 @@ body.pdf-share-mode .canvas-image-fixed {
     .canvas-image-fixed {
         width: 100% !important;
         height: 100% !important;
-        object-fit: cover !important;
+        object-fit: contain !important;
     }
     .offer-overlay-outer {
         position: relative !important;
@@ -8844,6 +8844,8 @@ const handleOpenStats = () => { setShowPinLock(true); };
             const [showFinishTypeModal, setShowFinishTypeModal] = useState(false); // NEW MODAL STATE
             
             const [showReferralModal, setShowReferralModal] = useState(false);
+            // PDF fertig → Teilen-Dialog mit frischer Nutzer-Geste (iOS-Gestenregel)
+            const [pdfShareReady, setPdfShareReady] = useState(null);
             const [showFolgeterminModal, setShowFolgeterminModal] = useState(false);
             const pendingPostSignature = React.useRef(null); // Funktion die nach Folgetermin läuft
             const [showValidityModal, setShowValidityModal] = useState(false);
@@ -9808,10 +9810,18 @@ const handleFinishOfferClick = () => {
 
                 // Wenn Kunde unterschrieben hat: PDF-Export (Empfohlen) + danach ReferralModal
                 if (customerSignature) {
+                    // === PDF-Dateiname = Rufnummer (MSISDN) des Kunden ===
+                    // Kleines Popup nach Abschluss: PDF heißt dann z.B. "Angebot 0176xxxxxxx.pdf"
+                    let __pdfName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                    try {
+                        const ms = window.prompt('📱 Bitte MSISDN / Rufnummer des Kunden eingeben:\n(Die PDF-Datei wird danach benannt)', '');
+                        const cleanMs = (ms || '').replace(/[^0-9+]/g, '').trim();
+                        if (cleanMs) __pdfName = `Angebot ${cleanMs}.pdf`;
+                    } catch(e) {}
                     if (!runOnlyWithOfferValidity(() => {
                         triggerToast('PDF wird erstellt… einen Moment.');
                         createPrintLookPdfBlob(triggerToast, ensurePrintHeaders).then((blob) => {
-                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                            const pdfFileName = __pdfName;
                             const url = URL.createObjectURL(blob);
                             window.open(url, '_blank');
                             setTimeout(() => URL.revokeObjectURL(url), 120000);
@@ -9824,41 +9834,40 @@ const handleFinishOfferClick = () => {
                         triggerToast('PDF wird erstellt… einen Moment.');
                         try {
                             const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
-                            const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
-                            // Web Share API → natives System-Teilen (WhatsApp, Mail, Drucken, etc.)
-                            if (navigator.canShare && navigator.canShare({ files: [new File([blob], pdfFileName, { type: 'application/pdf' })] })) {
+                            const pdfFileName = __pdfName;
+                            const pdfFile = new File([blob], pdfFileName, { type: 'application/pdf' });
+                            window.__lastPdfBlob = blob; window.__lastPdfFile = pdfFile;
+                            // Web Share API → natives System-Teilen. iOS-Gestenregel: schlägt das
+                            // Direkt-Teilen nach langer Erzeugung fehl, kommt der "Jetzt teilen"-Dialog.
+                            if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
                                 try {
-                                    await navigator.share({
-                                        title: 'Angebot',
-                                        text: 'Ihr persönliches Angebot',
-                                        files: [new File([blob], pdfFileName, { type: 'application/pdf' })]
-                                    });
+                                    await navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [pdfFile] });
                                     triggerToast('✅ PDF geteilt.');
+                                    setTimeout(() => setShowReferralModal(true), 400);
+                                    return;
                                 } catch(shareErr) {
-                                    if (shareErr.name !== 'AbortError') {
-                                        // Teilen abgebrochen oder fehlgeschlagen → Tab öffnen als Fallback
-                                        const url = URL.createObjectURL(blob);
-                                        window.open(url, '_blank');
-                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                                    if (shareErr && shareErr.name === 'AbortError') {
+                                        setTimeout(() => setShowReferralModal(true), 400);
+                                        return;
                                     }
+                                    setPdfShareReady(pdfFile);
+                                    return;
                                 }
-                            } else {
-                                // Kein Web Share (Desktop Firefox etc.) → neuer Tab
-                                const url = URL.createObjectURL(blob);
-                                const pdfTab = window.open(url, '_blank');
-                                if (!pdfTab) {
-                                    const a = document.createElement('a');
-                                    a.href = url; a.download = pdfFileName;
-                                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                                }
-                                setTimeout(() => URL.revokeObjectURL(url), 120000);
-                                triggerToast('✅ PDF geöffnet – drucken oder speichern.');
                             }
+                            // Kein Web Share (Desktop Firefox etc.) → neuer Tab / Download mit MSISDN-Namen
+                            const url = URL.createObjectURL(blob);
+                            const pdfTab = window.open(url, '_blank');
+                            if (!pdfTab) {
+                                const a = document.createElement('a');
+                                a.href = url; a.download = pdfFileName;
+                                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                            }
+                            setTimeout(() => URL.revokeObjectURL(url), 120000);
+                            triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                            setTimeout(() => setShowReferralModal(true), 400);
                         } catch(e) {
                             triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                         }
-                        setTimeout(() => setShowReferralModal(true), 400);
                     })();
                     return;
                 }
@@ -12020,21 +12029,33 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
         if (srcContainer && srcImg && cloneImg) {
             const isFotoFrame = cloneImg.classList.contains('canvas-image-fixed');
             if (isFotoFrame) {
-                // Fixer Rahmen: nur sicherstellen dass es korrekt dargestellt wird
+                // Ganzseiten-Layout: Foto NICHT zoomen/beschneiden (cover verzieht optisch),
+                // sondern proportional einpassen (contain) mit mehr Höhe.
+                // setProperty mit 'important' → gewinnt gegen Stylesheet-!important-Regeln.
                 const fotoFrame = cloneImg.closest('.foto-frame-fixed');
                 if (fotoFrame) {
-                    fotoFrame.style.width = '100%';
-                    fotoFrame.style.height = '200px';
-                    fotoFrame.style.overflow = 'hidden';
-                    fotoFrame.style.flexShrink = '0';
-                    fotoFrame.style.position = 'relative';
+                    // 9×13-Foto-Look: festes Foto-Format (13:9), rechts platziert,
+                    // weißer Rand + Schatten wie ein echter Fotoabzug.
+                    fotoFrame.style.setProperty('width', '470px', 'important');
+                    fotoFrame.style.setProperty('height', '325px', 'important');
+                    fotoFrame.style.setProperty('margin-left', 'auto', 'important');
+                    fotoFrame.style.setProperty('margin-right', '20px', 'important');
+                    fotoFrame.style.setProperty('margin-bottom', '16px', 'important');
+                    fotoFrame.style.setProperty('overflow', 'hidden', 'important');
+                    fotoFrame.style.setProperty('flex-shrink', '0', 'important');
+                    fotoFrame.style.setProperty('position', 'relative', 'important');
+                    fotoFrame.style.setProperty('background', '#ffffff', 'important');
+                    fotoFrame.style.setProperty('border', '8px solid #ffffff', 'important');
+                    fotoFrame.style.setProperty('border-radius', '10px', 'important');
+                    fotoFrame.style.setProperty('box-shadow', '0 10px 28px rgba(15,23,42,0.22)', 'important');
                 }
-                cloneImg.style.width = '100%';
-                cloneImg.style.height = '100%';
-                cloneImg.style.objectFit = 'cover';
-                cloneImg.style.objectPosition = 'center top';
-                cloneImg.style.display = 'block';
-                cloneImg.style.transform = 'none';
+                cloneImg.style.setProperty('width', '100%', 'important');
+                cloneImg.style.setProperty('height', '100%', 'important');
+                cloneImg.style.setProperty('object-fit', 'cover', 'important');
+                cloneImg.style.setProperty('object-position', 'center center', 'important');
+                cloneImg.style.setProperty('display', 'block', 'important');
+                cloneImg.style.setProperty('transform', 'none', 'important');
+                cloneImg.style.setProperty('border-radius', '4px', 'important');
             } else {
             const hostRect = srcContainer.getBoundingClientRect();
             const imgRect = srcImg.getBoundingClientRect();
@@ -13461,41 +13482,47 @@ const handlePDFShare = async () => {
                 if (!runOnlyWithOfferValidity(() => { handleRecommendedPdfPrint(); })) return;
 
                 try { setShowFinishTypeModal(false); } catch(e) {}
+                // === Nach Unterschrift: PDF-Name = Rufnummer (MSISDN) des Kunden ===
+                let __pdfName2 = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                try {
+                    if (customerSignature) {
+                        const ms = window.prompt('📱 Bitte MSISDN / Rufnummer des Kunden eingeben:\n(Die PDF-Datei wird danach benannt)', '');
+                        const cleanMs = (ms || '').replace(/[^0-9+]/g, '').trim();
+                        if (cleanMs) __pdfName2 = `Angebot ${cleanMs}.pdf`;
+                    }
+                } catch(e) {}
                 triggerToast('PDF wird erstellt… einen Moment.');
                 try {
                     const blob = await createPrintLookPdfBlob(triggerToast, ensurePrintHeaders);
-                    const pdfFileName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                    const pdfFileName = __pdfName2;
                     const pdfFile = new File([blob], pdfFileName, { type: 'application/pdf' });
+                    window.__lastPdfBlob = blob; window.__lastPdfFile = pdfFile;
 
+                    // ── Statistik sofort loggen (zählt unabhängig vom Teilen-Weg als "Angebot") ──
+                    logQuoteToStatistics();
+
+                    // Direkt-Teilen versuchen. ACHTUNG iOS: navigator.share braucht eine frische
+                    // Nutzer-Geste – nach langer PDF-Erzeugung kann die abgelaufen sein. Dann
+                    // zeigen wir den "Jetzt teilen"-Dialog (Button-Tap = neue Geste → klappt sicher).
                     if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
                         try {
                             await navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [pdfFile] });
                             triggerToast('✅ PDF geteilt.');
+                            setTimeout(() => setShowReferralModal(true), 400);
+                            return;
                         } catch(shareErr) {
-                            if (shareErr && shareErr.name === 'AbortError') return;
-                            const url = URL.createObjectURL(blob);
-                            window.open(url, '_blank');
-                            setTimeout(() => URL.revokeObjectURL(url), 120000);
-                            triggerToast('✅ PDF geöffnet – drucken oder speichern.');
+                            if (shareErr && shareErr.name === 'AbortError') {
+                                // Nutzer hat Teilen-Dialog bewusst geschlossen → trotzdem Abschluss-Dialog
+                                setTimeout(() => setShowReferralModal(true), 400);
+                                return;
+                            }
+                            // Gestenregel abgelaufen → Teilen-Button mit frischer Geste anbieten
+                            setPdfShareReady(pdfFile);
+                            return;
                         }
-                    } else {
-                        const url = URL.createObjectURL(blob);
-                        const pdfTab = window.open(url, '_blank');
-                        if (!pdfTab) {
-                            const a = document.createElement('a');
-                            a.href = url; a.download = pdfFileName;
-                            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                        }
-                        setTimeout(() => URL.revokeObjectURL(url), 120000);
-                        triggerToast('✅ PDF geöffnet – drucken oder speichern.');
                     }
-
-                    // ── Statistik loggen (auch nicht-abgeschlossene Angebote zählen!) ──
-                    // Ein PDF-Export ohne Unterschrift = "Angebot" (nicht abgeschlossen) → für Coaching sichtbar.
-                    logQuoteToStatistics();
-
-                    // ── Gleiche "fertig & neu starten"-Meldung wie nach Unterschrift ──
-                    setTimeout(() => setShowReferralModal(true), 400);
+                    // Share-API nicht verfügbar → Teilen/Öffnen-Dialog anbieten
+                    setPdfShareReady(pdfFile);
                 } catch(e) {
                     triggerToast('PDF-Fehler: ' + (e && e.message ? e.message : 'Unbekannt'));
                 }
@@ -13516,6 +13543,43 @@ const handlePDFShare = async () => {
     setShowTvModal(false); 
 }} />
                     <QuestionModal isOpen={!!activeCategory && !showAdmin} onClose={() => setActiveCategory(null)} category={activeCategory} question={getCurrentQuestion()} onNextQuestion={handleNextQuestion} />
+                    {pdfShareReady && (
+                        <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.55)',zIndex:100000,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+                            <div style={{background:'#fff',borderRadius:'20px',padding:'28px 26px',width:'min(92vw,420px)',textAlign:'center',boxShadow:'0 25px 60px rgba(0,0,0,0.3)'}}>
+                                <div style={{fontSize:'40px',marginBottom:'8px'}}>📄</div>
+                                <div style={{fontSize:'19px',fontWeight:900,color:'#0f172a',marginBottom:'6px'}}>PDF ist fertig!</div>
+                                <div style={{fontSize:'13px',color:'#64748b',marginBottom:'18px'}}>Jetzt mit dem Kunden teilen oder öffnen.</div>
+                                <button onClick={() => {
+                                    const f = pdfShareReady;
+                                    setPdfShareReady(null);
+                                    const after = () => setTimeout(() => setShowReferralModal(true), 300);
+                                    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+                                        // WICHTIG: share() synchron im Tap aufrufen → iOS zeigt den Teilen-Dialog sicher
+                                        navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [f] })
+                                            .then(() => { triggerToast('✅ PDF geteilt.'); after(); })
+                                            .catch(() => {
+                                                try { const url = URL.createObjectURL(f); window.open(url, '_blank'); setTimeout(() => URL.revokeObjectURL(url), 120000); } catch(e) {}
+                                                after();
+                                            });
+                                    } else {
+                                        try { const url = URL.createObjectURL(f); window.open(url, '_blank'); setTimeout(() => URL.revokeObjectURL(url), 120000); } catch(e) {}
+                                        after();
+                                    }
+                                }} style={{width:'100%',padding:'14px',borderRadius:'14px',border:'none',background:'#2563eb',color:'#fff',fontWeight:800,fontSize:'16px',cursor:'pointer',marginBottom:'10px',boxShadow:'0 6px 16px rgba(37,99,235,0.35)'}}>📤 Jetzt teilen</button>
+                                <button onClick={() => {
+                                    const f = pdfShareReady;
+                                    setPdfShareReady(null);
+                                    try {
+                                        const url = URL.createObjectURL(f);
+                                        const t = window.open(url, '_blank');
+                                        if (!t) { const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+                                        setTimeout(() => URL.revokeObjectURL(url), 120000);
+                                    } catch(e) {}
+                                    setTimeout(() => setShowReferralModal(true), 300);
+                                }} style={{width:'100%',padding:'12px',borderRadius:'14px',border:'1.5px solid #e2e8f0',background:'#f8fafc',color:'#475569',fontWeight:700,fontSize:'14px',cursor:'pointer'}}>In neuem Tab öffnen</button>
+                            </div>
+                        </div>
+                    )}
                     <ReferralModal isOpen={showReferralModal} onClose={(mode) => {
                         setShowReferralModal(false);
                         if (mode === 'cancel') {
@@ -13642,7 +13706,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.5</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v42.8</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
