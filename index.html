@@ -4022,6 +4022,8 @@ body.pdf-share-mode .email-mode-buttons { display: none !important; }
         };
 
         // ── Push einzelne Zeile zu Firebase (fire & forget) ──
+
+
         const pushRowToFirebase = async (row) => {
             try {
                 const db = getStatsDb();
@@ -4327,7 +4329,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 
 
         // --- 1. DATA CONFIG ---
-        const ALL_LANGUAGES = [{code:'de',name:'Deutsch',flag:'🇩🇪',languageCode:'de'},{code:'ar',name:'Arabisch',flag:'🇸🇦',languageCode:'ar'},{code:'en',name:'Englisch',flag:'🇬🇧',languageCode:'en'},{code:'el',name:'Griechisch',flag:'🇬🇷',languageCode:'el'},{code:'it',name:'Italienisch',flag:'🇮🇹',languageCode:'it'},{code:'pl',name:'Polnisch',flag:'🇵🇱',languageCode:'pl'},{code:'pt',name:'Portugiesisch',flag:'🇵🇹',languageCode:'pt'},{code:'ro',name:'Rumänisch',flag:'🇷🇴',languageCode:'ro'},{code:'es',name:'Spanisch',flag:'🇪🇸',languageCode:'es'},{code:'tr',name:'Türkisch',flag:'🇹🇷',languageCode:'tr'}];
+        const ALL_LANGUAGES = [{code:'de',name:'Deutsch',flag:'🇩🇪',languageCode:'de'},{code:'ar',name:'Arabisch',flag:'🇸🇦',languageCode:'ar'},{code:'en',name:'Englisch',flag:'🇬🇧',languageCode:'en'},{code:'el',name:'Griechisch',flag:'🇬🇷',languageCode:'el'},{code:'it',name:'Italienisch',flag:'🇮🇹',languageCode:'it'},{code:'pl',name:'Polnisch',flag:'🇵🇱',languageCode:'pl'},{code:'pt',name:'Portugiesisch',flag:'🇵🇹',languageCode:'pt'},{code:'ro',name:'Rumänisch',flag:'🇷🇴',languageCode:'ro'},{code:'ru',name:'Russisch',flag:'🇷🇺',languageCode:'ru'},{code:'es',name:'Spanisch',flag:'🇪🇸',languageCode:'es'},{code:'tr',name:'Türkisch',flag:'🇹🇷',languageCode:'tr'}];
         const SORTED_LANGUAGES = [ALL_LANGUAGES.find(l=>l.code==='de'),...ALL_LANGUAGES.filter(l=>l.code!=='de').sort((a,b)=>a.name.localeCompare(b.name))];
         const SITUATION_ITEMS = [
             { id: 'Kundenname', label: 'Kundenname', icon: ICONS.Users }, { id: 'Rufnummer', label: 'Rufnummer', icon: ICONS.Phone }, { id: 'Anbieter', label: 'Anbieter', icon: ICONS.Globe }, { id: 'Hardware', label: 'Hardware', icon: ICONS.Smartphone },
@@ -4348,6 +4350,18 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         const STROKE_SIZES = [{ id: 1, width: 2, label: 'Dünn' }, { id: 2, width: 4, label: 'Mittel' }, { id: 3, width: 8, label: 'Dick' }];
         
         const MOCK_TRANSLATIONS = {
+            ru: {
+                Offer1Title: '1. Устройства, провайдер и использование',
+                Offer2Title: '2. Домохозяйство и другие продукты',
+                Offer3Title: '3. Телевидение и Wi-Fi',
+                CostHeader: 'Обзор расходов и заключение',
+                CostEinmalig: 'ЕДИНОРАЗОВО (€)', CostMonatlich1: 'ЕЖЕМЕСЯЧНО, 1-Й ГОД (€)', CostMonatlich: 'ЕЖЕМЕСЯЧНО (€)', CostMonatlich2: 'ЕЖЕМЕСЯЧНО, 2-Й ГОД (€)', CostSmartphone: 'РАССРОЧКА НА СМАРТФОН (€/МЕС)',
+                AgentLabel: 'ПЕРСОНАЛЬНЫЙ АГЕНТ', DateLabel: 'ДАТА', ValidUntilLabel: 'ПРЕДЛОЖЕНИЕ ДЕЙСТВУЕТ ДО',
+                Kundenname_Label: 'Имя клиента', Rufnummer_Label: 'Номер телефона', Anbieter_Label: 'Провайдер',
+                Hardware_Label: 'Устройства', Nutzung_Label: 'Использование', Haushalt_Label: 'Домохозяйство',
+                'Weitere Produkte_Label': 'Другие продукты', Fernsehen_Label: 'Телевидение', WiFi_Label: 'WiFi',
+                Gesamtkosten_Label: 'Общие расходы', StatusOpen: 'Открыто', StatusClosed: 'Завершено', StatusNeutral: 'Нейтрально',
+            },
             en: {
                 Offer1Title: '1. Hardware, Provider & Usage',
                 Offer2Title: '2. Household & Other Products',
@@ -4764,6 +4778,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             );
         };
 
+
         const WlanModal=({isOpen,onClose,triggerToast,onRecommendation,onUebernehmen})=>{
   const[step,setStep]=React.useState(1);
   const[floors,setFloors]=React.useState(null);
@@ -4953,7 +4968,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
           ];
           const[simDl,setSimDl]=useState(100);
           const[simUl,setSimUl]=useState(40);
-          const[tiers,setTiers]=useState([{dl:16,ul:2.4,on:true},{dl:50,ul:10,on:true},{dl:100,ul:40,on:true},{dl:250,ul:40,on:true},{dl:1000,ul:100,on:true}]);
+          const[tiers,setTiers]=useState([{dl:16,ul:2.4,on:true},{dl:50,ul:10,on:true},{dl:100,ul:40,on:true},{dl:250,ul:50,on:true},{dl:500,ul:100,on:true},{dl:1000,ul:200,on:true}]);
           const[customDl,setCustomDl]=useState('');
           const[activities,setActivities]=useState([
             {k:'surf',emoji:'🌐',label:'Surfen',dl:1.5,ul:0.2,n:2},
@@ -4966,7 +4981,11 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
           const{rec,needDl,needUl,gaugePct}=useMemo(()=>{
             let nDl=0,nUl=0;
             activities.forEach(a=>{nDl+=a.n*a.dl;nUl+=a.n*a.ul;});
-            nDl=Math.ceil(nDl*1.2);nUl=Math.ceil(nUl*1.2);
+            // +20% Lastpuffer, dann WLAN-Overhead: real kommen über WLAN nur ~60% der
+            // gebuchten Leitung am Endgerät an → Bedarf durch 0,6 teilen, damit der
+            // empfohlene Tarif den tatsächlichen Bedarf am Gerät auch wirklich liefert.
+            const WLAN_EFF=0.6;
+            nDl=Math.ceil(nDl*1.2/WLAN_EFF);nUl=Math.ceil(nUl*1.2/WLAN_EFF);
             const avail=tiers.filter(t=>t.on).sort((a,b)=>a.dl-b.dl);
             let r=avail.find(t=>t.dl>=nDl&&t.ul>=Math.max(nUl,2));
             if(!r&&avail.length>0)r=avail[avail.length-1];
@@ -5016,7 +5035,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                       <button key={opt.dl} onClick={()=>{
                         setMaxBroadband(opt.dl);
                         // Tiers automatisch generieren: alle Standard-Stufen bis max
-                        const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:40},{dl:500,ul:50},{dl:1000,ul:100}];
+                        const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:50},{dl:500,ul:100},{dl:1000,ul:200}];
                         setTiers(allT.filter(t=>t.dl<=opt.dl).map(t=>({...t,on:true})));
                       }} style={{padding:'14px 12px',borderRadius:'14px',border:`1.5px solid ${BORDER}`,background:PANEL,cursor:'pointer',textAlign:'center',transition:'all 0.15s'}}>
                         <div style={{fontSize:'20px',fontWeight:'900',color:TEXT,lineHeight:1}}>{opt.label}</div>
@@ -5026,9 +5045,9 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:'8px',marginTop:'14px'}}>
                     <input type="number" placeholder="z.B. 150" min="1" max="10000" style={{flex:1,padding:'12px 14px',borderRadius:'12px',border:`1.5px solid ${BORDER}`,background:PANEL,fontSize:'16px',fontWeight:'700',color:TEXT,outline:'none'}}
-                      onKeyDown={(e)=>{if(e.key==='Enter'){const v=parseInt(e.target.value);if(v>0){setMaxBroadband(v);const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:40},{dl:500,ul:50},{dl:1000,ul:100}];const filtered=allT.filter(t=>t.dl<=v);if(!filtered.find(t=>t.dl===v))filtered.push({dl:v,ul:Math.round(v/5)});setTiers(filtered.sort((a,b)=>a.dl-b.dl).map(t=>({...t,on:true})));}}}}
+                      onKeyDown={(e)=>{if(e.key==='Enter'){const v=parseInt(e.target.value);if(v>0){setMaxBroadband(v);const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:50},{dl:500,ul:100},{dl:1000,ul:200}];const filtered=allT.filter(t=>t.dl<=v);if(!filtered.find(t=>t.dl===v))filtered.push({dl:v,ul:Math.round(v/5)});setTiers(filtered.sort((a,b)=>a.dl-b.dl).map(t=>({...t,on:true})));}}}}
                     />
-                    <button onClick={(e)=>{const inp=e.target.closest('div').querySelector('input');const v=parseInt(inp?.value);if(v>0){setMaxBroadband(v);const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:40},{dl:500,ul:50},{dl:1000,ul:100}];const filtered=allT.filter(t=>t.dl<=v);if(!filtered.find(t=>t.dl===v))filtered.push({dl:v,ul:Math.round(v/5)});setTiers(filtered.sort((a,b)=>a.dl-b.dl).map(t=>({...t,on:true})));}}} style={{padding:'12px 20px',borderRadius:'12px',border:'none',background:ACCENT,color:'#fff',fontWeight:'800',fontSize:'14px',cursor:'pointer',whiteSpace:'nowrap'}}>Mbit/s →</button>
+                    <button onClick={(e)=>{const inp=e.target.closest('div').querySelector('input');const v=parseInt(inp?.value);if(v>0){setMaxBroadband(v);const allT=[{dl:16,ul:2.4},{dl:50,ul:10},{dl:100,ul:40},{dl:250,ul:50},{dl:500,ul:100},{dl:1000,ul:200}];const filtered=allT.filter(t=>t.dl<=v);if(!filtered.find(t=>t.dl===v))filtered.push({dl:v,ul:Math.round(v/5)});setTiers(filtered.sort((a,b)=>a.dl-b.dl).map(t=>({...t,on:true})));}}} style={{padding:'12px 20px',borderRadius:'12px',border:'none',background:ACCENT,color:'#fff',fontWeight:'800',fontSize:'14px',cursor:'pointer',whiteSpace:'nowrap'}}>Mbit/s →</button>
                   </div>
                   <p style={{margin:'8px 0 0',fontSize:'11px',color:TEXT2}}>Eigenen Wert eingeben, falls nicht in der Liste (z.B. 150, 175, 300…)</p>
                 </div>
@@ -5297,23 +5316,11 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
         const RoamingModal = ({ isOpen, onClose }) => {
   const [zone, setZone] = useState('eu_roam');
   const [tab, setTab] = useState('info');
-  const [fuPreis, setFuPreis] = useState('');       // DE GB
-  const [fuNettoBrutto, setFuNettoBrutto] = useState(''); // brutto price
-  const [fuUnlimited, setFuUnlimited] = useState(false); // unlimited tarif toggle
-  const [fuJahr, setFuJahr] = useState('2026'); // Berechnungsjahr
+  const [bruttoPreis, setBruttoPreis] = useState('');
+  const [deGb, setDeGb] = useState('');        // optionaler DE-Volumen-Deckel
+  const [fuYear, setFuYear] = useState('2026'); // Aufschlag-Jahr (Großhandelspreis)
 
   if (!isOpen) return null;
-
-  const GWSP_MAP = {'2023':1.80,'2024':1.55,'2025':1.30,'2026':1.10};
-  const GWSP = GWSP_MAP[fuJahr] || 1.10;
-  const fuDeGb = parseFloat((fuPreis||'').replace(',','.')) || 0;
-  const fuBrutto = parseFloat((fuNettoBrutto||'').replace(',','.')) || 0;
-  const fuNetto = fuBrutto > 0 ? fuBrutto / 1.19 : 0;
-  const fuGbRaw = fuNetto > 0 ? Math.round((fuNetto / GWSP) * 2 * 10) / 10 : null;
-  // Unlimited: kein DE-Deckel — Formel gilt direkt
-  const fuGb = fuGbRaw !== null ? ((!fuUnlimited && fuDeGb > 0) ? Math.min(fuGbRaw, fuDeGb) : fuGbRaw) : null;
-  const fuCapped = !fuUnlimited && fuGbRaw !== null && fuDeGb > 0 && fuGbRaw > fuDeGb;
-  const fuCol = fuGb === null ? '#94a3b8' : fuGb >= 80 ? '#10b981' : fuGb >= 40 ? '#f59e0b' : '#3b82f6';
 
   const ZONES = {
     eu_roam: {
@@ -5442,7 +5449,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
 
       <div className="flex flex-1 overflow-hidden">
 
-        {/* SIDEBAR */}
+        {/* SIDEBAR — nur Szenario-Auswahl (Rechner ist im Tab) */}
         <div className="w-52 shrink-0 border-r border-slate-100 p-3 flex flex-col gap-2 overflow-y-auto" style={{background:'#f8fafc'}}>
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 px-1">Szenario wählen</div>
           {Object.entries(ZONES).map(([k,v])=>(
@@ -5454,93 +5461,11 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
               </div>
             </button>
           ))}
-
-          {/* Fair-Use Rechner — dynamisch in Sidebar */}
-          <div style={{marginTop:'8px',borderTop:'1px solid #e2e8f0',paddingTop:'10px'}}>
-            <div style={{fontSize:'9px',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'8px'}}>📊 Fair-Use Rechner 2026</div>
-
-            {/* GB in Deutschland */}
-            <div style={{marginBottom:'6px'}}>
-              <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',marginBottom:'3px'}}>GB in Deutschland</div>
-              <div style={{position:'relative'}}>
-                <input type="number" min="0" step="1" placeholder={fuUnlimited ? '∞ Unlimited' : 'z.B. 40'}
-                  value={fuUnlimited ? '' : fuPreis} onChange={e=>setFuPreis(e.target.value)}
-                  disabled={fuUnlimited}
-                  style={{width:'100%',padding:'7px 32px 7px 10px',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'14px',fontWeight:800,color: fuUnlimited?'#94a3b8':'#1e293b',outline:'none',boxSizing:'border-box',background: fuUnlimited?'#f1f5f9':'#fff'}}
-                  onFocus={e=>e.target.style.borderColor='#3b82f6'}
-                  onBlur={e=>e.target.style.borderColor='#e2e8f0'}
-                />
-                <span style={{position:'absolute',right:'8px',top:'50%',transform:'translateY(-50%)',fontSize:fuUnlimited?'16px':'10px',color:'#94a3b8',fontWeight:700}}>{fuUnlimited?'∞':'GB'}</span>
-              </div>
-              {/* Unlimited Toggle */}
-              <label style={{display:'flex',alignItems:'center',gap:'6px',marginTop:'5px',cursor:'pointer',userSelect:'none'}}>
-                <div onClick={()=>setFuUnlimited(v=>!v)} style={{width:'28px',height:'16px',borderRadius:'99px',background:fuUnlimited?'#3b82f6':'#e2e8f0',position:'relative',transition:'background 0.2s',flexShrink:0}}>
-                  <div style={{position:'absolute',top:'2px',left:fuUnlimited?'14px':'2px',width:'12px',height:'12px',borderRadius:'50%',background:'#fff',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
-                </div>
-                <span style={{fontSize:'9px',fontWeight:700,color:fuUnlimited?'#2563eb':'#64748b'}}>Unlimited-Tarif (∞ in DE)</span>
-              </label>
-            </div>
-
-            {/* Monatspreis brutto */}
-            <div style={{marginBottom:'8px'}}>
-              <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',marginBottom:'3px'}}>Monatspreis (brutto €)</div>
-              <div style={{position:'relative'}}>
-                <input type="number" min="0" step="0.01" placeholder="z.B. 39,99"
-                  value={fuNettoBrutto} onChange={e=>setFuNettoBrutto(e.target.value)}
-                  style={{width:'100%',padding:'7px 28px 7px 10px',border:'1.5px solid #e2e8f0',borderRadius:'8px',fontSize:'14px',fontWeight:800,color:'#1e293b',outline:'none',boxSizing:'border-box',background:'#fff'}}
-                  onFocus={e=>e.target.style.borderColor='#3b82f6'}
-                  onBlur={e=>e.target.style.borderColor='#e2e8f0'}
-                />
-                <span style={{position:'absolute',right:'8px',top:'50%',transform:'translateY(-50%)',fontSize:'10px',color:'#94a3b8',fontWeight:700}}>€</span>
-              </div>
-            </div>
-
-            {/* Jahr / Rate wählen */}
-            <div style={{marginBottom:'8px'}}>
-              <div style={{fontSize:'9px',fontWeight:700,color:'#64748b',marginBottom:'4px'}}>Berechnungsjahr (Großhandelspreis)</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'3px'}}>
-                {[['2023','1,80€'],['2024','1,55€'],['2025','1,30€'],['2026','1,10€']].map(([yr,rate])=>(
-                  <button key={yr} onClick={()=>setFuJahr(yr)}
-                    style={{padding:'4px 2px',borderRadius:'6px',border:`1.5px solid ${fuJahr===yr?'#3b82f6':'#e2e8f0'}`,background:fuJahr===yr?'#eff6ff':'#f8fafc',cursor:'pointer',textAlign:'center'}}>
-                    <div style={{fontSize:'9px',fontWeight:800,color:fuJahr===yr?'#1d4ed8':'#374151'}}>{yr}</div>
-                    <div style={{fontSize:'8px',color:fuJahr===yr?'#3b82f6':'#94a3b8',fontWeight:600}}>{rate}</div>
-                  </button>
-                ))}
-              </div>
-              {fuJahr==='2023'&&<div style={{fontSize:'8px',color:'#f59e0b',marginTop:'3px',fontWeight:700}}>⚠️ o2-Vertragsberechnung oft mit diesem Satz</div>}
-            </div>
-            <div style={{borderRadius:'10px',padding:'10px',textAlign:'center',background: fuGb!==null ? fuCol+'15' : '#f1f5f9',border:`1.5px solid ${fuGb!==null?fuCol+'40':'#e2e8f0'}`,transition:'all 0.2s'}}>
-              <div style={{fontSize:'24px',fontWeight:900,color: fuGb!==null?fuCol:'#cbd5e1',lineHeight:1}}>{fuGb!==null?`~${fuGb}`:'–'}</div>
-              <div style={{fontSize:'10px',fontWeight:700,color:'#64748b',marginTop:'2px'}}>GB im EU-Ausland</div>
-
-              {fuUnlimited && fuGb !== null && (
-                <div style={{marginTop:'5px',padding:'4px 6px',borderRadius:'5px',background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',fontSize:'8px',fontWeight:800,color:'#93c5fd'}}>
-                  🇩🇪 ∞ in DE &nbsp;→&nbsp; 🇪🇺 ~{fuGb} GB max. im Ausland
-                </div>
-              )}
-              {fuUnlimited && fuGb !== null && (
-                <div style={{marginTop:'4px',padding:'3px 6px',borderRadius:'4px',background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.3)',fontSize:'8px',color:'#fcd34d',fontWeight:700}}>
-                  ⚠️ danach ~1,10 €/GB Aufpreis
-                </div>
-              )}
-              {fuCapped && <div style={{marginTop:'5px',padding:'3px 6px',borderRadius:'5px',background:'#fef3c7',border:'1px solid #fde68a',fontSize:'8px',fontWeight:800,color:'#92400e'}}>📌 Formel: {fuGbRaw} GB → Deckel: {fuDeGb} GB</div>}
-              {fuGb!==null && !fuCapped && !fuUnlimited && fuDeGb>0 && <div style={{marginTop:'5px',padding:'3px 6px',borderRadius:'5px',background:'#dcfce7',border:'1px solid #bbf7d0',fontSize:'8px',fontWeight:700,color:'#166534'}}>✅ Fair-Use unter DE-Volumen</div>}
-
-              {/* Vergleichsbalken DE vs EU */}
-              {fuGb!==null && fuDeGb>0 && (
-                <div style={{marginTop:'8px'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',fontSize:'8px',color:'#94a3b8',fontWeight:700,marginBottom:'3px'}}>
-                    <span>🇩🇪 {fuDeGb} GB</span><span>🇪🇺 {fuGb} GB</span>
-                  </div>
-                  <div style={{height:'8px',background:'#e2e8f0',borderRadius:'99px',overflow:'hidden',position:'relative'}}>
-                    <div style={{width:'100%',height:'100%',background:'#cbd5e1',borderRadius:'99px'}}/>
-                    <div style={{position:'absolute',top:0,left:0,width:`${Math.min(100,Math.round((fuGb/fuDeGb)*100))}%`,height:'100%',background:fuCol,borderRadius:'99px',transition:'width 0.4s ease'}}/>
-                  </div>
-                  <div style={{fontSize:'9px',color:fuCol,fontWeight:800,marginTop:'3px'}}>{Math.min(100,Math.round((fuGb/fuDeGb)*100))}% des DE-Volumens</div>
-                </div>
-              )}
-              {fuGb!==null&&<div style={{fontSize:'8px',color:'#94a3b8',marginTop:'4px'}}>(÷1,10 € × 2) · 2026</div>}
-            </div>
+          <div style={{marginTop:'auto',paddingTop:'12px',borderTop:'1px solid #e2e8f0'}}>
+            <button onClick={()=>setTab('fairuse')} style={{width:'100%',padding:'10px',borderRadius:'10px',border:'1.5px solid #bfdbfe',background:tab==='fairuse'?'#eff6ff':'#fff',cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',justifyContent:'center'}}>
+              <span style={{fontSize:'16px'}}>📊</span>
+              <span style={{fontSize:'12px',fontWeight:800,color:'#1d4ed8'}}>EU-GB Rechner</span>
+            </button>
           </div>
         </div>
 
@@ -5600,87 +5525,117 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             )}
 
             {tab==='fairuse'&&(()=>{
-              const [preis, setPreis] = useState('');
-              const [provider, setProvider] = useState('auto');
-              const GWSP = 1.10; // EU-Großhandelspreis 2026
-              const preisNetto = parseFloat((preis||'').replace(',','.')) || 0;
-              const euGb = preisNetto > 0 ? Math.round((preisNetto / GWSP) * 2 * 10) / 10 : 0;
-
-              const examples = [
-                { label: 'Telekom', ex: [{p:19.99,label:'MagentaMobil S'},{p:29.99,label:'MagentaMobil M'},{p:39.99,label:'MagentaMobil L'},{p:54.99,label:'MagentaMobil XL'}] },
-                { label: 'o2',      ex: [{p:14.99,label:'o2 Mobile S'},{p:24.99,label:'o2 Mobile M'},{p:39.99,label:'o2 Mobile L'},{p:54.99,label:'o2 Mobile XL'}] },
-                { label: 'Vodafone',ex: [{p:19.99,label:'Smart M'},{p:29.99,label:'Smart L'},{p:39.99,label:'GigaMobil M'},{p:54.99,label:'GigaMobil XL'}] },
-              ];
-
-              const barPct = Math.min(100, Math.round((euGb / 200) * 100));
+              // Offizielle Aufschläge pro GB (netto) laut Fair-Use-Policy + EU-Senkungen
+              const GWSP_MAP = {'2022':2.975,'2023':1.80,'2024':1.55,'2025':1.30,'2026':1.10};
+              const GWSP = GWSP_MAP[fuYear] || 1.10;
+              const brutto = parseFloat((bruttoPreis||'').replace(',','.')) || 0;
+              const netto = brutto > 0 ? brutto / 1.19 : 0;
+              const formelGb = netto > 0 ? Math.round((netto / GWSP) * 2 * 10) / 10 : 0;
+              // Optionaler DE-Deckel: im Ausland nie mehr als das Tarif-Volumen
+              const deGbNum = parseFloat((deGb||'').replace(',','.')) || 0;
+              const capped = formelGb > 0 && deGbNum > 0 && formelGb > deGbNum;
+              const euGb = capped ? deGbNum : formelGb;
               const color = euGb >= 100 ? '#10b981' : euGb >= 50 ? '#f59e0b' : euGb > 0 ? '#3b82f6' : '#e2e8f0';
 
+              const examples = [
+                { label: 'Telekom', ex: [{p:19.99,label:'Magenta S'},{p:29.99,label:'Magenta M'},{p:39.99,label:'Magenta L'},{p:54.99,label:'Magenta XL'}] },
+                { label: 'o2',      ex: [{p:14.99,label:'o2 S'},{p:24.99,label:'o2 M'},{p:39.99,label:'o2 L'},{p:54.99,label:'o2 XL'}] },
+                { label: 'Vodafone',ex: [{p:19.99,label:'Smart M'},{p:29.99,label:'Smart L'},{p:39.99,label:'Giga M'},{p:54.99,label:'Giga XL'}] },
+              ];
+
               return (
-                <div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-4">EU Fair-Use Kalkulator 2026</div>
-
-                  {/* Formel-Info */}
-                  <div className="p-3 rounded-xl mb-4" style={{background:'#eff6ff',border:'1.5px solid #bfdbfe'}}>
-                    <div className="text-xs font-black text-blue-800 mb-1">📊 Formel (gültig ab 01.01.2026)</div>
-                    <div className="font-mono text-sm text-blue-900 font-bold">(Monatspreis netto ÷ 1,10 €) × 2 = EU-GB</div>
-                    <div className="text-[10px] text-blue-600 mt-1">Großhandelspreis 2026: 1,10 €/GB · 2025: 1,30 €/GB</div>
-                  </div>
-
-                  {/* Eingabe */}
-                  <div className="flex items-end gap-3 mb-4">
-                    <div className="flex-1">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1.5">Monatspreis (netto in €)</label>
-                      <div className="relative">
-                        <input type="number" min="0" step="0.01" placeholder="z.B. 33.61"
-                          value={preis} onChange={e=>setPreis(e.target.value)}
-                          style={{width:'100%',padding:'10px 36px 10px 14px',border:'2px solid #3b82f6',borderRadius:'10px',fontSize:'18px',fontWeight:800,color:'#1e293b',outline:'none',boxSizing:'border-box'}}
+                <div style={{maxWidth:'580px',margin:'0 auto'}}>
+                  {/* Eingabe + Ergebnis */}
+                  <div style={{display:'flex',gap:'14px',alignItems:'stretch',marginBottom:'14px'}}>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:'12px',fontWeight:800,color:'#475569',display:'block',marginBottom:'8px'}}>Monatspreis des Tarifs (brutto)</label>
+                      <div style={{position:'relative'}}>
+                        <input type="number" min="0" step="0.01" inputMode="decimal" placeholder="39,99"
+                          value={bruttoPreis} onChange={e=>setBruttoPreis(e.target.value)}
+                          style={{width:'100%',padding:'16px 44px 16px 18px',border:`2px solid ${euGb>0?color:'#3b82f6'}`,borderRadius:'14px',fontSize:'26px',fontWeight:900,color:'#1e293b',outline:'none',boxSizing:'border-box'}}
                         />
-                        <span style={{position:'absolute',right:'12px',top:'50%',transform:'translateY(-50%)',fontSize:'14px',fontWeight:700,color:'#64748b'}}>€</span>
+                        <span style={{position:'absolute',right:'16px',top:'50%',transform:'translateY(-50%)',fontSize:'18px',fontWeight:800,color:'#94a3b8'}}>€</span>
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-1">Brutto ÷ 1,19 = Netto &nbsp;|&nbsp; z.B. 39,99 € brutto → 33,61 € netto</div>
                     </div>
-                    <div style={{textAlign:'center',minWidth:'120px',padding:'12px 16px',borderRadius:'12px',background: euGb>0?color+'15':'#f8fafc',border:`2px solid ${euGb>0?color:'#e2e8f0'}`}}>
-                      <div style={{fontSize:'28px',fontWeight:900,color: euGb>0?color:'#cbd5e1',lineHeight:1}}>{euGb > 0 ? `~${euGb}` : '–'}</div>
-                      <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',marginTop:'2px'}}>GB im EU-Ausland</div>
+                    <div style={{minWidth:'150px',display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',padding:'14px',borderRadius:'14px',background: euGb>0?color+'15':'#f8fafc',border:`2px solid ${euGb>0?color:'#e2e8f0'}`}}>
+                      <div style={{fontSize:'40px',fontWeight:900,color: euGb>0?color:'#cbd5e1',lineHeight:1}}>{euGb > 0 ? `~${euGb}` : '–'}</div>
+                      <div style={{fontSize:'12px',fontWeight:800,color:'#64748b',marginTop:'6px',textAlign:'center'}}>GB im EU-Ausland</div>
                     </div>
                   </div>
 
-                  {/* Balken */}
-                  {euGb > 0 && (
-                    <div className="mb-4">
-                      <div style={{height:'10px',background:'#f1f5f9',borderRadius:'99px',overflow:'hidden'}}>
-                        <div style={{width:`${barPct}%`,height:'100%',background:color,borderRadius:'99px',transition:'width 0.4s ease'}}/>
+                  {/* Aufschlag-Jahr wählen */}
+                  <div style={{marginBottom:'12px'}}>
+                    <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',marginBottom:'6px'}}>Aufschlag pro GB (netto) — je nach Vertragsjahr:</div>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'5px'}}>
+                      {[['2022','2,98€'],['2023','1,80€'],['2024','1,55€'],['2025','1,30€'],['2026','1,10€']].map(([yr,rate])=>(
+                        <button key={yr} onClick={()=>setFuYear(yr)}
+                          style={{padding:'7px 2px',borderRadius:'8px',border:`1.5px solid ${fuYear===yr?'#3b82f6':'#e2e8f0'}`,background:fuYear===yr?'#eff6ff':'#f8fafc',cursor:'pointer',textAlign:'center'}}>
+                          <div style={{fontSize:'12px',fontWeight:800,color:fuYear===yr?'#1d4ed8':'#374151'}}>{yr}</div>
+                          <div style={{fontSize:'9px',color:fuYear===yr?'#3b82f6':'#94a3b8',fontWeight:600}}>{rate}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Optionaler DE-Deckel */}
+                  <div style={{marginBottom:'14px',padding:'12px 14px',borderRadius:'12px',background:'#f8fafc',border:'1px solid #e2e8f0'}}>
+                    <label style={{fontSize:'12px',fontWeight:700,color:'#475569',display:'block',marginBottom:'6px'}}>
+                      GB des Tarifs in Deutschland <span style={{fontWeight:600,color:'#94a3b8'}}>(optional)</span>
+                    </label>
+                    <div style={{display:'flex',gap:'10px',alignItems:'center'}}>
+                      <div style={{position:'relative',width:'130px'}}>
+                        <input type="number" min="0" step="1" inputMode="numeric" placeholder="z.B. 50"
+                          value={deGb} onChange={e=>setDeGb(e.target.value)}
+                          style={{width:'100%',padding:'9px 36px 9px 12px',border:'1.5px solid #e2e8f0',borderRadius:'9px',fontSize:'15px',fontWeight:800,color:'#1e293b',outline:'none',boxSizing:'border-box'}}
+                        />
+                        <span style={{position:'absolute',right:'10px',top:'50%',transform:'translateY(-50%)',fontSize:'11px',color:'#94a3b8',fontWeight:700}}>GB</span>
                       </div>
-                      <div className="flex justify-between text-[10px] text-slate-400 font-semibold mt-1">
-                        <span>0 GB</span><span>100 GB</span><span>200 GB</span>
+                      <div style={{flex:1,fontSize:'11px',color:'#64748b',lineHeight:1.4}}>
+                        Begrenzt das Ergebnis: im Ausland gibt's nie mehr GB als der Tarif überhaupt hat.
                       </div>
                     </div>
-                  )}
+                    {capped && (
+                      <div style={{marginTop:'8px',padding:'8px 10px',borderRadius:'8px',background:'#fef3c7',border:'1px solid #fde68a',fontSize:'11px',fontWeight:700,color:'#92400e'}}>
+                        📌 Formel ergäbe {formelGb} GB — aber Tarif hat nur {deGbNum} GB → gedeckelt auf {deGbNum} GB
+                      </div>
+                    )}
+                    {!capped && formelGb > 0 && deGbNum > 0 && (
+                      <div style={{marginTop:'8px',padding:'8px 10px',borderRadius:'8px',background:'#dcfce7',border:'1px solid #bbf7d0',fontSize:'11px',fontWeight:700,color:'#166534'}}>
+                        ✅ {formelGb} GB liegen unter dem Tarif-Volumen — voll nutzbar
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Schnelltabelle */}
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Schnellbeispiele</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}}>
+                  {/* Schnellauswahl Tarife */}
+                  <div style={{fontSize:'12px',fontWeight:800,color:'#475569',marginBottom:'10px'}}>Oder Tarif antippen:</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'10px',marginBottom:'16px'}}>
                     {examples.map(prov=>(
-                      <div key={prov.label} style={{background:'#f8fafc',borderRadius:'10px',border:'1px solid #e2e8f0',overflow:'hidden'}}>
-                        <div style={{padding:'6px 10px',background:'#f1f5f9',fontWeight:800,fontSize:'11px',color:'#374151'}}>{prov.label}</div>
+                      <div key={prov.label} style={{background:'#f8fafc',borderRadius:'12px',border:'1px solid #e2e8f0',overflow:'hidden'}}>
+                        <div style={{padding:'8px 10px',background:'#f1f5f9',fontWeight:800,fontSize:'12px',color:'#374151',textAlign:'center'}}>{prov.label}</div>
                         {prov.ex.map(e=>{
                           const gb = Math.round((e.p/1.19/GWSP)*2*10)/10;
+                          const active = Math.abs(brutto - e.p) < 0.01;
                           return (
-                            <div key={e.p} onClick={()=>setPreis((e.p/1.19).toFixed(2))}
-                              style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'5px 10px',cursor:'pointer',borderBottom:'1px solid #f1f5f9'}}
+                            <div key={e.p} onClick={()=>setBruttoPreis(e.p.toFixed(2))}
+                              style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 10px',cursor:'pointer',borderBottom:'1px solid #f1f5f9',background:active?'#eff6ff':'transparent'}}
                               className="hover:bg-blue-50">
                               <div>
-                                <div style={{fontSize:'10px',fontWeight:700,color:'#374151'}}>{e.label}</div>
-                                <div style={{fontSize:'9px',color:'#94a3b8'}}>{e.p.toFixed(2)} € brutto</div>
+                                <div style={{fontSize:'11px',fontWeight:700,color:'#374151'}}>{e.label}</div>
+                                <div style={{fontSize:'10px',color:'#94a3b8'}}>{e.p.toFixed(2)} €</div>
                               </div>
-                              <div style={{fontSize:'13px',fontWeight:900,color:'#2563eb'}}>~{gb} GB</div>
+                              <div style={{fontSize:'14px',fontWeight:900,color:'#2563eb'}}>~{gb}</div>
                             </div>
                           );
                         })}
                       </div>
                     ))}
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-2">* Beispielpreise (Listenpreise). Tatsächliche Fair-Use-GB hängen vom Vertragspreis ab. Auf Tarife klicken zum Übernehmen.</div>
+
+                  {/* Formel-Info unten */}
+                  <div style={{padding:'10px 14px',borderRadius:'10px',background:'#eff6ff',border:'1px solid #bfdbfe'}}>
+                    <div style={{fontSize:'11px',fontWeight:800,color:'#1e40af',marginBottom:'3px'}}>Offizielle Fair-Use-Formel (o2/Telefónica)</div>
+                    <div style={{fontSize:'11px',color:'#1e40af',fontWeight:600}}>Monatspreis netto ÷ Aufschlag/GB netto × 2 = EU-GB. Danach Aufschlag {GWSP.toFixed(2).replace('.',',')} €/GB netto.</div>
+                  </div>
                 </div>
               );
             })()}
@@ -5871,18 +5826,27 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                 telekom: {
                     label: 'MagentaTV', color: '#E2007A', colorLight: '#FFF0F8',
                     tagline: 'Bei MagentaTV immer dabei:',
-                    features: ['Über 180 Sender (167 in HD)','MagentaTV+ Mediathek','Für zuhause und unterwegs','Restart & Aufnahme-Funktion'],
+                    features: ['Über 180 Sender (167 in HD)','MagentaTV+ Mediathek','Für zuhause und unterwegs','Restart, Timeshift & 100h Aufnahme'],
                     rows: [
-                        { icon:'🔌', label:'Tarif- & Anschlusskosten', range:'7 – 30 €',  tarif:{ flex:11, smart:7,  mega:30 } },
-                        { icon:'🎬', label:'Netflix',                   range:'enthalten', tarif:{ flex:0,  smart:0,  mega:0  } },
-                        { icon:'🎥', label:'Disney+',                   range:'enthalten', tarif:{ flex:0,  smart:0,  mega:0  } },
+                        { icon:'🔌', label:'Grundpreis (nach 6 Mon. gratis)', range:'11 – 30 €',  tarif:{ smart:11, stream:17, mega:30 } },
+                        { icon:'📺', label:'RTL+ Premium',                     range:'enthalten', tarif:{ smart:0,  stream:0,  mega:0  } },
+                        { icon:'🎬', label:'Netflix',                           range:'',          tarif:{ smart:0,  stream:0,  mega:0  } },
+                        { icon:'🎥', label:'Disney+',                           range:'',          tarif:{ smart:0,  stream:0,  mega:0  } },
+                        { icon:'🍎', label:'Apple TV+',                         range:'',          tarif:{ smart:0,  stream:0,  mega:0  } },
                     ],
                     cols: [
-                        { id:'flex',  label:'Flex',       sub:'monatl. kündbar', checks:[true,false,false], badge:null },
-                        { id:'smart', label:'Smart',      sub:'+ RTL+ Premium',  checks:[true,false,false], badge:'⭐ Empfohlen' },
-                        { id:'mega',  label:'MegaStream', sub:'All-Inclusive',   checks:[true,true, true],  badge:null },
+                        { id:'smart',  label:'Smart',       sub:'6 Mon. gratis, dann 11 €', checks:[true,true,false,false,false], badge:'⭐ Empfohlen' },
+                        { id:'stream', label:'SmartStream', sub:'6 Mon. gratis, dann 17 €', checks:[true,true,true, true, false], badge:null },
+                        { id:'mega',   label:'MegaStream',  sub:'6 Mon. gratis, dann 30 €', checks:[true,true,true, true, true],  badge:null },
                     ],
-                    totals:{ flex:11, smart:7, mega:30 }, recommended:'smart',
+                    totals:{ smart:11, stream:17, mega:30 }, recommended:'smart',
+                    // Hinweise für die Anzeige (optional, Info-Text unter der Tabelle)
+                    footnotes: [
+                        'Smart: RTL+ Premium inklusive',
+                        'SmartStream: + Netflix (mit Werbung) + Disney+ (mit Werbung)',
+                        'MegaStream: + Netflix Standard + Disney+ Standard + Apple TV+',
+                        'Alle: 6 Monate 0 €, 24 Mon. Laufzeit, ohne Telekom-Anschluss buchbar',
+                    ],
                 },
                 vodafone: {
                     label: 'Giga TV', color: '#E50000', colorLight: '#FFF0F0',
@@ -6095,9 +6059,16 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
                           <Icon d={ICONS.CheckCircle} size={16}/> {recTotal.toFixed(2)} € übernehmen
                         </button>
                       </div>
-                    </div>
 
-                    {/* FOOTER */}
+                      {/* Footnotes (MagentaTV Details) */}
+                      {pd.footnotes && pd.footnotes.length > 0 && (
+                        <div style={{padding:'10px 14px',background:'#f8fafc',borderRadius:10,border:'1px solid #e2e8f0',marginTop:10}}>
+                          {pd.footnotes.map((fn,fi) => (
+                            <div key={fi} style={{fontSize:10,color:'#64748b',fontWeight:600,lineHeight:1.5}}>{fn}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div style={{padding:'12px 24px',borderTop:'1px solid #f1f5f9',background:'#fafcff',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
                       <span style={{fontSize:'10px',color:'#94a3b8',fontWeight:500}}>Preise ohne Gewähr · Stand März 2026</span>
                       <button onClick={onClose} style={{padding:'7px 18px',borderRadius:'10px',border:'1.5px solid #e2e8f0',background:'white',color:'#64748b',fontWeight:700,fontSize:'13px',cursor:'pointer',outline:'none'}}>Schließen</button>
@@ -7813,8 +7784,190 @@ const highResHTML = buildHighResBundleHTML(d);
         const QuestionModal = ({ isOpen, onClose, category, question, onNextQuestion }) => { if (!isOpen) return null; return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6"><h3 className="text-xl font-bold mb-4">Frage zu: {category}</h3><p className="text-lg mb-6">{question}</p><div className="flex justify-end gap-2"><button onClick={onNextQuestion} className="px-4 py-2 border rounded">Nächste</button><button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded">OK</button></div></div></div>); };
 
         // --- OFFER CANVAS (Redraw Patch Applied) ---
+// === v44.0 TINTEN-ENGINE: Werkzeug-Dynamik (Druck + Geschwindigkeit → Strichbreite) ===
+// pen      = Stift: moderate Druck-/Tempo-Reaktion (lebendige, aber kontrollierte Linie)
+// fountain = Füller: starke Reaktion – langsam/fest = breit, schnell/leicht = dünn (Tinten-Look)
+// ballpen  = Kugelschreiber: konstant dünn, nur Transparenz-Charakter (echtes Kuli-Gefühl)
+// v45.6: Globaler Zugriff auf aktuelle Stiftfarbe (für Top-Level Overlay-Render)
+function colorRefGlobal() { return window.__currentPenColor || '#1d4ed8'; }
+function getInkToolDynamics(toolId) {
+    if (toolId === 'fountain') return { pGain: 0.70, vGain: 0.55, fMin: 0.55, fMax: 1.50, smooth: 0.22 };
+    if (toolId === 'pen')      return { pGain: 0.40, vGain: 0.18, fMin: 0.78, fMax: 1.22, smooth: 0.30 };
+    return null; // ballpen / eraser / highlighter: konstante Breite
+}
+// Breitenfaktor aus Druck (0..1, 0.5 neutral) und normiertem Tempo (0..1, 0.35 neutral)
+function computeInkWidthFactor(dyn, pressure, velNorm) {
+    if (!dyn) return 1;
+    const pf = 1 + (pressure - 0.5) * 2 * dyn.pGain;
+    const vf = 1 + (0.35 - velNorm) * 2 * dyn.vGain;
+    return Math.max(dyn.fMin, Math.min(dyn.fMax, pf * vf));
+}
+// Hat der Stroke pro Punkt gespeicherte Breitenfaktoren (wf)?
+function strokeHasVariableWidth(stroke) {
+    return !!(stroke && (stroke.tool === 'pen' || stroke.tool === 'fountain')
+        && Array.isArray(stroke.points) && stroke.points.length > 1
+        && stroke.points.some(p => p && p.wf != null));
+}
+// Variable Strichbreite rendern: Midpoint-Quadratic-Segmente, lineWidth pro Segment.
+// pts = (skalierte) Koordinaten, rawPts = Original-Punkte mit wf, baseLW = Ziel-Basisbreite.
+// Identische Geometrie wie das Live-Rendering → Redraw sieht aus wie beim Schreiben.
+function drawVariableWidthPath(ctx, pts, rawPts, baseLW) {
+    const wf = (i) => { const p = rawPts[Math.min(i, rawPts.length - 1)]; return (p && p.wf != null) ? p.wf : 1; };
+    if (!pts || pts.length === 0) return;
+    if (pts.length === 1) {
+        ctx.beginPath();
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.arc(pts[0].x, pts[0].y, Math.max(0.5, baseLW * wf(0)) / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        return;
+    }
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    let prevX = pts[0].x, prevY = pts[0].y;
+    for (let i = 1; i < pts.length; i++) {
+        const isLast = (i === pts.length - 1);
+        const midX = isLast ? pts[i].x : (pts[i].x + pts[i + 1].x) / 2;
+        const midY = isLast ? pts[i].y : (pts[i].y + pts[i + 1].y) / 2;
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(0.5, baseLW * ((wf(i - 1) + wf(i)) / 2));
+        ctx.moveTo(prevX, prevY);
+        if (isLast) { ctx.lineTo(midX, midY); } else { ctx.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY); }
+        ctx.stroke();
+        prevX = midX; prevY = midY;
+    }
+    ctx.beginPath(); // Pfad leeren, damit nachfolgendes ctx.stroke() nichts doppelt zeichnet
+}
+
+// === v44.0 LIVE-TIP OVERLAY: Latenz-Kaschierung wie Samsung Notes / GoodNotes ===
+// Die "echte" Tinte endet konstruktionsbedingt am Mittelpunkt der letzten beiden Punkte.
+// Das Overlay zeichnet das fehlende letzte Stück + Stylus-Prediction bis zur Stiftspitze
+// auf ein fixiertes Canvas ÜBER dem Zeichen-Canvas. Wird pro Frame neu gezeichnet und
+// beim Abheben entfernt → gespeicherte Striche/Redraw bleiben 100% unverändert.
+// v45.8: LIVE-TIP-OVERLAY KOMPLETT DEAKTIVIERT.
+// Das separate Overlay-Canvas (z-index 99999) war auf iPad/Safari die Ursache der
+// sporadischen schwarzen, leicht versetzten Linie während des Schreibens: Safari
+// komponiert das zweite Layer kurz mit falscher Position/Default-Farbe (schwarz),
+// bevor die echte Tinte es überschreibt. Auf Android unsichtbar → trat dort nie auf.
+// Nutzen (minimale Latenz-Kaschierung) steht in keinem Verhältnis zum Fehler.
+// Alle Funktionen sind jetzt No-Ops; das echte Live-Rendering läuft direkt auf dem
+// Zeichen-Canvas (siehe draw()), das ist sauber und einlagig.
+function getInkTipOverlay() { return null; }
+function positionInkTipOverlay(canvas) { return null; }
+function hideInkTipOverlay() {
+    // Falls aus einer früheren Session noch ein Overlay-Element existiert: entfernen.
+    try {
+        const ov = window.__inkTipOverlay;
+        if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
+        window.__inkTipOverlay = null;
+    } catch (_) {}
+}
+function renderHighlighterPreview(stroke) { /* deaktiviert – Marker rendert direkt auf Canvas */ }
+function renderInkTip(e, stroke) { /* deaktiviert – Tinte rendert direkt auf Canvas */ }
+
+// === v46.2 MARKER-VORSCHAU-EBENE ===
+// Problem: Live-Marker zeichnet segmentweise mit Alpha<1 → Überlappungen addieren sich
+// → "erst dunkel". Lösung: separates Vorschau-Canvas, das VOLL DECKEND (alpha=1) beschrieben
+// wird (keine Überlappungs-Verdunkelung) und seine Transparenz NUR über CSS-opacity bekommt.
+// 1:1 über dem Zeichen-Canvas, keine Prediction, kein Positions-Trick (anders als das alte
+// fehlerhafte Tip-Overlay). Beim Abheben wird der echte transparente Pfad committed.
+function getMarkerPreview() {
+    let ov = window.__markerPreview;
+    if (!ov) {
+        ov = document.createElement('canvas');
+        ov.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:40;display:none;';
+        document.body.appendChild(ov);
+        window.__markerPreview = ov;
+    }
+    return ov;
+}
+function positionMarkerPreview(canvas, opacity) {
+    try {
+        const ov = getMarkerPreview();
+        const rect = canvas.getBoundingClientRect();
+        if (!rect || rect.width < 2 || rect.height < 2) return null;
+        const dpr = window.devicePixelRatio || 1;
+        ov.style.left = rect.left + 'px';
+        ov.style.top = rect.top + 'px';
+        ov.style.width = rect.width + 'px';
+        ov.style.height = rect.height + 'px';
+        ov.style.opacity = String(opacity != null ? opacity : 0.4); // Transparenz NUR hier
+        const w = Math.max(1, Math.round(rect.width * dpr));
+        const h = Math.max(1, Math.round(rect.height * dpr));
+        if (ov.width !== w || ov.height !== h) { ov.width = w; ov.height = h; }
+        ov.__rect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        ov.__dpr = dpr;
+        ov.style.display = 'block';
+        const ctx = ov.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        return ov;
+    } catch (_) { return null; }
+}
+function renderMarkerPreview(stroke) {
+    try {
+        const ov = window.__markerPreview;
+        if (!ov || ov.style.display === 'none' || !ov.__rect) return;
+        const fp = stroke && stroke.points;
+        if (!fp || fp.length === 0) return;
+        const rect = ov.__rect;
+        const dpr = ov.__dpr || 1;
+        const ctx = ov.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        // VOLL DECKEND zeichnen (alpha=1) → die Transparenz macht allein die CSS-opacity.
+        // Ein durchgehender Pfad, jeder Frame neu → keine Überlappungs-Verdunkelung.
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = stroke.color || colorRefGlobal();
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.lineWidth = Math.max(0.5, (stroke.baseLineWidth || 2) * 3);
+        ctx.beginPath();
+        if (fp.length === 1) {
+            ctx.fillStyle = stroke.color || colorRefGlobal();
+            ctx.arc(fp[0].x, fp[0].y, ctx.lineWidth / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            buildMidpointPath(ctx, fp);
+            ctx.stroke();
+        }
+    } catch (_) {}
+}
+function hideMarkerPreview() {
+    try {
+        const ov = window.__markerPreview;
+        if (!ov) return;
+        const ctx = ov.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, ov.width, ov.height);
+        ov.style.display = 'none';
+        ov.__rect = null;
+    } catch (_) {}
+}
+
+// buildMidpointPath bleibt – wird beim echten Commit (stopDrawing) für glatte Kurven gebraucht.
+function buildMidpointPath(ctx, fp) {
+    ctx.moveTo(fp[0].x, fp[0].y);
+    if (fp.length === 2) { ctx.lineTo(fp[1].x, fp[1].y); return; }
+    ctx.lineTo((fp[0].x + fp[1].x) / 2, (fp[0].y + fp[1].y) / 2);
+    for (let i = 1; i < fp.length - 1; i++) {
+        ctx.quadraticCurveTo(fp[i].x, fp[i].y, (fp[i].x + fp[i + 1].x) / 2, (fp[i].y + fp[i + 1].y) / 2);
+    }
+    ctx.lineTo(fp[fp.length - 1].x, fp[fp.length - 1].y);
+}
+
+
         const redrawCanvas = (canvas, strokes, scaleFactor = 1, key = '') => {
             if (!canvas) return;
+            // === v46.0: NIE auf dem gerade live bezeichneten Canvas neu zeichnen ===
+            // redrawCanvas schreibt am Ende clearRect+drawImage (und ggf. canvas.width) auf den
+            // sichtbaren Canvas. Während eines aktiven Strichs würde das den laufenden Strich
+            // löschen UND den ctx-State/Transform zerstören → schwarze, versetzte Linie auf iPad.
+            // Der committete Strich landet ohnehin beim Abheben im Array; der nächste Redraw
+            // (nach stopDrawing) zeichnet dann sauber alles.
+            if (window.__activeDrawingCanvas === canvas) {
+                canvas.__redrawPending = true; // merken: nach dem Abheben einmal nachziehen
+                return;
+            }
             const dpr = window.devicePixelRatio || 1;
 
             // ── Stabile Maße abwarten (Fix fuer Seite 2 Hoch→Quer-Verzerrung) ─────────
@@ -7925,19 +8078,24 @@ const highResHTML = buildHighResBundleHTML(d);
                     const pts = (isOfferKey && offerScaleX != null)
                         ? stroke.points.map(p => ({ x: p.x * offerScaleX, y: p.y * offerScaleY }))
                         : stroke.points.map(p => ({ x: p.x * responsiveScaleFactor, y: p.y * responsiveScaleFactor }));
-                    const isSmooth = (stroke.tool === 'fountain' || stroke.tool === 'ballpen');
-                    if (isSmooth && pts.length >= 3) {
-                        ctx.moveTo(pts[0].x, pts[0].y);
-                        ctx.lineTo((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2);
-                        for (let i = 1; i < pts.length - 1; i++) {
-                            const mx = (pts[i].x + pts[i + 1].x) / 2;
-                            const my = (pts[i].y + pts[i + 1].y) / 2;
-                            ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
-                        }
-                        ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+                    // v44.0: pen/fountain mit gespeicherten Breitenfaktoren → identisch zum Live-Bild
+                    if (strokeHasVariableWidth(stroke) && stroke.tool !== 'eraser' && stroke.tool !== 'highlighter') {
+                        drawVariableWidthPath(ctx, pts, stroke.points, finalLineWidth);
                     } else {
-                        ctx.moveTo(pts[0].x, pts[0].y);
-                        pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+                        const isSmooth = (stroke.tool === 'fountain' || stroke.tool === 'ballpen' || stroke.tool === 'pen' || stroke.tool === 'highlighter');
+                        if (isSmooth && pts.length >= 3) {
+                            ctx.moveTo(pts[0].x, pts[0].y);
+                            ctx.lineTo((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2);
+                            for (let i = 1; i < pts.length - 1; i++) {
+                                const mx = (pts[i].x + pts[i + 1].x) / 2;
+                                const my = (pts[i].y + pts[i + 1].y) / 2;
+                                ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+                            }
+                            ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+                        } else {
+                            ctx.moveTo(pts[0].x, pts[0].y);
+                            pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+                        }
                     }
                 }
                 ctx.stroke();
@@ -8456,6 +8614,7 @@ function App() {
                 const doRedraw = () => {
                     const canvas = offerCost3Ref?.current;
                     if (!canvas) return;
+                    if (window.__activeDrawingCanvas === canvas) { canvas.__redrawPending = true; return; } // v46.1
                     const rect = canvas.getBoundingClientRect();
                     if (!rect.width || !rect.height) return;
                     const dpr = window.devicePixelRatio || 1;
@@ -8582,6 +8741,11 @@ const toolRef = useRef('pen');
                 if (toolId === 'ballpen') {
                     return { width: bw, opacity: Math.max(0.6, Math.min(0.8, baseOpacity)), smooth: 0.25 };
                 }
+                // v44.2: Textmarker = echter Marker → ~50% transparenter als die Stifte
+                // (Slider wirkt weiter, aber gedeckelt auf max. 50% Deckkraft)
+                if (toolId === 'highlighter') {
+                    return { width: bw, opacity: Math.max(0.10, Math.min(0.4, baseOpacity * 0.35)), smooth: 0 };
+                }
                 return { width: bw, opacity: Math.min(1, baseOpacity), smooth: 0 };
             };
 
@@ -8668,6 +8832,12 @@ const toolRef = useRef('pen');
                     });
                 };
                 const handle = () => {
+                    // === v46.1: Während ein Stift-Strich läuft NICHT neu skalieren/zeichnen ===
+                    // visualViewport.resize feuert auf iPad/Safari ständig während des Schreibens
+                    // (Pencil, Browser-UI). Das löste setRedrawCounter → canvas.width-Reset aus →
+                    // die Schrift verschwand kurz. Wir setzen aus und holen den Redraw nach dem
+                    // Abheben nach (handlePostStroke unten).
+                    if (window.__activeDrawingCanvas) { window.__recalcPending = true; return; }
                     // Stabilitaets-Cache auf allen Offer-Canvases zuruecksetzen, damit
                     // redrawCanvas beim naechsten Aufruf sofort neu misst (kein staler Wert).
                     [offerCanvasRef1, offerCanvasRef2, offerCanvasRef3].forEach(ref => {
@@ -8714,7 +8884,7 @@ const toolRef = useRef('pen');
             const hasMigratedSituationRef = useRef(false);
             
             useEffect(() => { toolRef.current = tool; }, [tool]);
-            useEffect(() => { colorRef.current = color; }, [color]);
+            useEffect(() => { colorRef.current = color; window.__currentPenColor = color; }, [color]);
             useEffect(() => { strokeWidthRef.current = strokeWidth; }, [strokeWidth]);
             useEffect(() => { eraserSizeRef.current = eraserSize; }, [eraserSize]);
             useEffect(() => { opacityRef.current = opacity; }, [opacity]);
@@ -8755,6 +8925,7 @@ const handleOpenStats = () => { setShowPinLock(true); };
             const [emailText, setEmailText] = useState('');
             const [emailMode, setEmailMode] = useState('keyboard'); 
             const [showEmailKeyboard, setShowEmailKeyboard] = useState(false);
+            const [showProviderKeyboard, setShowProviderKeyboard] = useState(false);
             const [beratungsIdMode, setBeratungsIdMode] = useState('keyboard');
             const [showNumpad, setShowNumpad] = useState(false);
             const [showSmartphoneFinanzierung, setShowSmartphoneFinanzierung] = useState(false);
@@ -8762,6 +8933,7 @@ const handleOpenStats = () => { setShowPinLock(true); };
             const [notesMode, setNotesMode] = useState('keyboard');
 
             const [showWlanModal, setShowWlanModal] = useState(false);
+
             const [showSpeedModal, setShowSpeedModal] = useState(false);
             const [showTechModal, setShowTechModal] = useState(false);
             const [showCostSection, setShowCostSection] = useState(true);
@@ -9045,6 +9217,8 @@ const [showSkipReasonModal, setShowSkipReasonModal] = useState(false);
             const emailCanvasRef = useRef(null);
             const beratungsIdCanvasRef = useRef(null);
             const providerCanvasRef = useRef(null); 
+            // v46.6: Anbieter "Sonstiges" nutzt jetzt die eigene virtuelle Tastatur
+            // (showProviderKeyboard) statt nativem Input – iOS-unabhängig, öffnet zuverlässig.
             const notesCanvasRef = useRef(null);
             const sitCanvasRef_Kundenname = useRef(null);
             const sitCanvasRef_Rufnummer = useRef(null);
@@ -9071,6 +9245,9 @@ const fileInputRef = useRef(null);
 
             const [displayLanguage, setDisplayLanguage] = useState('de');
             const [translatedText, setTranslatedText] = useState({});
+            // v45.3: Refs für die Live-Übersetzung getippter Texte (MyMemory)
+            const textDataLiveRef = useRef({});
+            const translatedTextLiveRef = useRef({});
             const [staticTranslations, setStaticTranslations] = useState({}); 
             const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
             const [oneDriveLink, setOneDriveLink] = useState('https://jefferson990.github.io/Verkaufsmappe/'); 
@@ -10120,6 +10297,20 @@ const handleFinishOfferClick = () => {
             const getCurrentQuestion = () => questionsData[activeCategory || 'default'][questionIndex];
             const handleTextChange = (key, val) => {
                 setTextData(prev => ({ ...prev, [key]: val }));
+                // v45.3: Deutscher Text geändert → gecachte Übersetzungen dieses Felds verwerfen
+                if (displayLanguage === 'de') {
+                    setTranslatedText(prev => {
+                        let changed = false;
+                        const next = {};
+                        for (const lang of Object.keys(prev || {})) {
+                            if (prev[lang] && Object.prototype.hasOwnProperty.call(prev[lang], key)) {
+                                const { [key]: _drop, ...rest } = prev[lang];
+                                next[lang] = rest; changed = true;
+                            } else { next[lang] = prev[lang]; }
+                        }
+                        return changed ? next : prev;
+                    });
+                }
                 // Merken: dieses Feld wurde digital (Tastatur) genutzt -> im Druck/Share anzeigen
                 try {
                     if (inputMode === 'keyboard') {
@@ -10245,6 +10436,8 @@ const handleFinishOfferClick = () => {
                 const resizeCanvas = (ref, key) => { 
                     const canvas = ref.current; 
                     if (!canvas || !key) return; 
+                    // v46.1: aktiv bezeichneten Canvas nicht anfassen – canvas.width-Reset löscht den Strich
+                    if (window.__activeDrawingCanvas === canvas) { canvas.__redrawPending = true; return; }
                     const rect = canvas.getBoundingClientRect(); 
                     if (!rect || rect.width === 0 || rect.height === 0) return; 
                     const dpr = window.devicePixelRatio || 1; 
@@ -10315,6 +10508,13 @@ const handleFinishOfferClick = () => {
                     list.forEach(({ ref, key }) => {
                         const c = ref.current;
                         if (!c) return;
+                        // === v46.1: Aktiv bezeichneten Canvas NICHT anfassen ===
+                        // Das canvas.width-Resize unten LÖSCHT den Canvas-Inhalt (Browser-Verhalten).
+                        // Während ein Strich live gezeichnet wird, würde das die Schrift kurz
+                        // verschwinden lassen (sporadisch auf iPad, weil dort DPR/Layout sub-pixel
+                        // schwankt → needW≠width → Reset). Nach dem Abheben zieht stopDrawing
+                        // den ausstehenden Redraw ohnehin nach.
+                        if (window.__activeDrawingCanvas === c) { c.__redrawPending = true; return; }
                         // Canvas neu skalieren falls nötig (Grid-Kacheln nach Step-Wechsel haben Größe 0)
                         const rect = c.getBoundingClientRect();
                         if (rect.width > 0 && rect.height > 0) {
@@ -10347,6 +10547,8 @@ const handleFinishOfferClick = () => {
                 const doStepRedraw = () => {
                     const c = stepCanvasRef.current;
                     if (!c) return;
+                    // v46.1: aktiv bezeichneten Canvas nicht resetten (löscht den laufenden Strich)
+                    if (window.__activeDrawingCanvas === c) { c.__redrawPending = true; return; }
                     const rect = c.getBoundingClientRect();
                     if (rect.width === 0 || rect.height === 0) return;
                     const dpr = window.devicePixelRatio || 1;
@@ -10434,9 +10636,20 @@ const handleFinishOfferClick = () => {
                 if (!canvas.__pinchState) canvas.__pinchState = { count: 0, penActive: false, penPointerId: null };
                 return canvas.__pinchState;
             };
+            // === v44.3 ZWEI-FINGER-SCROLLEN (wie Apple) ===
+            // 1 Finger auf Canvas = nichts (Handballen kann NIE scrollen),
+            // 2 Finger = manuelles Scrollen des Containers (überall zuverlässig),
+            // Stift = Schreiben. touch-action bleibt 'none' – das Scrollen übernimmt
+            // der globale Touch-Handler selbst (touch-action kann 1 vs. 2 Finger nicht trennen).
+            const PEN_GRACE_MS = 500;
+            const isPenActiveOrRecent = () => {
+                try {
+                    return (activePenCanvasRef.current !== null) || (Date.now() < (window.__penGraceUntil || 0));
+                } catch(_) { return false; }
+            };
             const updateCanvasTouchAction = (canvas, count) => {
                 if (!canvas) return;
-                if (gestureModeRef?.current || count >= 2) {
+                if (gestureModeRef?.current) {
                     canvas.style.touchAction = 'pan-x pan-y pinch-zoom';
                     return;
                 }
@@ -10454,10 +10667,23 @@ const handleFinishOfferClick = () => {
             // Global Finger-Zähler: erkennt 2-Finger-Gesten zuverlässig
             const globalTouchCountRef = useRef(0);
             useEffect(() => {
+                // v44.3: Zustand der laufenden Zwei-Finger-Scroll-Geste
+                let twoFingerScroll = null;
+                const findScrollContainer = (el) => {
+                    let n = (el instanceof Element) ? el : null;
+                    while (n) {
+                        try {
+                            const s = getComputedStyle(n);
+                            if ((n.scrollHeight > n.clientHeight + 2) && /(auto|scroll|overlay)/.test(s.overflowY)) return n;
+                        } catch(_) {}
+                        n = n.parentElement;
+                    }
+                    return document.scrollingElement || document.documentElement;
+                };
                 const onTouchStart = (e) => {
-                    // === PALM REJECTION: Wenn Stift aktiv → Touch-Events blockieren ===
+                    // === PALM REJECTION: Stift aktiv ODER gerade abgehoben (Grace) → Touch blockieren ===
                     // AUSNAHME: Toolbar (footer-bar) immer durchlassen – auch während Stift schreibt
-                    if (activePenCanvasRef.current !== null) {
+                    if (activePenCanvasRef.current !== null || Date.now() < (window.__penGraceUntil || 0)) {
                         const isOnToolbar = e.target?.closest?.('.footer-bar');
                         if (isOnToolbar) return; // Toolbar: immer anklickbar
                         e.preventDefault();
@@ -10466,26 +10692,48 @@ const handleFinishOfferClick = () => {
                     }
                     globalTouchCountRef.current = e.touches.length;
                     if (e.touches.length >= 2) {
+                        // Laufenden Strich abbrechen (Sicherheit)
                         isDrawingRef.current = false;
                         currentStrokeRef.current = null;
-                        document.querySelectorAll('canvas.drawing-canvas').forEach(c => {
-                            c.style.touchAction = 'pan-x pan-y pinch-zoom';
-                        });
+                        // v44.3: Zwei-Finger-Scroll-Session starten (wie Apple Notes)
+                        if (!gestureModeRef?.current && e.touches.length === 2) {
+                            const t0 = e.touches[0], t1 = e.touches[1];
+                            twoFingerScroll = {
+                                container: findScrollContainer(t0.target),
+                                lastX: (t0.clientX + t1.clientX) / 2,
+                                lastY: (t0.clientY + t1.clientY) / 2
+                            };
+                        }
+                    } else {
+                        twoFingerScroll = null;
                     }
                 };
                 const onTouchEnd = (e) => {
+                    if (e.touches.length < 2) twoFingerScroll = null;
                     if (activePenCanvasRef.current !== null) return;
                     globalTouchCountRef.current = e.touches.length;
-                    if (e.touches.length < 2 && !gestureModeRef?.current) {
-                        document.querySelectorAll('canvas.drawing-canvas').forEach(c => {
-                            c.style.touchAction = 'none';
-                        });
-                    }
                 };
-                // Scroll während Stift aktiv → blockieren
                 const onTouchMove = (e) => {
-                    if (activePenCanvasRef.current !== null) {
+                    // Handballen-Schutz: Stift aktiv / Grace → alles blockieren
+                    if (activePenCanvasRef.current !== null || Date.now() < (window.__penGraceUntil || 0)) {
                         e.preventDefault();
+                        return;
+                    }
+                    // GestureMode: native Pinch/Pan durchlassen
+                    if (gestureModeRef?.current) return;
+                    // v44.3: Zwei Finger = manuelles Scrollen (zuverlässig, überall)
+                    if (twoFingerScroll && e.touches.length === 2) {
+                        if (e.cancelable) e.preventDefault();
+                        const t0 = e.touches[0], t1 = e.touches[1];
+                        const avgX = (t0.clientX + t1.clientX) / 2;
+                        const avgY = (t0.clientY + t1.clientY) / 2;
+                        const c = twoFingerScroll.container;
+                        if (c) {
+                            c.scrollTop  -= (avgY - twoFingerScroll.lastY);
+                            c.scrollLeft -= (avgX - twoFingerScroll.lastX);
+                        }
+                        twoFingerScroll.lastX = avgX;
+                        twoFingerScroll.lastY = avgY;
                     }
                 };
                 document.addEventListener('touchstart',  onTouchStart, { passive: false });
@@ -10511,6 +10759,7 @@ const handleFinishOfferClick = () => {
                     isDrawingRef.current = false;
                     currentStrokeRef.current = null;
                     window.__activeDrawingCanvas = null;
+                    hideMarkerPreview();
                 }
 
                 const pointerType = e.pointerType; // 'pen' | 'touch' | 'mouse'
@@ -10608,24 +10857,33 @@ const handleFinishOfferClick = () => {
                 const widthScale = isCostCanvas ? 0.55 : 1.0;
                 const finalLineWidth = (visualBaseW / zoomLevel) * widthScale;
 
-                // initWidth: KONSTANT = finalLineWidth (keine Druckvariation beim Start)
-                const initWidth = finalLineWidth;
-                const pressure = 0.5; // Neutral-Wert – wird in draw() live gemessen
+                // === v44.0 TINTEN-ENGINE: Startbreite aus echtem Stylus-Druck ===
+                const dynStart = (currentTool !== 'eraser' && currentTool !== 'highlighter') ? getInkToolDynamics(currentTool) : null;
+                const pressure = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0.5;
+                const wf0 = dynStart ? computeInkWidthFactor(dynStart, pressure, 0.35) : 1;
+                const initWidth = Math.max(0.5, finalLineWidth * wf0);
 
                 const newStroke = {
                     tool: currentTool,
                     color: currentColor,
                     width: tune.width,
                     opacity: currentOpacity,
-                    points: [{ x, y, pressure, width: initWidth }],
+                    points: [{ x, y, pressure, width: initWidth, wf: wf0 }],
                     baseWidth: strokeBaseWidth,
                     baseHeight: strokeBaseHeight,
                     baseLineWidth: finalLineWidth,
                     eraserMult: (currentTool === 'eraser' ? (eraserSizeRef.current || 4) : 4),
                     lastWidth: initWidth,
+                    lastWf: wf0,
+                    smoothedPressure: pressure,
                     lastTime: e.timeStamp,
-                    smoothedVelocity: 0   // startet bei 0 → Ramp-Up greift in draw()
+                    smoothedVelocity: 0
                 };
+
+                // v46.2: Textmarker → Vorschau-Ebene positionieren (voll deckend + CSS-opacity).
+                if (currentTool === 'highlighter') {
+                    positionMarkerPreview(canvas, currentOpacity);
+                }
 
                 // setPointerCapture: Pencil/Stylus-Events auch außerhalb des Canvas empfangen
                 try {
@@ -10684,6 +10942,7 @@ const handleFinishOfferClick = () => {
                         isDrawingRef.current = false;
                         currentStrokeRef.current = null;
                         canvas.style.touchAction = 'pan-x pan-y pinch-zoom';
+                        hideMarkerPreview();
                     }
                     return;
                 }
@@ -10694,11 +10953,13 @@ const handleFinishOfferClick = () => {
                 e.preventDefault();
 
                 // Coalesced Events: alle Zwischenpunkte seit letztem Frame nutzen (minimiert Latenz)
-                // iOS Safari: getCoalescedEvents kann leeres Array zurückgeben → Fallback auf [e]
-                let events = [e];
+                // WICHTIG (v44.0): React-SyntheticEvents haben KEIN getCoalescedEvents →
+                // immer auf das native PointerEvent zugreifen, sonst war Coalescing nie aktiv!
+                const nativeEv = e.nativeEvent || e;
+                let events = [nativeEv];
                 try {
-                    if (e.getCoalescedEvents) {
-                        const coalesced = e.getCoalescedEvents();
+                    if (nativeEv.getCoalescedEvents) {
+                        const coalesced = nativeEv.getCoalescedEvents();
                         if (coalesced && coalesced.length > 0) events = coalesced;
                     }
                 } catch(_) {}
@@ -10707,6 +10968,34 @@ const handleFinishOfferClick = () => {
                 const stroke = currentStrokeRef.current;
                 const currentTool = stroke.tool;
 
+                // === v46.0 RACE-CONDITION-FIX (iPad schwarze/versetzte Linie) ===
+                // URSACHE: Läuft zwischen zwei draw()-Frames ein redrawCanvas auf DEMSELBEN
+                // sichtbaren Canvas (React-Rerender → Offer/Sit-Redraw), dann ruft dieses
+                // setTransform(1,0,0,1)+clearRect+drawImage auf und ZERSTÖRT den ctx-State-Stack,
+                // den startDrawing per ctx.save() angelegt hat. Beim nächsten Segment ist dann
+                // strokeStyle = Default-SCHWARZ und der Transform = 1:1 statt dpr → schwarze,
+                // versetzte Linie. Auf Android trat das kaum auf (anderes Rerender-/Compositing-
+                // Timing), auf iPad/Safari ständig.
+                // FIX: draw() verlässt sich NICHT mehr auf den Zustand aus startDrawing,
+                // sondern setzt Transform + Stil bei JEDEM Frame komplett selbst.
+                const __dpr = window.devicePixelRatio || 1;
+                ctx.setTransform(__dpr, 0, 0, __dpr, 0, 0);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                if (currentTool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = '#000000';
+                } else if (currentTool === 'highlighter') {
+                    ctx.globalCompositeOperation = 'destination-over';
+                    ctx.globalAlpha = stroke.opacity != null ? stroke.opacity : 0.4;
+                    ctx.strokeStyle = stroke.color || colorRefGlobal();
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.globalAlpha = stroke.opacity != null ? stroke.opacity : 1;
+                    ctx.strokeStyle = stroke.color || colorRefGlobal();
+                }
+
                 for (const ev of events) {
                     const { x: cssX, y: cssY } = getRelativeCoords(ev, canvas) || {};
                     if (cssX == null || cssY == null) continue;
@@ -10714,21 +11003,53 @@ const handleFinishOfferClick = () => {
                     const x = cssX;
                     const y = cssY;
 
-                    // === GLEICHMÄSSIGE LINIENSTÄRKE ===
-                    // KONSTANTE Breite: exakt die eingestellte Dicke, sofort und gleichbleibend.
-                    // Kein Druck-Faktor, kein Smoothing-Aufbau → Live-Linie = Redraw-Linie (kein "wird dicker").
-                    const pressure = 0.5; // nur für Punkt-Speicherung, beeinflusst Breite NICHT
-
+                    // === v44.0 TINTEN-ENGINE: Breite aus Druck + Schreibtempo ===
+                    // pen/fountain: lebendige Linie (Füller deutlich stärker), ballpen: konstant.
+                    // wf (Breitenfaktor) wird pro Punkt gespeichert → Redraw rendert IDENTISCH.
                     const pts = stroke.points;
                     const baseLW = stroke.baseLineWidth || 2;
-                    const smoothedWidth = baseLW;   // konstant
-                    stroke.lastWidth = baseLW;
+                    const dyn = (currentTool !== 'eraser' && currentTool !== 'highlighter') ? getInkToolDynamics(currentTool) : null;
+
+                    // Echter Stylus-Druck (Apple Pencil / S Pen); Fallback neutral 0.5
+                    const prRaw = (ev.pointerType === 'pen' && ev.pressure > 0) ? ev.pressure : 0.5;
+                    stroke.smoothedPressure = (stroke.smoothedPressure == null) ? prRaw : (stroke.smoothedPressure * 0.6 + prRaw * 0.4);
+                    const pressure = stroke.smoothedPressure;
+
+                    // Schreibtempo (px/ms), exponentiell geglättet
+                    const lastPt = pts.length > 0 ? pts[pts.length - 1] : null;
+                    const dt = Math.max(1, (ev.timeStamp || 0) - (stroke.lastTime || ev.timeStamp || 0));
+                    const dist = lastPt ? Math.hypot(x - lastPt.x, y - lastPt.y) : 0;
+                    const vel = dist / dt;
+                    stroke.smoothedVelocity = (stroke.smoothedVelocity || 0) * 0.65 + vel * 0.35;
+                    const velNorm = Math.min(1, stroke.smoothedVelocity / 1.4);
+
+                    // Ziel-Faktor → geglättet annähern (keine Breitensprünge)
+                    let wf = 1;
+                    if (dyn) {
+                        const wfTarget = computeInkWidthFactor(dyn, pressure, velNorm);
+                        const prevWf = (stroke.lastWf == null) ? wfTarget : stroke.lastWf;
+                        let next = prevWf + (wfTarget - prevWf) * dyn.smooth;
+                        // Max. ±0.06 Änderung pro Punkt (bei 120Hz immer noch sehr reaktiv)
+                        next = Math.max(prevWf - 0.06, Math.min(prevWf + 0.06, next));
+                        wf = Math.max(dyn.fMin, Math.min(dyn.fMax, next));
+                        stroke.lastWf = wf;
+                    }
+                    const smoothedWidth = Math.max(0.5, baseLW * wf);
+                    stroke.lastWidth = smoothedWidth;
 
                     if (pts.length > 0) stroke.lastTime = ev.timeStamp;
 
-                    pts.push({ x, y, pressure, width: smoothedWidth });
+                    pts.push({ x, y, pressure: prRaw, width: smoothedWidth, wf });
 
-                    // Live-Bezier-Rendering: Quadratic Curve für flüssige Linien
+                    // v46.2: Textmarker zeichnet NICHT segmentweise auf den Haupt-Canvas
+                    // (Überlappungen würden sich verdunkeln → "erst dunkel"). Stattdessen
+                    // Vorschau-Ebene (voll deckend, CSS-opacity). Commit beim Abheben.
+                    if (currentTool === 'highlighter') continue;
+
+                    // Live-Bezier-Rendering: Quadratic Curve für flüssige Linien.
+                    // v46.0: KEIN ctx.save()/restore() mehr pro Segment! Der vollständige State
+                    // (strokeStyle, alpha, composite, transform) wird oben pro Frame gesetzt.
+                    // save/restore würde hier nur den (evtl. korrupten) Stack wiederherstellen.
                     if (pts.length >= 3) {
                         const p0 = pts[pts.length - 3];
                         const p1 = pts[pts.length - 2];
@@ -10738,33 +11059,36 @@ const handleFinishOfferClick = () => {
                         const mx = (p1.x + p2.x) / 2;
                         const my = (p1.y + p2.y) / 2;
 
-                        ctx.save();
-                        ctx.lineWidth = Math.max(0.5, smoothedWidth);
+                        // Segment-Breite = Mittel der beiden Punktbreiten (weiche Übergänge)
+                        const segW = ((p1.width != null ? p1.width : smoothedWidth) + (p2.width != null ? p2.width : smoothedWidth)) / 2;
+
+                        ctx.lineWidth = Math.max(0.5, segW);
                         ctx.beginPath();
                         ctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
                         ctx.quadraticCurveTo(p1.x, p1.y, mx, my);
                         ctx.stroke();
-                        ctx.restore();
                     } else if (pts.length === 2) {
                         // Erster Strich: einfache Linie
                         const p0 = pts[0];
                         const p1 = pts[1];
-                        ctx.save();
                         ctx.lineWidth = Math.max(0.5, smoothedWidth);
                         ctx.beginPath();
                         ctx.moveTo(p0.x, p0.y);
                         ctx.lineTo(p1.x, p1.y);
                         ctx.stroke();
-                        ctx.restore();
                     } else if (pts.length === 1) {
-                        // Einzelner Punkt: kleiner Kreis in Stiftfarbe (fillStyle setzen!)
-                        ctx.save();
-                        ctx.fillStyle = stroke.color || currentColor || '#1d4ed8';
+                        // Einzelner Punkt: kleiner Kreis in Stiftfarbe
+                        const prevFill = ctx.fillStyle;
+                        ctx.fillStyle = stroke.color || colorRefGlobal();
                         ctx.beginPath();
                         ctx.arc(x, y, Math.max(0.5, smoothedWidth / 2), 0, Math.PI * 2);
                         ctx.fill();
-                        ctx.restore();
+                        ctx.fillStyle = prevFill;
                     }
+                }
+                // v46.2: Textmarker auf der Vorschau-Ebene aktualisieren (voll deckend, CSS-opacity).
+                if (currentTool === 'highlighter') {
+                    renderMarkerPreview(stroke);
                 }
             }, []);
 
@@ -10781,6 +11105,19 @@ const handleFinishOfferClick = () => {
                     if (activePenCanvasRef.current === canvas || activePenPointerIdRef.current === e.pointerId) {
                         activePenCanvasRef.current = null;
                         activePenPointerIdRef.current = null;
+                        // v44.1: Grace-Periode – Handballen liegt nach dem Abheben noch auf.
+                        // Erst danach Finger-Scrollen wieder freigeben.
+                        try {
+                            window.__penGraceUntil = Date.now() + PEN_GRACE_MS;
+                            setTimeout(() => {
+                                if (activePenCanvasRef.current === null && Date.now() >= (window.__penGraceUntil || 0)) {
+                                    document.querySelectorAll('canvas.drawing-canvas').forEach(c => {
+                                        const st2 = getCanvasPointerState(c);
+                                        updateCanvasTouchAction(c, st2.count || 0);
+                                    });
+                                }
+                            }, PEN_GRACE_MS + 30);
+                        } catch(_) {}
                     }
                 }
                 // pointercancel: immer alle Locks freigeben (z.B. bei Systemgeste)
@@ -10788,6 +11125,8 @@ const handleFinishOfferClick = () => {
                     activePenCanvasRef.current = null;
                     activePenPointerIdRef.current = null;
                     window.__activeDrawingCanvas = null;
+                    if (e.pointerType === 'pen') { try { window.__penGraceUntil = Date.now() + PEN_GRACE_MS; } catch(_) {} }
+                    hideMarkerPreview();
                     // ctx.restore() um den save() aus startDrawing auszugleichen (Stack-Balance)
                     if (isDrawingRef.current && canvas) {
                         try { canvas.getContext('2d').restore(); } catch(_) {}
@@ -10802,6 +11141,7 @@ const handleFinishOfferClick = () => {
 
                 isDrawingRef.current = false;
                 window.__activeDrawingCanvas = null; // Redraw-Sperre aufheben
+                hideMarkerPreview(); // v44.0: Live-Tip entfernen (Tinte ist bereits committet)
                 const finishedStroke = currentStrokeRef.current;
                 currentStrokeRef.current = null;
 
@@ -10841,7 +11181,70 @@ const handleFinishOfferClick = () => {
                 }
 
                 const ctx = canvas.getContext('2d');
-                ctx.restore();
+                // v46.0: Endsegment selbst-enthaltend rendern (Transform + Stil explizit),
+                // unabhängig vom State aus startDrawing – konsistent mit dem neuen draw().
+                const __dpr2 = window.devicePixelRatio || 1;
+                if (finishedStroke && finishedStroke.tool === 'highlighter') {
+                    // v46.2: Marker wurde live auf der Vorschau-Ebene gezeigt (voll deckend + CSS-opacity).
+                    // Jetzt EINMAL als durchgehender, transparenter Pfad auf den Haupt-Canvas committen
+                    // (destination-over → unter bestehende Tinte, Text bleibt lesbar). Ein Pfad = keine
+                    // Überlappungs-Verdunkelung. Danach Vorschau-Ebene entfernen.
+                    try {
+                        const fp = finishedStroke.points;
+                        if (fp && fp.length >= 1) {
+                            ctx.setTransform(__dpr2, 0, 0, __dpr2, 0, 0);
+                            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                            ctx.globalCompositeOperation = 'destination-over';
+                            ctx.globalAlpha = finishedStroke.opacity != null ? finishedStroke.opacity : 0.4;
+                            ctx.strokeStyle = finishedStroke.color || colorRefGlobal();
+                            ctx.lineWidth = Math.max(0.5, (finishedStroke.baseLineWidth || 2) * 3);
+                            ctx.beginPath();
+                            if (fp.length === 1) {
+                                ctx.fillStyle = finishedStroke.color || colorRefGlobal();
+                                ctx.arc(fp[0].x, fp[0].y, ctx.lineWidth / 2, 0, Math.PI * 2);
+                                ctx.fill();
+                            } else {
+                                buildMidpointPath(ctx, fp);
+                                ctx.stroke();
+                            }
+                        }
+                    } catch(_) {}
+                    hideMarkerPreview();
+                } else if (finishedStroke && finishedStroke.points.length >= 2) {
+                    // Endstück: die Live-Kurve endet bei mid(a,b), letztes Stück bis b ergänzen.
+                    try {
+                        ctx.setTransform(__dpr2, 0, 0, __dpr2, 0, 0);
+                        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.globalAlpha = finishedStroke.opacity != null ? finishedStroke.opacity : 1;
+                        ctx.strokeStyle = finishedStroke.color || colorRefGlobal();
+                        const fp = finishedStroke.points;
+                        const a = fp[fp.length - 2];
+                        const b = fp[fp.length - 1];
+                        ctx.lineWidth = Math.max(0.5, b.width != null ? b.width : (finishedStroke.baseLineWidth || 2));
+                        ctx.beginPath();
+                        ctx.moveTo((a.x + b.x) / 2, (a.y + b.y) / 2);
+                        ctx.lineTo(b.x, b.y);
+                        ctx.stroke();
+                    } catch(_) {}
+                }
+                // Stack-Balance: das ctx.save() aus startDrawing ausgleichen.
+                try { ctx.restore(); } catch(_) {}
+                ctx.globalAlpha = 1;
+                ctx.globalCompositeOperation = 'source-over';
+
+                // v46.0/46.1: Falls während des Strichs ein Redraw/Recalc unterdrückt wurde →
+                // jetzt nachziehen, damit Skalierung/Position sauber stimmt.
+                const needRecalc = window.__recalcPending || canvas.__redrawPending;
+                if (canvas.__redrawPending) canvas.__redrawPending = false;
+                if (window.__recalcPending) {
+                    window.__recalcPending = false;
+                    // globalen Recalc (Viewport/Shift) anstoßen – einmal, nach dem Abheben
+                    try { window.dispatchEvent(new Event('ps-canvas-recalc')); } catch(_) {}
+                }
+                if (needRecalc) {
+                    requestAnimationFrame(() => { setRedrawCounter(r => r + 1); });
+                }
             }, [setDrawnStrokes]);
 
             // ── Mini-Taschenrechner für Kosten IST im Stylus-Modus ──
@@ -10991,7 +11394,11 @@ const renderPenToolButtons = () => {
             };
             const renderOfferInput = (key, labelKey, type = 'text') => { let ref, rawValue, strokesKey; const label = getStaticLabel(labelKey); if (key === 'einmalig' || key === 'monatlich1' || key === 'monatlich2' || key === 'smartphone') { ref = (key === 'einmalig' ? offerCost1Ref : key === 'monatlich1' ? offerCost2Ref : key === 'monatlich2' ? offerCost3Ref : offerCostSmartphoneRef); rawValue = offerData[`${key}Raw`] ?? ''; strokesKey = `cost_${key}`; } else if (key === 'agent') { ref = offerAgentRef; rawValue = getDisplayText('AgentName'); strokesKey = 'agent_name'; } else if (key === 'datum') { ref = offerDateRef; rawValue = getDisplayText('DateValue'); strokesKey = 'date_field'; } else if (key === 'gueltig') { ref = offerValidUntilRef; rawValue = getDisplayText('OfferValidUntil'); strokesKey = 'offer_valid_until'; } const isCostField = key.startsWith('monatlich') || key === 'einmalig' || key === 'smartphone'; const handleChange = (e) => { if (isCostField) { handleOfferCostChange(key, e.target.value); } else if (key === 'agent') { handleTextChange('AgentName', e.target.value); } else if (key === 'datum') { handleTextChange('DateValue', e.target.value); } else if (key === 'gueltig') { handleTextChange('OfferValidUntil', e.target.value); } }; const inputHeightClass = 'h-12'; return (<div className="flex flex-col"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label><div className={`relative ${inputHeightClass} ${isCostField ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg transition-all`}><SmallInputCanvas inputMode={inputMode} canvasRef={ref} inputKey={strokesKey} inputValue={rawValue} inputType={type} onChange={handleChange} placeholder={label.split(' ')[0]} drawnStrokes={drawnStrokes} setDrawnStrokes={setDrawnStrokes} startDrawing={startDrawing} draw={draw} stopDrawing={stopDrawing} triggerRedraw={redrawCounter}/></div></div>); };
             
-            const translateBatch = null; // No API needed — all translations are local
+            const translateBatch = null; // Statische Labels lokal, getippte Texte via MyMemory (kostenlos)
+
+            // Refs aktuell halten (für die async Übersetzung)
+            useEffect(() => { textDataLiveRef.current = textData; }, [textData]);
+            useEffect(() => { translatedTextLiveRef.current = translatedText; }, [translatedText]);
 
             const handleLocalTranslation = useCallback((targetCode) => {
                 if (targetCode === 'de') return;
@@ -11001,13 +11408,47 @@ const renderPenToolButtons = () => {
                     triggerToast(`⚠️ Keine Übersetzung für ${langName} verfügbar`);
                     return;
                 }
-                // Static labels
+                // Static labels (lokal, sofort, offline)
                 const newStatic = {};
                 Object.keys(STATIC_LABELS).forEach(k => { if (dict[k]) newStatic[k] = dict[k]; });
                 setStaticTranslations(prev => ({ ...prev, [targetCode]: newStatic }));
-                // Clear user text translations (they stay in German — no API)
-                setTranslatedText(prev => ({ ...prev, [targetCode]: {} }));
                 triggerToast(`✅ ${langName} — Beschriftungen übersetzt`);
+
+                // === v45.3: GETIPPTE TEXTE kostenlos übersetzen (MyMemory API) ===
+                // api.mymemory.translated.net – gratis, kein API-Key, ~5000 Zeichen/Tag.
+                // Namen, Rufnummern, Datum & reine Zahlen werden NICHT übersetzt.
+                (async () => {
+                    try {
+                        const EXCLUDE_KEYS = ['AgentName', 'DateValue', 'OfferValidUntil'];
+                        const cached = translatedTextLiveRef.current?.[targetCode] || {};
+                        const entries = Object.entries(textDataLiveRef.current || {}).filter(([k, v]) =>
+                            !EXCLUDE_KEYS.includes(k) &&
+                            !k.toLowerCase().includes('kundenname') &&
+                            !k.toLowerCase().includes('rufnummer') &&
+                            typeof v === 'string' && v.trim().length > 1 &&
+                            /[A-Za-zÄÖÜäöüß]/.test(v) &&            // nur Texte mit Buchstaben
+                            !/^[\d.,:\s€%+-]+$/.test(v.trim()) &&    // keine reinen Zahlen/Preise
+                            !cached[k]                               // Cache: nicht doppelt übersetzen
+                        );
+                        if (entries.length === 0) return;
+                        triggerToast(`🌐 Übersetze ${entries.length} Texte → ${langName} …`);
+                        let done = 0;
+                        for (const [k, v] of entries.slice(0, 40)) {
+                            try {
+                                const res = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(v.slice(0, 480)) + '&langpair=de|' + targetCode);
+                                if (!res.ok) continue;
+                                const j = await res.json();
+                                const t = j?.responseData?.translatedText;
+                                if (t && String(j?.responseStatus) === '200' && t.trim() && !/MYMEMORY WARNING/i.test(t)) {
+                                    setTranslatedText(prev => ({ ...prev, [targetCode]: { ...(prev[targetCode] || {}), [k]: t } }));
+                                    done++;
+                                }
+                            } catch(_) {}
+                        }
+                        if (done > 0) triggerToast(`✅ ${done} Texte auf ${langName} übersetzt`);
+                        else triggerToast('⚠️ Übersetzungsdienst gerade nicht erreichbar (Tageslimit?) – Beschriftungen bleiben übersetzt');
+                    } catch(_) {}
+                })();
             }, [triggerToast]);
 
             useEffect(() => {
@@ -11066,9 +11507,23 @@ const renderStrokesForPrint = (strokes, targetW, targetH, key) => {
                 ctx.globalCompositeOperation = 'source-over';
             }
             const pts = stroke.points.map(p => ({ x: p.x * useX, y: p.y * useY }));
-            ctx.moveTo(pts[0].x, pts[0].y);
-            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-            ctx.stroke();
+            // v44.0: pen/fountain mit Breitenfaktoren → Druckbild = Bildschirmbild
+            if (strokeHasVariableWidth(stroke) && stroke.tool !== 'eraser' && stroke.tool !== 'highlighter') {
+                drawVariableWidthPath(ctx, pts, stroke.points, lw);
+            } else if (pts.length >= 3 && stroke.tool !== 'eraser') {
+                // Glatte Midpoint-Kurven statt eckiger lineTo-Kette
+                ctx.moveTo(pts[0].x, pts[0].y);
+                ctx.lineTo((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2);
+                for (let i = 1; i < pts.length - 1; i++) {
+                    ctx.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i + 1].x) / 2, (pts[i].y + pts[i + 1].y) / 2);
+                }
+                ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+                ctx.stroke();
+            } else {
+                ctx.moveTo(pts[0].x, pts[0].y);
+                for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                ctx.stroke();
+            }
         });
         ctx.globalCompositeOperation = 'source-over';
         ctx.globalAlpha = 1;
@@ -13772,7 +14227,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v43.3</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v46.8</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -14270,7 +14725,7 @@ const handlePDFShare = async () => {
                                 <div style={{padding:'7px 10px',display:'flex',flexDirection:'column',gap:'5px'}}>
                                     <div style={{position:'relative'}}>
                                         {!isCustomProvider
-                                            ?<><select value={providerSelect} onChange={e=>{if(e.target.value==='Sonstiges'){setIsCustomProvider(true);setProviderSelect('Sonstiges');}else{setProviderSelect(e.target.value);setIsCustomProvider(false);setWlanRecommendation('');setSpeedRecommendation('');}}}
+                                            ?<><select value={providerSelect} onChange={e=>{if(e.target.value==='Sonstiges'){setIsCustomProvider(true);setProviderSelect('Sonstiges');setProviderMode('keyboard');setShowProviderKeyboard(true);}else{setProviderSelect(e.target.value);setIsCustomProvider(false);setWlanRecommendation('');setSpeedRecommendation('');}}}
                                                 style={{width:'100%',height:'30px',background:'#f8fafc',border:`1.5px solid ${providerSelect?'#22c55e':'#f87171'}`,borderRadius:'8px',paddingLeft:'8px',paddingRight:'20px',fontSize:'10px',fontWeight:600,color:'#374151',outline:'none',appearance:'none',cursor:'pointer'}}>
                                                 <option value="" disabled hidden>DSL-Anbieter *</option>
                                                 <option selected>Telekom</option><option>1&1</option><option>Vodafone</option><option>O2</option><option value="Sonstiges">Sonstiges</option>
@@ -14282,13 +14737,79 @@ const handlePDFShare = async () => {
                                                     <button onClick={()=>{setIsCustomProvider(false);setWlanRecommendation('');setSpeedRecommendation('');setProviderSelect('');setCustomProvider('');}} style={{width:'22px',height:'22px',borderRadius:'5px',border:'1px solid #e2e8f0',background:'#f8fafc',color:'#94a3b8',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><Icon d={ICONS.List} size={9}/></button>
                                                 </div>
                                                 {providerMode==='keyboard'
-                                                    ?<input type="text" value={customProvider} onChange={e=>setCustomProvider(e.target.value)} placeholder="Anbieter..." style={{width:'100%',height:'100%',padding:'0 55px 0 8px',fontSize:'10px',fontWeight:600,color:'#166534',background:'transparent',border:'none',outline:'none'}} autoFocus/>
+                                                    ?<div onClick={()=>setShowProviderKeyboard(true)} style={{display:'flex',alignItems:'center',width:'100%',height:'100%',padding:'0 30px 0 10px',cursor:'pointer',boxSizing:'border-box'}}>
+                                                        <span style={{fontSize:'11px',fontWeight:600,color:customProvider?'#166534':'#9ca3af',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{customProvider||'Anbieter eintippen...'}</span>
+                                                    </div>
                                                     :<><canvas ref={providerCanvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" onPointerDown={e=>startDrawing(e,providerCanvasRef,'provider')} onPointerMove={e=>draw(e,providerCanvasRef,'provider')} onPointerUp={e=>stopDrawing(e,providerCanvasRef)} onPointerLeave={e=>stopDrawing(e,providerCanvasRef)} onPointerCancel={e=>stopDrawing(e,providerCanvasRef)}/><button onClick={()=>clearCanvas(providerCanvasRef,'provider')} style={{position:'absolute',right:'3px',top:'50%',transform:'translateY(-50%)',width:'22px',height:'22px',borderRadius:'5px',border:'1px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',zIndex:30,display:'flex',alignItems:'center',justifyContent:'center'}}><Icon d={ICONS.Trash} size={9}/></button></>
                                                 }
                                             </div>
                                         }
                                     </div>
                                     {wlanRecommendation&&<div style={{padding:'4px 8px',background:'#f0fdf4',border:'1px solid #86efac',borderRadius:'7px',fontSize:'10px',fontWeight:700,color:'#166534'}}>✓ {wlanRecommendation}</div>}
+
+                                    {/* Virtuelle Anbieter-Tastatur (iOS-unabhängig, wie E-Mail) */}
+                                    {showProviderKeyboard && ReactDOM.createPortal(
+                                        <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'flex-end',justifyContent:'center',background:'rgba(0,0,0,0.45)'}} onClick={()=>setShowProviderKeyboard(false)}>
+                                            <div onClick={e=>e.stopPropagation()} style={{background:'#f8fafc',borderRadius:'22px 22px 0 0',width:'100%',maxWidth:'560px',boxShadow:'0 -6px 40px rgba(0,0,0,0.22)',paddingBottom:'env(safe-area-inset-bottom,12px)',overflow:'hidden'}}>
+                                                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px 10px',borderBottom:'1.5px solid #e2e8f0',background:'#fff'}}>
+                                                    <span style={{fontSize:'13px',fontWeight:800,color:'#1e293b',letterSpacing:'0.03em'}}>📡 Anbieter eingeben</span>
+                                                    <button onClick={()=>setShowProviderKeyboard(false)} style={{width:'28px',height:'28px',borderRadius:'50%',background:'#e2e8f0',border:'none',cursor:'pointer',fontSize:'14px',color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900}}>✕</button>
+                                                </div>
+                                                <div style={{background:'#fff',border:'1.5px solid #bfdbfe',borderRadius:'12px',margin:'12px 16px 6px',padding:'10px 14px',minHeight:'44px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px'}}>
+                                                    <span style={{fontSize:'16px',fontWeight:700,color:customProvider?'#1e293b':'#cbd5e1',flex:1,wordBreak:'break-all'}}>
+                                                        {customProvider||'—'}
+                                                    </span>
+                                                    {customProvider&&<button onClick={()=>setCustomProvider(p=>p.slice(0,-1))} style={{width:'32px',height:'32px',borderRadius:'10px',border:'1.5px solid #fecaca',background:'#fef2f2',color:'#ef4444',cursor:'pointer',fontSize:'16px',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>⌫</button>}
+                                                </div>
+                                                {/* Häufige Anbieter Quick-Buttons */}
+                                                <div style={{display:'flex',gap:'6px',padding:'6px 16px',overflowX:'auto',flexWrap:'nowrap'}}>
+                                                    {['PŸUR','Tele2','M-net','NetCologne','EWE','Deutsche Glasfaser','Congstar','Pyur'].map(d=>(
+                                                        <button key={d} onClick={()=>setCustomProvider(d)} style={{padding:'6px 12px',borderRadius:'999px',border:'1.5px solid #bfdbfe',background:'#eff6ff',color:'#2563eb',fontSize:'12px',fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,WebkitTapHighlightColor:'transparent'}}>
+                                                            {d}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                {(() => {
+                                                    const rows=[['Q','W','E','R','T','Z','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['Y','X','C','V','B','N','M']];
+                                                    const btnBase={height:'44px',borderRadius:'10px',fontSize:'17px',fontWeight:700,border:'none',cursor:'pointer',background:'#ffffff',color:'#1e293b',boxShadow:'0 1px 3px rgba(0,0,0,0.1)',WebkitTapHighlightColor:'transparent',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.08s'};
+                                                    return (
+                                                        <div style={{padding:'4px 8px 6px',display:'flex',flexDirection:'column',gap:'5px'}}>
+                                                            {rows.map((row,ri)=>(
+                                                                <div key={ri} style={{display:'grid',gridTemplateColumns:`repeat(${row.length},1fr)`,gap:'4px',padding:ri===2?'0 22px':'0'}}>
+                                                                    {row.map(k=>(
+                                                                        <button key={k}
+                                                                            onPointerDown={e=>{e.currentTarget.style.transform='scale(0.9)';e.currentTarget.style.background='#dbeafe';}}
+                                                                            onPointerUp={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.background='#ffffff';setCustomProvider(p=>p+k);}}
+                                                                            style={btnBase}>{k}</button>
+                                                                    ))}
+                                                                </div>
+                                                            ))}
+                                                            {/* Bottom row: Zahlen + Sonderzeichen */}
+                                                            <div style={{display:'grid',gridTemplateColumns:'repeat(10,1fr)',gap:'4px'}}>
+                                                                {['1','2','3','4','5','6','7','8','9','0'].map(k=>(
+                                                                    <button key={k}
+                                                                        onPointerDown={e=>{e.currentTarget.style.transform='scale(0.9)';e.currentTarget.style.background='#e2e8f0';}}
+                                                                        onPointerUp={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.background='#f1f5f9';setCustomProvider(p=>p+k);}}
+                                                                        style={{...btnBase,background:'#f1f5f9',fontSize:'15px'}}>{k}</button>
+                                                                ))}
+                                                            </div>
+                                                            {/* Leerzeichen + Bindestrich + Punkt + Löschen */}
+                                                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 4fr 1fr',gap:'4px'}}>
+                                                                <button onPointerDown={e=>{e.currentTarget.style.background='#e2e8f0';}} onPointerUp={e=>{e.currentTarget.style.background='#f1f5f9';setCustomProvider(p=>p+'-');}} style={{...btnBase,background:'#f1f5f9',fontSize:'18px'}}>-</button>
+                                                                <button onPointerDown={e=>{e.currentTarget.style.background='#e2e8f0';}} onPointerUp={e=>{e.currentTarget.style.background='#f1f5f9';setCustomProvider(p=>p+'.');}} style={{...btnBase,background:'#f1f5f9',fontSize:'18px'}}>.</button>
+                                                                <button onPointerDown={e=>{e.currentTarget.style.background='#e2e8f0';}} onPointerUp={e=>{e.currentTarget.style.background='#fff';setCustomProvider(p=>p+' ');}} style={{...btnBase}}>Leerzeichen</button>
+                                                                <button onPointerDown={e=>{e.currentTarget.style.background='#fee2e2';}} onPointerUp={e=>{e.currentTarget.style.background='#fef2f2';setCustomProvider(p=>p.slice(0,-1));}} style={{...btnBase,background:'#fef2f2',color:'#ef4444',fontSize:'18px'}}>⌫</button>
+                                                            </div>
+                                                            <button onClick={()=>setShowProviderKeyboard(false)} style={{width:'100%',height:'48px',borderRadius:'14px',border:'none',fontSize:'15px',fontWeight:800,cursor:'pointer',background:customProvider?'#2563eb':'#cbd5e1',color:'#fff',marginTop:'2px',boxShadow:customProvider?'0 3px 12px rgba(37,99,235,0.35)':'none',transition:'all 0.15s'}}>
+                                                                ✓ Übernehmen
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>,
+                                        document.body
+                                    )}
                                     <button onClick={()=>setShowWlanModal(true)}
                                         style={{width:'100%',display:'flex',alignItems:'center',gap:'9px',padding:'7px 10px',borderRadius:'9px',border:`1.5px solid ${wlanRecommendation?'#86efac':'#f1f5f9'}`,background:wlanRecommendation?'#f0fdf4':'#fafafa',cursor:'pointer',transition:'all 0.15s',textAlign:'left'}}
                                         onMouseEnter={e=>{e.currentTarget.style.borderColor='#3b82f6';e.currentTarget.style.background='#eff6ff';}}
@@ -15173,7 +15694,7 @@ const handlePDFShare = async () => {
 
 
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 justify-between shadow-sm footer-bar" style={{position:"fixed",bottom:0,left:0,right:0,width:"100%",zIndex:9000,boxSizing:"border-box"}}>
-                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => { setScrollMode(v=>!v); setInputMode('pen'); }} className={`p-2 rounded-md transition-colors flex flex-col items-center gap-0 ${scrollMode ? 'bg-amber-100 text-amber-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Scroll-Modus (Scrollen mit Finger)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg><span style={{fontSize:'7px',fontWeight:800,lineHeight:1,marginTop:'1px'}}>{scrollMode?'AN':'AUS'}</span></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && !scrollMode && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'fountain' || tool === 'ballpen' || tool === 'highlighter') && (<div className="opacity-slider-group flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="toolbar-divider w-px h-6 bg-slate-200 mx-1"></div><div className="color-picker-group relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
+                        {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && !scrollMode && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'fountain' || tool === 'ballpen' || tool === 'highlighter') && (<div className="opacity-slider-group flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="toolbar-divider w-px h-6 bg-slate-200 mx-1"></div><div className="color-picker-group relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
                             <button onClick={() => { if (LINK_EMPLOYEE === 'Diego da Silva') { handleSkipToOffer('Übersprungen (Admin)'); } else { setShowSkipReasonModal(true); } }} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
                             <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
                         </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'fountain' || tool === 'ballpen' || tool === 'highlighter') && (<div className="opacity-slider-group flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="toolbar-divider w-px h-6 bg-slate-200 mx-1"></div><div className="color-picker-group relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
