@@ -4122,7 +4122,22 @@ body.pdf-share-mode .offer-canvas-container:has(.offer-html-overlay-wrap) .offer
                 const params = new URLSearchParams(window.location.search || '');
                 const raw = params.get('agent') || params.get('m') || '';
                 const decoded = decodeURIComponent(String(raw).replace(/\+/g, ' ')).trim();
-                return (decoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim() || '';
+                const cleaned = (decoded || '').replace(/[^a-zA-Z0-9ÄÖÜäöüß .,_-]/g, '').trim();
+                // v56 FIX (Ronny-Bug): Agent-Name aus dem Link merken.
+                // Problem: Öffnet der Mitarbeiter die Seite OHNE ?agent=... (Lesezeichen
+                // der nackten URL, aus dem Verlauf), war "Persönlicher Agent" leer.
+                // Lösung: Einmal aus dem Link gelesen → in localStorage sichern und beim
+                // nächsten Mal ohne Parameter von dort wiederherstellen.
+                if (cleaned) {
+                    try { localStorage.setItem('ps_link_agent', cleaned); } catch(_) {}
+                    return cleaned;
+                }
+                // Kein Link-Parameter → zuletzt gemerkten Agent nehmen (falls vorhanden)
+                try {
+                    const saved = (localStorage.getItem('ps_link_agent') || '').trim();
+                    if (saved) return saved;
+                } catch(_) {}
+                return '';
             } catch (e) {
                 return '';
             }
@@ -9979,7 +9994,15 @@ const fileInputRef = useRef(null);
             const handleLoadOffer = useCallback((offer) => {
                 try {
                     // ── KOMPLETTER Zustand wiederherstellen (v47.2) ──
-                    if (offer.textData) setTextData(offer.textData);
+                    if (offer.textData) {
+                        // v56 FIX: Agent-Name aus dem Link (?agent=...) hat IMMER Vorrang.
+                        // Sonst konnte ein gespeichertes Angebot mit leerem AgentName den
+                        // Namen überschreiben → "Persönlicher Agent" war mal da, mal leer (Ronny-Bug).
+                        const restored = { ...offer.textData };
+                        if (LINK_EMPLOYEE) restored.AgentName = LINK_EMPLOYEE;
+                        else if (!restored.AgentName) restored.AgentName = offer.textData.AgentName || '';
+                        setTextData(restored);
+                    }
                     if (offer.drawnStrokes) setDrawnStrokes(offer.drawnStrokes);
                     if (offer.emailText != null) setEmailText(offer.emailText);
                     if (offer.beratungsId != null) setBeratungsId(offer.beratungsId);
@@ -10134,7 +10157,12 @@ const fileInputRef = useRef(null);
             const handleRestoreAutosave = () => {
                 try {
                     const snap = JSON.parse(localStorage.getItem(AUTOSAVE_KEY)||'{}');
-                    if (snap.textData) setTextData(snap.textData);
+                    if (snap.textData) {
+                        // v56 FIX: Agent-Name aus dem Link hat IMMER Vorrang (Ronny-Bug).
+                        const restored = { ...snap.textData };
+                        if (LINK_EMPLOYEE) restored.AgentName = LINK_EMPLOYEE;
+                        setTextData(restored);
+                    }
                     if (snap.drawnStrokes) setDrawnStrokes(snap.drawnStrokes);
                     if (snap.customerType !== undefined) setCustomerType(snap.customerType);
                     if (snap.segment !== undefined) { setSegment(snap.segment); if (snap.segment) setSegmentTouched(true); }
@@ -12232,13 +12260,15 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                         });
                     }catch(e){}
 
-                    // ===== Übernommenes Angebot im Druck: 35% kleiner + Bilder nebeneinander =====
+                    // ===== v56: Übernommenes Angebot/Bundle im Druck GRÖSSER (1,4×) =====
+                    // Diego: Overlay ist eh fix → groß drucken, Seite füllen statt klein oben.
                     try{
+                        const PS_PRINT_SCALE = 1.4; // Stellschraube
                         doc.querySelectorAll('.offer-overlay-outer').forEach(outer=>{
                             outer.style.position = 'absolute';
                             outer.style.left = '0';
                             outer.style.right = '0';
-                            outer.style.top = '58%';
+                            outer.style.top = '14%';      // v56: höher, da Inhalt nun größer ist
                             outer.style.width = '100%';
                             outer.style.height = 'auto';
                             outer.style.minHeight = '0';
@@ -12253,9 +12283,9 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                                     const t = wrap.style.transform || '';
                                     const m = t.match(/scale\(([\d.]+)\)/);
                                     const screenScale = m ? parseFloat(m[1]) : 1;
-                                    const pdfScale = screenScale; // v51: keine Zusatz-Verkleinerung mehr, sonst wirkt das Overlay blass/zu klein
+                                    const pdfScale = screenScale * PS_PRINT_SCALE; // v56: 1,4× größer
                                     wrap.style.transform = `scale(${pdfScale})`;
-                                    wrap.style.transformOrigin = 'top left';
+                                    wrap.style.transformOrigin = 'top center';
                                     wrap.style.opacity = '1';
                                     wrap.style.filter = 'none';
                                     wrap.style.webkitFilter = 'none';
@@ -12264,41 +12294,14 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                                     wrap.style.background = '#ffffff';
                                     try { wrap.querySelectorAll('*').forEach(n => { n.style.opacity = '1'; n.style.filter = 'none'; n.style.webkitFilter = 'none'; n.style.mixBlendMode = 'normal'; n.style.backgroundBlendMode = 'normal'; n.style.webkitPrintColorAdjust = 'exact'; n.style.printColorAdjust = 'exact'; }); } catch(_){ }
                                     const curH = parseInt(outer.style.height) || 600;
-                                    const newH = curH; // v51: Höhe nicht künstlich schrumpfen
+                                    const newH = curH;
                                     outer.style.height = newH + 'px';
                                     outer.style.maxHeight = newH + 'px';
                                     try {
                                         const container = outer.closest('.offer-canvas-container');
                                         if (container) container.style.minHeight = '0';
                                     } catch(_){}
-                                    // Bilder kleiner + Container nebeneinander (inline-styles für html2canvas)
-                                    try {
-                                        wrap.querySelectorAll('img').forEach(img => {
-                                            img.style.maxHeight = '90px';
-                                            img.style.maxWidth = '110px';
-                                            img.style.width = 'auto';
-                                            img.style.height = 'auto';
-                                            img.style.objectFit = 'contain';
-                                            img.style.display = 'inline-block';
-                                        });
-                                        // Bild-Container nebeneinander: Parent-Div von img auf inline-flex
-                                        wrap.querySelectorAll('img').forEach(img => {
-                                            const parent = img.parentElement;
-                                            if (parent) {
-                                                parent.style.display = 'inline-flex';
-                                                parent.style.width = 'auto';
-                                                parent.style.maxWidth = '48%';
-                                                // Großeltern-Container auf flex-row
-                                                const grandparent = parent.parentElement;
-                                                if (grandparent && grandparent !== wrap) {
-                                                    grandparent.style.display = 'flex';
-                                                    grandparent.style.flexDirection = 'row';
-                                                    grandparent.style.flexWrap = 'wrap';
-                                                    grandparent.style.gap = '6px';
-                                                }
-                                            }
-                                        });
-                                    } catch(_){}
+                                    // v56: Bilder NICHT mehr verkleinern – sie sollen groß mitwachsen
                                 }
                             } catch(_){}
                             try {
@@ -16694,6 +16697,20 @@ const handlePDFShare = async () => {
                             overlayWrap.style.setProperty('filter', 'none', 'important');
                             overlayWrap.style.setProperty('-webkit-filter', 'none', 'important');
                             overlayWrap.style.setProperty('mix-blend-mode', 'normal', 'important');
+                            // v56: Overlay GRÖSSER drucken (1,4×) – vorhandenen scale multiplizieren
+                            try {
+                                const PS_PRINT_SCALE = 1.4;
+                                const tw = String(overlayWrap.style.transform || '');
+                                const mw = tw.match(/scale\(([\d.]+)\)/);
+                                const baseScale = mw ? parseFloat(mw[1]) : 1;
+                                const newScale = baseScale * PS_PRINT_SCALE;
+                                if (mw) {
+                                    overlayWrap.style.setProperty('transform', tw.replace(/scale\([\d.]+\)/, 'scale(' + newScale + ')'), 'important');
+                                } else {
+                                    overlayWrap.style.setProperty('transform', 'scale(' + newScale + ')', 'important');
+                                }
+                                overlayWrap.style.setProperty('transform-origin', 'top center', 'important');
+                            } catch(_) {}
                             try { overlayWrap.querySelectorAll('*').forEach(n => {
                                 n.style.setProperty('opacity', '1', 'important');
                                 n.style.setProperty('filter', 'none', 'important');
@@ -16707,7 +16724,7 @@ const handlePDFShare = async () => {
                                 overlayParent.style.setProperty('position', 'absolute', 'important');
                                 overlayParent.style.setProperty('left', '0', 'important');
                                 overlayParent.style.setProperty('right', '0', 'important');
-                                overlayParent.style.setProperty('top', '18%', 'important');
+                                overlayParent.style.setProperty('top', '12%', 'important');
                                 overlayParent.style.setProperty('bottom', 'auto', 'important');
                                 overlayParent.style.setProperty('width', '100%', 'important');
                                 overlayParent.style.setProperty('height', 'auto', 'important');
