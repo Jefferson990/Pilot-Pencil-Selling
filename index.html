@@ -211,6 +211,22 @@
 .offer-html-overlay-wrap * {
     color: inherit;
 }
+
+/* v51: Imported Bundle/Verkaufsmappe darf nie blass/transparent wirken */
+.offer-html-overlay-wrap,
+.offer-html-overlay-wrap *,
+.bundle-import-wrap,
+.bundle-import-wrap * {
+    opacity: 1 !important;
+    -webkit-filter: none !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+  color: inherit !important;
+}
+.offer-html-overlay-wrap {
+  opacity: 1 !important;
+  filter: contrast(1.04) saturate(1.04) !important;
+}
 /* Oberen Leerraum im Bundle entfernen - erstes Element nach oben ziehen */
 .offer-html-overlay-wrap > *:first-child,
 .offer-html-overlay-wrap > div:first-child {
@@ -1272,6 +1288,18 @@ html, body {
     .print-offer-view .offer-canvas-container {
         min-height: 350px !important;
         margin-bottom: 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+    }
+    /* FIX (v48.x): Karte bleibt flex-column im Druck (Print-Reset setzt sonst display:block).
+       Das Top-Pinning des Overlays passiert per Inline-Style (marginBottom:auto). */
+    .print-offer-view .offer-print-grid > div.offer-canvas-container,
+    .print-offer-view .offer-canvas-container.offer-canvas-container {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: stretch !important;
     }
     .print-offer-view .print-page-header {
         margin-bottom: 8px !important;
@@ -2334,13 +2362,44 @@ body.pdf-share-mode .share-outro,
     min-width: 0 !important;
   }
   .footer-bar > div:last-child button {
-    padding: 6px 10px !important;
+    padding: 6px 8px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+  /* v48.0: Mittlere Action-Icons (Speichern/Angebote/Globus/Personen/etc.) kompakter,
+     damit rechts immer Platz für "Fertigstellen" bleibt. */
+  .footer-bar .footer-action-icons button {
+    padding: 5px 6px !important;
+    min-width: 30px !important;
+  }
+  /* Farbkreis kleiner */
+  .footer-bar .w-8.h-8.rounded-full { width: 26px !important; height: 26px !important; }
+}
+
+/* v48.0: Schmale Tablets/iPad Portrait (≤ 1024px): noch kompakter, Fertigstellen sichtbar */
+@media (max-width: 1024px) {
+  .footer-bar > div:last-child {
+    flex-shrink: 0 !important;
+    min-width: 0 !important;
+  }
+  .footer-bar > div:last-child button {
+    padding: 7px 10px !important;
     font-size: 11px !important;
     white-space: nowrap !important;
     flex-shrink: 0 !important;
   }
-  /* Farbkreis kleiner */
-  .footer-bar .w-8.h-8.rounded-full { width: 26px !important; height: 26px !important; }
+  /* Zurück-Button darf schrumpfen, Fertigstellen nie */
+  .footer-bar > div:last-child button:first-child {
+    padding: 7px 8px !important;
+  }
+  .footer-bar .footer-action-icons {
+    gap: 1px !important;
+  }
+  .footer-bar .footer-action-icons button {
+    padding: 5px 5px !important;
+    min-width: 28px !important;
+  }
 }
 
 
@@ -2783,7 +2842,33 @@ body.pdf-share-mode .print-offer-view { height:100%!important; overflow:hidden!i
    stattdessen nimmt das einzelne Angebot die volle Breite/Höhe ein */
 body.pdf-share-mode .offer-print-grid { display:flex!important; flex-direction:column!important; flex:1 1 auto!important; height:100%!important; width:100%!important; gap:0!important; }
 body.pdf-share-mode .offer-print-grid>div { height:100%!important; min-height:0!important; display:flex!important; flex-direction:column!important; flex:1 1 auto!important; }
-body.pdf-share-mode .offer-canvas-container { height:100%!important; flex:1 1 auto!important; min-height:0!important; display:flex!important; flex-direction:column!important; overflow:hidden!important; }
+body.pdf-share-mode .offer-canvas-container { height:100%!important; flex:1 1 auto!important; min-height:0!important; display:flex!important; flex-direction:column!important; justify-content:flex-start!important; overflow:hidden!important; }
+
+/* FIX v55: Bundle-Overlay im PDF höher positionieren, ohne transform/Blass-Effekt */
+body.pdf-share-mode .offer-canvas-container .offer-overlay-outer {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: var(--ps-overlay-print-top, 18%) !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+    transform: none !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    z-index: 9999 !important;
+}
+body.pdf-share-mode .offer-canvas-container .offer-html-overlay-wrap,
+body.pdf-share-mode .offer-canvas-container .offer-html-overlay-wrap *,
+body.pdf-share-mode .bundle-import-wrap,
+body.pdf-share-mode .bundle-import-wrap * {
+    opacity: 1 !important;
+    -webkit-filter: none !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+}
 
 /* FIX: Das relative flex-1 div (textarea/canvas-Container) darf nicht kollabieren */
 body.pdf-share-mode .offer-canvas-container > div.relative,
@@ -3871,6 +3956,129 @@ body.pdf-share-mode .email-mode-buttons { display: none !important; }
 }
 </style>
 
+
+<style id="overlay-print-position-hotfix-v55">
+/* v55: Druck/PDF-Hardfix für Verkaufsmappe-/Bundle-Overlay
+   NICHT mehr per Flex/Margin-Auto positionieren, sondern absolut in der Angebotskarte.
+   --ps-overlay-print-top kann bei Bedarf schnell angepasst werden: 18% = gleiche sichtbare Höhe wie vorher, aber ohne transform/Blass-Effekt. */
+:root { --ps-overlay-print-top: 18%; }
+.offer-overlay-outer,
+.offer-overlay-outer *,
+.offer-html-overlay-wrap,
+.offer-html-overlay-wrap *,
+.bundle-import-wrap,
+.bundle-import-wrap * {
+  opacity: 1 !important;
+  visibility: visible !important;
+  -webkit-filter: none !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  background-blend-mode: normal !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+@media print {
+  .offer-canvas-container { position: relative !important; overflow: hidden !important; }
+  .offer-canvas-container .offer-overlay-outer {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: var(--ps-overlay-print-top) !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    z-index: 25 !important;
+    box-sizing: border-box !important;
+  }
+  .offer-canvas-container .offer-html-overlay-wrap {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    margin: 0 auto !important;
+    opacity: 1 !important;
+    -webkit-filter: none !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    isolation: isolate !important;
+    background: #ffffff !important;
+  }
+}
+body.pdf-share-mode .offer-canvas-container { position: relative !important; overflow: hidden !important; }
+body.pdf-share-mode .offer-canvas-container .offer-overlay-outer {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: var(--ps-overlay-print-top) !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 24px !important;
+  transform: none !important;
+  transform-origin: center center !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  z-index: 25 !important;
+  box-sizing: border-box !important;
+}
+body.pdf-share-mode .offer-canvas-container .offer-html-overlay-wrap {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  margin: 0 auto !important;
+  opacity: 1 !important;
+  -webkit-filter: none !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate !important;
+  background: #ffffff !important;
+}
+body.pdf-share-mode .offer-overlay-outer,
+body.pdf-share-mode .offer-overlay-outer *,
+body.pdf-share-mode .offer-html-overlay-wrap,
+body.pdf-share-mode .offer-html-overlay-wrap *,
+body.pdf-share-mode .bundle-import-wrap,
+body.pdf-share-mode .bundle-import-wrap * {
+  opacity: 1 !important;
+  visibility: visible !important;
+  -webkit-filter: none !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  background-blend-mode: normal !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+/* v55: Bei Bundle-Overlay dürfen keine weißen Canvas-/Linien-Layer darüberliegen. */
+@media print {
+  .offer-canvas-container:has(.offer-html-overlay-wrap) .canvas-lines,
+  .offer-canvas-container:has(.offer-html-overlay-wrap) > div.relative[class*="flex-1"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  .offer-canvas-container:has(.offer-html-overlay-wrap) .offer-overlay-outer {
+    z-index: 9999 !important;
+  }
+}
+body.pdf-share-mode .offer-canvas-container:has(.offer-html-overlay-wrap) .canvas-lines,
+body.pdf-share-mode .offer-canvas-container:has(.offer-html-overlay-wrap) > div.relative[class*="flex-1"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+body.pdf-share-mode .offer-canvas-container:has(.offer-html-overlay-wrap) .offer-overlay-outer {
+  z-index: 9999 !important;
+}
+</style>
 </head>
 <body>
     <div id="root"></div>
@@ -4345,7 +4553,7 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             'Fernsehen_Label': 'Fernsehen', 'WiFi_Label': 'WiFi', 'Gesamtkosten_Label': 'Gesamtkosten', 'StatusOpen': 'Offen', 'StatusClosed': 'Abgeschlossen', 'StatusNeutral': 'Neutral'
         };
         
-        const INITIAL_QUESTIONS_DATA = { 'Kundenname': ["Wie lautet der Name?", "Rechnungsempfänger?", "Bestandskunde?"], 'Rufnummer': ["Rufnummer behalten?", "Portierung?", "Multi-SIM?"], 'Anbieter': ["Welcher Anbieter?", "Laufzeit?", "Gekündigt?"], 'Hardware': ["Aktuelles Handy?", "iOS oder Android?", "Kamera wichtig?", "Zubehör?", "Kaufdatum?"], 'Nutzung': ["Datenvolumen?", "Ausland?", "Hotspot?", "Streaming?", "5G?"], 'Haushalt': ["Personenanzahl?", "Geräte im WLAN?", "Jugendschutz?", "Smarthome?", "Partnerkarte?"], 'Weitere Produkte': ["Smartwatch?", "Tablet?", "Versicherung?", "Cloud?", "Music?"], 'Fernsehen': ["Streaming?", "Lineares TV?", "HD?", "Aufnahme?", "Mobile TV?"], 'WiFi': ["Empfang?", "Repeater?", "Router Standort?", "Wände?", "Geschwindigkeit?"], 'Gesamtkosten': ["Aktuelle Kosten?", "Budget?", "Mehrleistung?", "Zahlungsweise?", "Preisgarantie?"], 'default': ["Offene Fragen?", "Details?"] };
+        const INITIAL_QUESTIONS_DATA = { 'Kundenname': ["Wie lautet der Name?", "Rechnungsempfänger?", "Bestandskunde?"], 'Rufnummer': ["Rufnummer behalten?", "Portierung?", "Multi-SIM?", "Fremdnummer?", "Keine Nr. (nur Hardware)?"], 'Anbieter': ["Welcher Anbieter?", "Laufzeit?", "Gekündigt?"], 'Hardware': ["Aktuelles Handy?", "iOS oder Android?", "Kamera wichtig?", "Zubehör?", "Kaufdatum?"], 'Nutzung': ["Datenvolumen?", "Ausland?", "Hotspot?", "Streaming?", "5G?"], 'Haushalt': ["Personenanzahl?", "Geräte im WLAN?", "Jugendschutz?", "Smarthome?", "Partnerkarte?"], 'Weitere Produkte': ["Smartwatch?", "Tablet?", "Versicherung?", "Cloud?", "Music?"], 'Fernsehen': ["Streaming?", "Lineares TV?", "HD?", "Aufnahme?", "Mobile TV?"], 'WiFi': ["Empfang?", "Repeater?", "Router Standort?", "Wände?", "Geschwindigkeit?"], 'Gesamtkosten': ["Aktuelle Kosten?", "Budget?", "Mehrleistung?", "Zahlungsweise?", "Preisgarantie?"], 'default': ["Offene Fragen?", "Details?"] };
         const COLORS = [{ id: 'black', value: '#000000', label: 'Schwarz' }, { id: 'pencil', value: '#374151', label: 'Bleistift' }, { id: 'blue', value: '#0044ff', label: 'Blau' }, { id: 'red', value: '#ff0000', label: 'Rot' }, { id: 'green', value: '#00cc00', label: 'Grün' }, { id: 'yellow', value: '#ffcc00', label: 'Gelb' }, { id: 'pink', value: '#ff00cc', label: 'Rosa' }, { id: 'purple', value: '#8800ff', label: 'Lila' }, { id: 'white', value: '#ffffff', label: 'Weiß' }];
         const STROKE_SIZES = [{ id: 1, width: 2, label: 'Dünn' }, { id: 2, width: 4, label: 'Mittel' }, { id: 3, width: 8, label: 'Dick' }];
         
@@ -4971,12 +5179,12 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
           const[tiers,setTiers]=useState([{dl:16,ul:2.4,on:true},{dl:50,ul:10,on:true},{dl:100,ul:40,on:true},{dl:250,ul:50,on:true},{dl:500,ul:100,on:true},{dl:1000,ul:200,on:true}]);
           const[customDl,setCustomDl]=useState('');
           const[activities,setActivities]=useState([
-            {k:'surf',emoji:'🌐',label:'Surfen',dl:1.5,ul:0.2,n:2},
-            {k:'video',emoji:'📹',label:'Videotelefonie',dl:3,ul:1.5,n:1},
-            {k:'stream',emoji:'📺',label:'Streaming HD',dl:5,ul:1,n:1},
+            {k:'surf',emoji:'🌐',label:'Surfen',dl:1.5,ul:0.2,n:0},
+            {k:'video',emoji:'📹',label:'Videotelefonie',dl:3,ul:1.5,n:0},
+            {k:'stream',emoji:'📺',label:'Streaming HD',dl:5,ul:1,n:0},
             {k:'stream4k',emoji:'🎬',label:'4K-Streaming',dl:25,ul:2,n:0},
-            {k:'gaming',emoji:'🎮',label:'Online-Gaming',dl:3,ul:0.5,n:1},
-            {k:'home',emoji:'💼',label:'Home-Office',dl:4,ul:2,n:1}
+            {k:'gaming',emoji:'🎮',label:'Online-Gaming',dl:3,ul:0.5,n:0},
+            {k:'home',emoji:'💼',label:'Home-Office',dl:4,ul:2,n:0}
           ]);
           const{rec,needDl,needUl,gaugePct}=useMemo(()=>{
             let nDl=0,nUl=0;
@@ -4987,8 +5195,15 @@ for (const [key, strokes] of Object.entries(drawnStrokes)) {
             const WLAN_EFF=0.6;
             nDl=Math.ceil(nDl*1.2/WLAN_EFF);nUl=Math.ceil(nUl*1.2/WLAN_EFF);
             const avail=tiers.filter(t=>t.on).sort((a,b)=>a.dl-b.dl);
-            let r=avail.find(t=>t.dl>=nDl&&t.ul>=Math.max(nUl,2));
-            if(!r&&avail.length>0)r=avail[avail.length-1];
+            // v48.0: Bei 0 Aktivitäten → niedrigste Stufe (16) als Startpunkt.
+            // Der Rechner klettert dann mit jeder Aktivität sichtbar hoch.
+            let r;
+            if (nDl === 0 && avail.length > 0) {
+                r = avail[0]; // unterste verfügbare Stufe (16er)
+            } else {
+                r = avail.find(t=>t.dl>=nDl&&t.ul>=Math.max(nUl,2));
+                if(!r&&avail.length>0)r=avail[avail.length-1];
+            }
             const pct=r?Math.min(100,Math.round((nDl/r.dl)*100)):0;
             return{needDl:nDl,needUl:nUl,rec:r,gaugePct:pct};
           },[activities,tiers]);
@@ -6122,8 +6337,18 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
               /* === PS FIX: keep imported bundle card size consistent immediately === */
               /* IMPORTANT: avoid CSS zoom/transform here because it blurs in html2canvas/PDF */
               .bundle-import-wrap{
-                font-size: 0.74em;
-                line-height: 1.12;
+                font-size: 0.95em;
+                line-height: 1.14;
+                opacity: 1 !important;
+                filter: none !important;
+                -webkit-filter: none !important;
+                mix-blend-mode: normal !important;
+              }
+              .bundle-import-wrap, .bundle-import-wrap *{
+                opacity: 1 !important;
+                filter: none !important;
+                -webkit-filter: none !important;
+                mix-blend-mode: normal !important;
               }
               /* Bundle-Bilder (Handy, SIM etc.) kleiner → mehr Platz für Kommentare */
               .bundle-import-wrap img {
@@ -6275,125 +6500,103 @@ const BundleModal = ({ isOpen, onClose, url, onImportToCanvas, triggerToast, tar
 
         const titleOrTarif = `${(d.geraet || d.titel || d.bezeichnung || '')} ${(d.tarif || d.tarifName || '')}`.toLowerCase();
         const isLikelyO2Bundle = /\bo2\b/.test(titleOrTarif) || /o2\s*mobile/.test(titleOrTarif) || /telekom\b/i.test(titleOrTarif) || /magenta\b/i.test(titleOrTarif);
-        if (isLikelyO2Bundle && images.length === 2) images.push(SIM_CARD_DATA_URI);
+        // v48.x FIX: Wir ergänzen automatisiert GENAU EINE SIM – aber nur, wenn noch keine
+        // SIM-Grafik unter den Bildern ist. Frühere Logik (images.length === 2) hat eine
+        // 2. SIM hinzugefügt, obwohl die Aktionsmappe oft schon Hardware + 1 SIM liefert.
+        const looksLikeSim = (s) => /sim|esim|karte|card/i.test(String(s || ''));
+        const alreadyHasSim = images.some(looksLikeSim);
+        // Nur ergänzen, wenn höchstens Hardware (1 Bild) vorhanden ist UND keine SIM erkannt wurde.
+        if (isLikelyO2Bundle && !alreadyHasSim && images.length <= 1) images.push(SIM_CARD_DATA_URI);
 
         const badgesHTML = badgesArr.map(b => `
             <span style="
                 display:inline-flex;align-items:center;gap:6px;
-                padding:6px 10px;border-radius:999px;
-                background:#e7f2ff;color:#0b4aa2;
-                font-size:12px;font-weight:800;
-                border:1px solid #cfe5ff;
+                padding:3px 9px;border-radius:6px;
+                background:#f1f5f9;color:#475569;
+                font-size:11px;font-weight:600;letter-spacing:.01em;
             ">${b}</span>
         `).join('');
 
-        const imagesHTML = images.map(src => `
+        const imagesHTML = images.map(src => {
+            const isSim = /sim|esim|karte|card/i.test(String(src || ''));
+            const tile = isSim ? 96 : 150;   // SIM deutlich kleiner als Hardware
+            return `
             <div style="
-                background:#fff;border-radius:10px;
-                border:1px solid #e5e7eb;
-                padding:8px;
-                width:170px;height:170px;
+                width:${tile}px;height:${tile}px;
                 display:flex;align-items:center;justify-content:center;
             ">
-              <img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;" />
+              <img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;${isSim ? 'opacity:.9;' : ''}" />
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         return `
           <div style="
-            width:100%; max-width:920px; margin:0 auto;
-            background:#fff; border-radius:18px;
-            border:2px solid #0b1e42;
-            overflow:hidden;
+            position:relative;
+            width:100%; max-width:760px; margin:0 auto;
+            background:transparent;
             font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+            color:#1e293b;
             pointer-events:none; user-select:none;
           ">
-            <div style="
-              background:#173a7a;
-              color:#fff;
-              padding:14px 18px;
-              display:flex;
-              align-items:center;
-              justify-content:space-between;
-              gap:14px;
-            ">
-              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-                <span style="
-                  width:28px;height:28px;
-                  border-radius:8px;
-                  background:rgba(255,255,255,.14);
-                  display:flex;align-items:center;justify-content:center;
-                  font-weight:900;
-                ">📦</span>
-                <div style="
-                  font-size:22px;
-                  font-weight:1000;
-                  white-space:nowrap;
-                  overflow:hidden;
-                  text-overflow:ellipsis;
-                  max-width:690px;
-                ">${titel}</div>
-              </div>
 
-              ${validUntil ? `
-                <div style="
-                  padding:6px 10px;
-                  border-radius:10px;
-                  background:rgba(255,255,255,.12);
-                  border:1px solid rgba(255,255,255,.22);
-                  font-weight:800;
-                  font-size:12px;
-                  white-space:nowrap;
-                ">Bis: ${validUntil}</div>
-              ` : ``}
+            <div style="
+              position:absolute;
+              top:-14px; right:-6px;
+              z-index:5;
+              width:88px; height:88px;
+              border-radius:50%;
+              background:#dc2626;
+              color:#fff;
+              display:flex; flex-direction:column;
+              align-items:center; justify-content:center;
+              text-align:center;
+              transform:rotate(-9deg);
+              box-shadow:0 6px 16px rgba(220,38,38,.32), 0 1px 3px rgba(0,0,0,.18);
+              border:2.5px solid #fff;
+            ">
+              <span style="font-size:19px;font-weight:900;line-height:1;letter-spacing:-.02em;">${preis}</span>
+              <span style="font-size:10px;font-weight:700;opacity:.92;margin-top:2px;letter-spacing:.04em;">mtl.</span>
             </div>
 
-            <div style="padding:14px 16px 12px 16px;">
-              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-                <div style="flex:1;min-width:0;">
-                  ${badgesArr.length ? `<div style="margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;">${badgesHTML}</div>` : ``}
-                </div>
+            <div style="
+              display:flex;align-items:baseline;justify-content:space-between;
+              gap:14px;flex-wrap:nowrap;
+              padding-right:96px;
+              padding-bottom:8px;
+              border-bottom:1.5px solid #cbd5e1;
+            ">
+              <div style="
+                font-size:18px;font-weight:700;letter-spacing:-.01em;
+                color:#0f172a;min-width:0;
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                flex:1 1 auto;
+              ">${titel}</div>
+              ${validUntil ? `<span style="font-size:11px;color:#94a3b8;font-weight:600;white-space:nowrap;flex:0 0 auto;">gültig bis ${validUntil}</span>` : ``}
+            </div>
 
-                <div style="
-                  width:146px;flex:0 0 146px;
-                  background:#dc2626;
-                  border-radius:10px;
-                  color:#fff;
-                  padding:9px 10px;
-                  box-shadow:0 6px 14px rgba(0,0,0,.10);
-                  text-align:center;
-                ">
-                  <div style="font-size:10px;font-weight:900;opacity:.95;letter-spacing:.06em;">PREIS</div>
-                  <div style="font-size:24px;font-weight:1100;line-height:1.05;margin-top:4px;">${preis}</div>
-                </div>
-              </div>
+            <div style="padding-top:12px;">
+              ${badgesArr.length ? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;">${badgesHTML}</div>` : ``}
 
               ${images.length ? `
                 <div style="
-                  margin-top:10px;
                   display:flex;
-                  justify-content:center;
-                  gap:10px;
+                  align-items:center;
+                  justify-content:flex-start;
+                  gap:18px;
                   flex-wrap:wrap;
                 ">${imagesHTML}</div>
               ` : ``}
 
               ${detailsHTML ? `
                 <div style="
-                  margin-top:10px;
-                  border-radius:12px;
-                  border:1px solid #e5e7eb;
-                  background:#f8fafc;
-                  padding:10px 12px;
-                ">
-                  <div style="
-                    border-left:4px solid #2563eb;
-                    padding-left:10px;
-                    color:#0f172a;
-                    font-size:13px;
-                    line-height:1.28;
-                  ">${detailsHTML}</div>
-                </div>
+                  margin-top:16px;
+                  padding-left:13px;
+                  border-left:2px solid #cbd5e1;
+                  color:#334155;
+                  font-size:13px;
+                  line-height:1.5;
+                ">${detailsHTML}</div>
               ` : ``}
             </div>
           </div>
@@ -7503,6 +7706,53 @@ const highResHTML = buildHighResBundleHTML(d);
                                     <div style={{fontSize:'10px',color:'#94a3b8',marginTop:'4px'}}>{skipped} von {total} Pencil Sellings</div>
                                 </div>
                             </div>
+
+                            {/* v48.2: Papier vs. Digital */}
+                            {(() => {
+                                const counters = getOutputCounters();
+                                const PAGES = 7;
+                                // Aktueller Monat + Gesamt
+                                const monthKey = new Date().toISOString().slice(0,7);
+                                const cur = counters[monthKey] || { print: 0, digital: 0 };
+                                let totalPrint = 0, totalDigital = 0;
+                                Object.values(counters).forEach(c => { totalPrint += (c.print||0); totalDigital += (c.digital||0); });
+                                const sumActions = totalPrint + totalDigital;
+                                const digitalPct = sumActions ? Math.round(totalDigital / sumActions * 100) : 0;
+                                const pagesPrinted = totalPrint * PAGES;
+                                const pagesSaved = totalDigital * PAGES;
+                                return (
+                                    <div style={{background:'#fff',borderRadius:'14px',border:'1.5px solid #bbf7d0',padding:'14px 16px',marginTop:'8px'}}>
+                                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'10px'}}>
+                                            <div style={{fontSize:'10px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.06em'}}>🌱 Papier vs. Digital (gesamt)</div>
+                                            <div style={{fontSize:'9px',color:'#94a3b8'}}>akt. Monat: {cur.print}🖨 / {cur.digital}📲</div>
+                                        </div>
+                                        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+                                            <div style={{flex:1,height:'10px',borderRadius:'5px',background:'#fee2e2',overflow:'hidden',position:'relative'}}>
+                                                <div style={{width:`${digitalPct}%`,height:'100%',background:'#059669',borderRadius:'5px',transition:'width 0.4s'}}/>
+                                            </div>
+                                            <span style={{fontSize:'16px',fontWeight:900,color:'#059669'}}>{digitalPct}%</span>
+                                        </div>
+                                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}}>
+                                            <div style={{textAlign:'center',padding:'8px',borderRadius:'10px',background:'#fef2f2'}}>
+                                                <div style={{fontSize:'18px',fontWeight:900,color:'#dc2626',lineHeight:1}}>{totalPrint}</div>
+                                                <div style={{fontSize:'9px',color:'#94a3b8',marginTop:'3px'}}>🖨 Gedruckt</div>
+                                                <div style={{fontSize:'9px',color:'#dc2626',fontWeight:700,marginTop:'1px'}}>~{pagesPrinted} Seiten</div>
+                                            </div>
+                                            <div style={{textAlign:'center',padding:'8px',borderRadius:'10px',background:'#ecfdf5'}}>
+                                                <div style={{fontSize:'18px',fontWeight:900,color:'#059669',lineHeight:1}}>{totalDigital}</div>
+                                                <div style={{fontSize:'9px',color:'#94a3b8',marginTop:'3px'}}>📲 Digital</div>
+                                                <div style={{fontSize:'9px',color:'#059669',fontWeight:700,marginTop:'1px'}}>~{pagesSaved} gespart</div>
+                                            </div>
+                                            <div style={{textAlign:'center',padding:'8px',borderRadius:'10px',background:'#f0fdf4'}}>
+                                                <div style={{fontSize:'18px',fontWeight:900,color:'#16a34a',lineHeight:1}}>{pagesSaved}</div>
+                                                <div style={{fontSize:'9px',color:'#94a3b8',marginTop:'3px'}}>🌱 Blatt gespart</div>
+                                                <div style={{fontSize:'9px',color:'#16a34a',fontWeight:700,marginTop:'1px'}}>statt Papier</div>
+                                            </div>
+                                        </div>
+                                        <div style={{fontSize:'9px',color:'#cbd5e1',marginTop:'8px',textAlign:'center'}}>Schätzung: 7 Seiten/Angebot · echte Druckerseiten nicht messbar (OS-Dialog)</div>
+                                    </div>
+                                );
+                            })()}
                         </>)}
 
                         {/* ── ENTWICKLUNG 6 MONATE ── */}
@@ -8472,7 +8722,7 @@ function buildMidpointPath(ctx, fp) {
         )}
         {hasOverlay && !(statusKey === 'offer1' || statusKey === 'offer2' || statusKey === 'offer3') && (<button onClick={(onClearOverlay||onClearImage)} className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Inhalt entfernen"><Icon d={ICONS.Trash} size={14}/></button>)}</div></div><div className="flex items-center gap-2 mt-2"><span className="text-[10px] font-medium text-slate-500 mr-1 uppercase">Status:</span><button data-print-keep="1" onClick={() => toggleStatus('open')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isOpen ? 'bg-red-500 text-white shadow-lg shadow-red-200/50' : 'text-slate-500 bg-red-50 border-red-200 hover:bg-red-100'}`}>{isOpen ? <Icon d={ICONS.AlertCircle} size={10}/> : null} Offen</button><button data-print-keep="1" onClick={() => toggleStatus('closed')} className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 border ${isClosed ? 'bg-green-500 text-white shadow-lg shadow-green-200/50' : 'text-slate-500 bg-green-50 border-green-200 hover:bg-green-100'}`}>{isClosed ? <Icon d={ICONS.CheckCircle} size={10}/> : null} Abgeschlossen</button></div>
 
-</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} data-stroke-key={statusKey} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} onPointerCancel={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
+</div><div className="canvas-lines"></div>{htmlOverlay && (<div ref={overlayOuterRef} className="offer-overlay-outer" style={{ position: 'relative', width: '100%', height: overlayBoxHeight ? overlayBoxHeight + 'px' : 'auto', overflow: 'hidden', zIndex: 45, background: '#ffffff', flex: '0 0 auto', marginTop: 0, marginBottom: 'auto', alignSelf: 'stretch' }}><div ref={overlayWrapRef} className="offer-html-overlay-wrap" style={{ position: 'absolute', top: 0, left: 0, width: (100 / overlayFitScale) + '%', boxSizing: 'border-box', padding: '0', margin: '0', transform: `scale(${overlayFitScale})`, transformOrigin: 'top left', pointerEvents: 'none', userSelect: 'none', background: '#ffffff', color: '#1e293b', borderRadius: '8px' }} dangerouslySetInnerHTML={{ __html: htmlOverlay }} /></div>)}<div className="relative flex-1 w-full h-full min-h-[100px] overflow-hidden" style={htmlOverlay ? {display:'none'} : {}}><textarea value={textValue || ''} onChange={(e) => handleTextChange(statusKey, e.target.value)} className={getOfferTextClasses()} style={{ ...getOfferTextStyle(), position:'absolute', inset:0, width:'100%', height:'100%', zIndex: inputMode === 'keyboard' ? 30 : 10, pointerEvents: inputMode === 'keyboard' ? 'auto' : 'none', userSelect: inputMode === 'keyboard' ? 'text' : 'none', WebkitUserSelect: inputMode === 'keyboard' ? 'text' : 'none' }} inputMode={inputMode === 'pen' ? 'none' : undefined} placeholder={inputMode === 'keyboard' ? 'Hier tippen...' : ''} readOnly={inputMode === 'pen'} /><canvas ref={canvasRef} data-stroke-key={statusKey} onPointerDown={(e) => { e.preventDefault(); startDrawing(e, canvasRef, statusKey); }} onPointerMove={(e) => draw(e, canvasRef, statusKey)} onPointerUp={(e) => stopDrawing(e, canvasRef)} onPointerLeave={(e) => stopDrawing(e, canvasRef)} onPointerCancel={(e) => stopDrawing(e, canvasRef)} className="w-full h-full drawing-canvas absolute inset-0" style={{zIndex: inputMode === 'pen' ? 25 : 5, pointerEvents: inputMode === 'pen' ? 'auto' : 'none', touchAction: 'none'}}/>
             </div>{image && !htmlOverlay && (<div className="foto-frame-fixed shrink-0" style={{ width:'min(470px, 72%)', aspectRatio:'13 / 9', minHeight:'200px', overflow:'hidden', background:'#ffffff', border:'6px solid #ffffff', borderRadius:'10px', boxShadow:'0 8px 22px rgba(15,23,42,0.20)', position:'relative', flexShrink:0, marginLeft:'auto', marginRight:'14px', marginBottom:'12px' }}><img src={image} alt="Kundenfoto" className="canvas-image-fixed" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center', display:'block', pointerEvents:'none', userSelect:'none', borderRadius:'4px' }}/></div>)}</div>); });
         
         // --- SMALL INPUT CANVAS (Patched with drawing-canvas class) ---
@@ -8584,6 +8834,106 @@ function buildMidpointPath(ctx, fp) {
                 </div>
             );
         };
+
+        // ═══════════════════════════════════════════════════════════════
+        // 💾 ANGEBOTE SPEICHERN & LADEN (IndexedDB – funktioniert auf iPad + Android)
+        // Kein manuelles PDF-in-Ordner-schieben mehr. Ein Tipp = gespeichert.
+        // IndexedDB: persistent, groß genug für Handschrift-Daten, offline-fähig.
+        // ═══════════════════════════════════════════════════════════════
+        const OFFER_DB_NAME = 'PencilSellingOffers';
+        const OFFER_STORE = 'offers';
+        const OFFER_DB_VERSION = 1;
+
+        function openOfferDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(OFFER_DB_NAME, OFFER_DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(OFFER_STORE)) {
+                        db.createObjectStore(OFFER_STORE, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+        async function saveOffer(offer) {
+            try {
+                const db = await openOfferDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(OFFER_STORE, 'readwrite');
+                    tx.objectStore(OFFER_STORE).put(offer);
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => reject(tx.error);
+                });
+            } catch (e) { console.warn('saveOffer:', e); return false; }
+        }
+        const OFFER_MAX_AGE_MS = 48 * 60 * 60 * 1000; // 48 Stunden – danach Auto-Löschung
+
+        async function listOffers() {
+            try {
+                const db = await openOfferDB();
+                const all = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(OFFER_STORE, 'readonly');
+                    const req = tx.objectStore(OFFER_STORE).getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+                // v48.1: Angebote älter als 48h automatisch entfernen (Speicher schonen).
+                const now = Date.now();
+                const fresh = [];
+                const expired = [];
+                for (const o of all) {
+                    if (o.ts && (now - o.ts) > OFFER_MAX_AGE_MS) expired.push(o.id);
+                    else fresh.push(o);
+                }
+                if (expired.length > 0) {
+                    try {
+                        const tx2 = db.transaction(OFFER_STORE, 'readwrite');
+                        const store = tx2.objectStore(OFFER_STORE);
+                        expired.forEach(id => store.delete(id));
+                    } catch(_) {}
+                }
+                return fresh.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            } catch (e) { console.warn('listOffers:', e); return []; }
+        }
+        async function deleteOffer(id) {
+            try {
+                const db = await openOfferDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(OFFER_STORE, 'readwrite');
+                    tx.objectStore(OFFER_STORE).delete(id);
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => reject(tx.error);
+                });
+            } catch (e) { console.warn('deleteOffer:', e); return false; }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 📊 DRUCK-vs-DIGITAL-ZÄHLER (v48.2)
+        // Echtes Drucken (Seiten, Drucker) ist NICHT trackbar – das macht das OS.
+        // Aber WELCHEN Button der Agent drückt, wissen wir: "Drucken" vs "Digital teilen".
+        // Daraus schätzen wir Papierverbrauch (7 Seiten/Druck) und gespartes Papier.
+        // Speicherung lokal pro Monat in localStorage.
+        // ═══════════════════════════════════════════════════════════════
+        const PAGES_PER_PRINT = 7; // Ein Angebot = 7 Seiten
+        function trackOutputAction(kind) { // kind: 'print' | 'digital'
+            try {
+                const monthKey = new Date().toISOString().slice(0, 7); // "2026-06"
+                const raw = localStorage.getItem('ps_output_counters');
+                const data = raw ? JSON.parse(raw) : {};
+                if (!data[monthKey]) data[monthKey] = { print: 0, digital: 0 };
+                if (kind === 'print') data[monthKey].print += 1;
+                else if (kind === 'digital') data[monthKey].digital += 1;
+                localStorage.setItem('ps_output_counters', JSON.stringify(data));
+            } catch(_) {}
+        }
+        function getOutputCounters() {
+            try {
+                const raw = localStorage.getItem('ps_output_counters');
+                return raw ? JSON.parse(raw) : {};
+            } catch(_) { return {}; }
+        }
 
 function App() {
             const [view, setView] = useState('situation');
@@ -8768,6 +9118,100 @@ const toolRef = useRef('pen');
             const scaleRef2 = useRef({ baseWidth: 0, scaleFactor: 1 });
             const scaleRef3 = useRef({ baseWidth: 0, scaleFactor: 1 });
             const [redrawCounter, setRedrawCounter] = useState(0);
+
+            // ═══════════════════════════════════════════════════════════════
+            // v56: ROBUSTE WIEDERHERSTELLUNG ("Redraw bis sichtbar")
+            // ───────────────────────────────────────────────────────────────
+            // Problem (iPad, bes. nach längerer Zeit / kaltem Safari-Start):
+            // Nach dem Laden eines Angebots sind die Strokes im State, aber die
+            // Canvas-Elemente sind im Moment des State-Updates noch 0×0 (View
+            // mountet erst, Layout steht noch nicht). Die alten festen Timer
+            // (300/600/1200 ms) liefen dann ins Leere → Linien unsichtbar,
+            // obwohl die Daten da sind. Status blieb auf "Abgeschlossen", weil
+            // die Stroke-Arrays ja gefüllt sind.
+            //
+            // Lösung: KEINE festen Timer mehr. Stattdessen eine selbst-prüfende
+            // Schleife, die so lange recalc+redraw auslöst, BIS die Canvasse
+            // tatsächlich Tinte zeigen (oder ein Zeit-Maximum erreicht ist).
+            // ═══════════════════════════════════════════════════════════════
+            const restoreRedrawTimerRef = React.useRef(null);
+            const forceRestoreRedraw = React.useCallback((expectedStrokes) => {
+                // Bereits laufende Schleife abbrechen (z.B. wenn schnell 2× geladen wird)
+                if (restoreRedrawTimerRef.current) {
+                    clearTimeout(restoreRedrawTimerRef.current);
+                    restoreRedrawTimerRef.current = null;
+                }
+                const startTs = Date.now();
+                const MAX_MS = 6000;     // max. 6 s lang versuchen
+                const STEP_MS = 200;     // alle 200 ms ein Versuch
+                let stableHits = 0;      // wie oft hintereinander "alles sichtbar"
+
+                // Welche Stroke-Keys MÜSSEN sichtbar werden? (nur die nicht-leeren)
+                const keysWithInk = [];
+                try {
+                    const src = expectedStrokes || window.__psStrokes || {};
+                    for (const k of Object.keys(src)) {
+                        if (Array.isArray(src[k]) && src[k].length > 0) keysWithInk.push(k);
+                    }
+                } catch(_) {}
+
+                // Prüft, ob ein Canvas zu einem Key tatsächlich Pixel zeigt
+                const canvasShowsInk = (key) => {
+                    try {
+                        // Sichtbares Canvas über vorhandene Attribute finden:
+                        // Offer/Kosten-Canvas tragen data-stroke-key, Situations-Canvas data-sit-key.
+                        const el = document.querySelector(
+                            'canvas[data-stroke-key="' + key + '"], canvas[data-sit-key="' + key + '"], canvas[data-cost-key="' + key + '"]'
+                        );
+                        if (!el || el.width < 2 || el.height < 2) return false;
+                        const ctx = el.getContext('2d');
+                        // Stichprobe statt voller Scan (Performance): zentraler Streifen
+                        const w = el.width, h = el.height;
+                        const data = ctx.getImageData(0, 0, w, h).data;
+                        // Schritt durch jeden 40. Pixel → schnell genug, findet jede Linie
+                        for (let i = 3; i < data.length; i += 160) {
+                            if (data[i] > 8) return true; // Alpha > 8 = Tinte
+                        }
+                        return false;
+                    } catch(_) {
+                        // getImageData kann bei 0×0 / nicht gemountet werfen → noch nicht bereit
+                        return false;
+                    }
+                };
+
+                const tick = () => {
+                    // 1) Layout neu vermessen + globalen Redraw anstoßen
+                    try { window.dispatchEvent(new Event('ps-canvas-recalc')); } catch(_) {}
+                    setRedrawCounter(r => r + 1);
+
+                    // 2) Prüfen, ob alle erwarteten Canvasse jetzt Tinte zeigen
+                    let allVisible = true;
+                    if (keysWithInk.length > 0) {
+                        for (const k of keysWithInk) {
+                            if (!canvasShowsInk(k)) { allVisible = false; break; }
+                        }
+                    }
+
+                    const elapsed = Date.now() - startTs;
+
+                    if (keysWithInk.length === 0) {
+                        // Nichts zu zeichnen → nach kurzem Sicherheits-Redraw fertig
+                        if (elapsed > 600) { restoreRedrawTimerRef.current = null; return; }
+                    } else if (allVisible) {
+                        // Alles sichtbar → noch 2× bestätigen (gegen iPad-Sub-Pixel-Flackern), dann fertig
+                        stableHits += 1;
+                        if (stableHits >= 2) { restoreRedrawTimerRef.current = null; return; }
+                    } else {
+                        stableHits = 0;
+                    }
+
+                    if (elapsed >= MAX_MS) { restoreRedrawTimerRef.current = null; return; }
+                    restoreRedrawTimerRef.current = setTimeout(tick, STEP_MS);
+                };
+                // Erster Versuch sofort (über rAF, damit React den State-Update gerendert hat)
+                requestAnimationFrame(() => requestAnimationFrame(tick));
+            }, []);
+
             // ✅ Auto-Redraw + Smart-Shift bei Drehen/Resize/Vollbild (damit nichts rechts abgeschnitten wird)
             useEffect(() => {
                 const setShift = (px) => {
@@ -9251,6 +9695,8 @@ const fileInputRef = useRef(null);
             const [staticTranslations, setStaticTranslations] = useState({}); 
             const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
             const [oneDriveLink, setOneDriveLink] = useState('https://jefferson990.github.io/Verkaufsmappe/'); 
+
+
             const [isDrawing, setIsDrawing] = useState(false);
             const [toastMessage, setToastMessage] = useState(null); 
             const toastTimerRef = useRef(null);
@@ -9435,6 +9881,158 @@ const fileInputRef = useRef(null);
 
             const triggerToast = (message) => { clearTimeout(toastTimerRef.current); setToastMessage(message); toastTimerRef.current = setTimeout(() => setToastMessage(null), 3000); };
 
+            // === 💾 ANGEBOTE SPEICHERN & LADEN ===
+            const [showSavedOffers, setShowSavedOffers] = useState(false);
+            const [savedOffersList, setSavedOffersList] = useState([]);
+            const [offerSaving, setOfferSaving] = useState(false);
+            const [showSaveDialog, setShowSaveDialog] = useState(false);
+            const [saveDialogName, setSaveDialogName] = useState('');
+            const [loadedOfferId, setLoadedOfferId] = useState(null); // v48.1: für Löschung nach Fertigstellen
+            const [sessionOfferId, setSessionOfferId] = useState(null); // v48.3: aktuell aktive Session (für Überschreiben)
+            const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
+            const [pendingSaveName, setPendingSaveName] = useState('');
+
+            const loadOffersList = useCallback(async () => {
+                const list = await listOffers();
+                setSavedOffersList(list || []);
+            }, []);
+
+            const handleSaveOffer = useCallback(async (customName, overwriteId) => {
+                setOfferSaving(true);
+                try {
+                    const kundenName = textData?.Kundenname || textData?.CustomerName || '';
+                    const datum = textData?.DateValue || new Date().toLocaleDateString('de-DE');
+                    // v48.3: Wenn überschrieben wird, die bestehende ID behalten – sonst neue.
+                    const id = overwriteId || ('offer_' + Date.now());
+                    // Label-Priorität: 1. Custom-Name 2. Kundenname 3. "Unbenannt"
+                    const label = (customName && customName.trim()) ? customName.trim() : (kundenName || 'Unbenannt');
+                    const offer = {
+                        id,
+                        ts: Date.now(),
+                        label,
+                        datum,
+                        segment: segment || '',
+                        provider: isCustomProvider ? customProvider : providerSelect,
+                        // ── KOMPLETTER Zustand (v47.1) ──
+                        textData: { ...textData },
+                        drawnStrokes: JSON.parse(JSON.stringify(drawnStrokes)),
+                        emailText,
+                        beratungsId,
+                        view,
+                        customerType,
+                        providerSelect,
+                        customProvider,
+                        isCustomProvider,
+                        segment,
+                        canvasImages: { ...canvasImages },
+                        imageTransform: JSON.parse(JSON.stringify(imageTransform)),
+                        offerData: JSON.parse(JSON.stringify(offerData)),
+                        costState: { ...costState },
+                        packagePrices: JSON.parse(JSON.stringify(packagePrices)),
+                        showSecondYear,
+                        gutschriftBetrag,
+                        showSavingsBlock,
+                        showCostSection,
+                        checkedTechs: { ...checkedTechs },
+                        techUebernommen: [...techUebernommen],
+                        netBundleMatched,
+                        wlanSnapshot,
+                        wlanRecommendation,
+                        speedRecommendation,
+                        followUpsByKey: JSON.parse(JSON.stringify(followUpsByKey)),
+                        customerSignature,
+                        displayLanguage,
+                        translatedText: JSON.parse(JSON.stringify(translatedText)),
+                        staticTranslations: JSON.parse(JSON.stringify(staticTranslations)),
+                        sitLayoutMode,
+                        offerLayoutMode,
+                    };
+                    const ok = await saveOffer(offer);
+                    if (ok) {
+                        triggerToast(overwriteId ? '💾 Aktualisiert: ' + label : '💾 Gespeichert: ' + label);
+                        setSessionOfferId(id); // v48.3: diese Session ist jetzt mit dieser ID verknüpft
+                        await loadOffersList();
+                    } else {
+                        triggerToast('⚠️ Speichern fehlgeschlagen');
+                    }
+                } catch (e) { triggerToast('⚠️ Fehler: ' + e.message); }
+                setOfferSaving(false);
+                setShowSaveDialog(false);
+                setShowOverwriteDialog(false);
+                setSaveDialogName('');
+            }, [textData, drawnStrokes, emailText, beratungsId, view, customerType, providerSelect, customProvider, isCustomProvider, segment, canvasImages, imageTransform, offerData, costState, packagePrices, showSecondYear, gutschriftBetrag, showSavingsBlock, showCostSection, checkedTechs, techUebernommen, netBundleMatched, wlanSnapshot, wlanRecommendation, speedRecommendation, followUpsByKey, customerSignature, displayLanguage, translatedText, staticTranslations, sitLayoutMode, offerLayoutMode, triggerToast, loadOffersList]);
+
+            // v48.3: Speichern-Button gedrückt → prüfen ob diese Session schon gespeichert wurde
+            const handleSaveButtonClick = useCallback(() => {
+                const name = textData?.Kundenname || '';
+                if (sessionOfferId) {
+                    // Schon mal gespeichert in dieser Session → Überschreiben-Frage
+                    setPendingSaveName(name);
+                    setShowOverwriteDialog(true);
+                } else {
+                    // Erstes Speichern → normaler Dialog mit Namensfeld
+                    setSaveDialogName(name);
+                    setShowSaveDialog(true);
+                }
+            }, [textData, sessionOfferId]);
+
+            const handleLoadOffer = useCallback((offer) => {
+                try {
+                    // ── KOMPLETTER Zustand wiederherstellen (v47.2) ──
+                    if (offer.textData) setTextData(offer.textData);
+                    if (offer.drawnStrokes) setDrawnStrokes(offer.drawnStrokes);
+                    if (offer.emailText != null) setEmailText(offer.emailText);
+                    if (offer.beratungsId != null) setBeratungsId(offer.beratungsId);
+                    if (offer.view) setView(offer.view);
+                    if (offer.customerType != null) setCustomerType(offer.customerType);
+                    if (offer.providerSelect != null) setProviderSelect(offer.providerSelect);
+                    if (offer.customProvider != null) setCustomProvider(offer.customProvider);
+                    if (offer.isCustomProvider != null) setIsCustomProvider(offer.isCustomProvider);
+                    if (offer.segment != null) setSegment(offer.segment);
+                    if (offer.canvasImages) setCanvasImages(offer.canvasImages);
+                    if (offer.imageTransform) setImageTransform(offer.imageTransform);
+                    if (offer.offerData) setOfferData(offer.offerData);
+                    if (offer.costState) setCostState(offer.costState);
+                    if (offer.packagePrices) setPackagePrices(offer.packagePrices);
+                    if (offer.showSecondYear != null) setShowSecondYear(offer.showSecondYear);
+                    if (offer.gutschriftBetrag != null) setGutschriftBetrag(offer.gutschriftBetrag);
+                    if (offer.showSavingsBlock != null) setShowSavingsBlock(offer.showSavingsBlock);
+                    if (offer.showCostSection != null) setShowCostSection(offer.showCostSection);
+                    if (offer.checkedTechs) setCheckedTechs(offer.checkedTechs);
+                    if (offer.techUebernommen) setTechUebernommen(offer.techUebernommen);
+                    if (offer.netBundleMatched !== undefined) setNetBundleMatched(offer.netBundleMatched);
+                    if (offer.wlanSnapshot !== undefined) setWlanSnapshot(offer.wlanSnapshot);
+                    if (offer.wlanRecommendation !== undefined) setWlanRecommendation(offer.wlanRecommendation);
+                    if (offer.speedRecommendation !== undefined) setSpeedRecommendation(offer.speedRecommendation);
+                    if (offer.followUpsByKey) setFollowUpsByKey(offer.followUpsByKey);
+                    if (offer.customerSignature !== undefined) setCustomerSignature(offer.customerSignature);
+                    if (offer.displayLanguage) setDisplayLanguage(offer.displayLanguage);
+                    if (offer.translatedText) setTranslatedText(offer.translatedText);
+                    if (offer.staticTranslations) setStaticTranslations(offer.staticTranslations);
+                    if (offer.sitLayoutMode) setSitLayoutMode(offer.sitLayoutMode);
+                    if (offer.offerLayoutMode) setOfferLayoutMode(offer.offerLayoutMode);
+
+                    setShowSavedOffers(false);
+                    setLoadedOfferId(offer.id); // v48.1: merken, welches Angebot geladen wurde
+                    setSessionOfferId(offer.id); // v48.3: erneutes Speichern überschreibt dieses Angebot
+                    triggerToast('✅ Angebot geladen: ' + (offer.label || 'Unbenannt'));
+
+                    // v56: ROBUSTE Wiederherstellung statt fester Timer.
+                    // Die alten 300/600/1200ms reichten auf kaltem iPad-Safari nicht aus
+                    // (Canvas noch nicht gemountet → Strokes im State, aber unsichtbar).
+                    // forceRestoreRedraw zeichnet jetzt so lange neu, bis die Tinte
+                    // wirklich auf dem Canvas erscheint (max. 6s).
+                    forceRestoreRedraw(offer.drawnStrokes);
+                } catch (e) { triggerToast('⚠️ Laden fehlgeschlagen: ' + e.message); }
+            }, [triggerToast, forceRestoreRedraw]);
+
+            const handleDeleteOffer = useCallback(async (id) => {
+                await deleteOffer(id);
+                await loadOffersList();
+                triggerToast('🗑 Angebot gelöscht');
+            }, [loadOffersList, triggerToast]);
+
+
             // ── Autosave: schützt vor Datenverlust bei Browser-Reload / Android-Zurück ──
             const AUTOSAVE_KEY = 'ps_autosave_v1';
             const autosaveTimerRef = React.useRef(null);
@@ -9527,16 +10125,10 @@ const fileInputRef = useRef(null);
             React.useEffect(() => {
                 if (autosaveRestoredRef.current) return;
                 autosaveRestoredRef.current = true;
-                try {
-                    const raw = localStorage.getItem(AUTOSAVE_KEY);
-                    if (!raw) return;
-                    const snap = JSON.parse(raw);
-                    if (!snap || !snap.ts || (Date.now()-snap.ts) > 8*60*60*1000) return;
-                    const hasContent = snap.textData && (
-                        Object.values(snap.textData).some(v => v && String(v).trim().length > 2) ||
-                        snap.customerType || snap.segment);
-                    if (hasContent) setShowRestoreToast(true);
-                } catch(e) {}
+                // v56: Das alte "Sitzung wiederherstellen"-Banner oben rechts wird NICHT
+                // mehr angezeigt. Es ist durch das untere 💾-System (Speichern/Angebote)
+                // ersetzt. Der Autosave läuft im Hintergrund weiter (Schutz bei Reload),
+                // aber das aufdringliche Banner entfällt.
             }, []);
 
             const handleRestoreAutosave = () => {
@@ -9572,11 +10164,9 @@ const fileInputRef = useRef(null);
                     if (snap.tvSnapshot) setTvSnapshot(snap.tvSnapshot);
                     if (snap.canvasImages) setCanvasImages(snap.canvasImages);
                     if (snap.imageTransform) setImageTransform(snap.imageTransform);
-                    // Gestaffelte Redraws: Layout braucht Zeit um Canvas-Größen zu berechnen.
-                    // Erster Redraw sofort, weitere nach 200/600ms für Sicherheit.
-                    setRedrawCounter(r => r+1);
-                    setTimeout(() => setRedrawCounter(r => r+1), 200);
-                    setTimeout(() => setRedrawCounter(r => r+1), 600);
+                    // v56: Robuste Wiederherstellung statt fester Timer – zeichnet,
+                    // bis die Tinte tatsächlich sichtbar ist (s. forceRestoreRedraw).
+                    forceRestoreRedraw(snap.drawnStrokes);
                     setShowRestoreToast(false);
                     triggerToast('✅ Sitzung wiederhergestellt!');
                 } catch(e) { triggerToast('Wiederherstellung fehlgeschlagen.'); }
@@ -10006,7 +10596,7 @@ const isOfferAreaNonEmpty = React.useCallback((k) => {
                 })();
             }, [triggerToast]);
 
-            const handlePrint = useCallback(() => { requestPrint(() => safePrint()); }, [requestPrint, safePrint]);
+            const handlePrint = useCallback(() => { trackOutputAction('print'); requestPrint(() => safePrint()); }, [requestPrint, safePrint]);
 
             
             const getAgentDisplayNameForUpload = () => {
@@ -10054,12 +10644,17 @@ const handleFinishOfferClick = () => {
                 // Wenn Kunde unterschrieben hat: PDF-Export (Empfohlen) + danach ReferralModal
                 if (customerSignature) {
                     // === PDF-Dateiname = Rufnummer (MSISDN) des Kunden ===
-                    // Kleines Popup nach Abschluss: PDF heißt dann z.B. "Angebot 0176xxxxxxx.pdf"
+                    // v47.6: Rufnummer wird aus dem Formular vorausgefüllt (kein leeres Prompt mehr)
+                    const rufnummerFromForm = (textData?.Rufnummer || '').replace(/[^0-9+]/g, '').trim();
                     let __pdfName = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                    let __msisdn = rufnummerFromForm;
                     try {
-                        const ms = window.prompt('📱 Bitte MSISDN / Rufnummer des Kunden eingeben:\n(Die PDF-Datei wird danach benannt)', '');
+                        const ms = window.prompt('📱 Rufnummer des Kunden für PDF-Dateiname:\n(Wird auch für den E-Mail-Betreff verwendet)', rufnummerFromForm || '');
                         const cleanMs = (ms || '').replace(/[^0-9+]/g, '').trim();
-                        if (cleanMs) __pdfName = `Angebot ${cleanMs}.pdf`;
+                        if (cleanMs) {
+                            __msisdn = cleanMs;
+                            __pdfName = `Angebot_${cleanMs}_${new Date().toISOString().slice(0,10)}.pdf`;
+                        }
                     } catch(e) {}
                     if (!runOnlyWithOfferValidity(() => {
                         triggerToast('PDF wird erstellt… einen Moment.');
@@ -10084,7 +10679,7 @@ const handleFinishOfferClick = () => {
                             // Direkt-Teilen nach langer Erzeugung fehl, kommt der "Jetzt teilen"-Dialog.
                             if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
                                 try {
-                                    await navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [pdfFile] });
+                                    trackOutputAction('digital'); await navigator.share({ title: `Ihr persönliches Angebot`, text: `Vielen Dank für Ihren Besuch! Anbei Ihr persönliches Angebot. Bei Fragen sind wir jederzeit für Sie da. 😊${LINK_EMPLOYEE ? '\n\nMit freundlichen Grüßen\n' + LINK_EMPLOYEE : ''}`, files: [pdfFile] });
                                     triggerToast('✅ PDF geteilt.');
                                     setTimeout(() => setShowReferralModal(true), 400);
                                     return;
@@ -10121,6 +10716,15 @@ const handleFinishOfferClick = () => {
 
             const handleFinishTypeSelection = (type) => {
                 setShowFinishTypeModal(false);
+
+                // v48.1: Nach Fertigstellen (egal ob Abschluss oder Angebot) das ggf. geladene
+                // Angebot aus dem lokalen Speicher entfernen – es ist fertig bearbeitet (+ als PDF
+                // gesichert), muss also nicht mehr in der Wiederherstellung liegen (Speicher schonen).
+                if (loadedOfferId) {
+                    deleteOffer(loadedOfferId).then(() => { loadOffersList(); }).catch(()=>{});
+                    setLoadedOfferId(null);
+                }
+                setSessionOfferId(null); // v48.3: Session beendet → nächstes Speichern ist wieder "neu"
 
                 if (type === 'deal') {
                     // Abschluss-Pfad: Analytics nach Unterschrift (→ handleSignatureSave)
@@ -10272,19 +10876,28 @@ const handleFinishOfferClick = () => {
                 
                 // Diego (Admin) kann unbegrenzt überspringen
                 const isDiego = agentName === 'Diego da Silva';
+                // v47.5: "Nur Handyfinanzierung" ist eine legitime Bestellung, kein Skip.
+                // Zählt NICHT gegen das monatliche Limit (separate Kategorie).
+                const isHandyFinanzierung = (reasonData === 'Nur Handyfinanzierung');
                 
-                if (!isDiego && currentCount >= limit) {
+                if (!isDiego && !isHandyFinanzierung && currentCount >= limit) {
                     triggerToast(`⚠️ Skip-Limit (${limit}/Monat) erreicht. Admin kann es erhöhen.`);
                     return; // Nicht durchlassen
                 }
                 
-                // Durchlassen + zählen
-                await incrementSkipCount(agentName);
+                // Durchlassen + zählen (Handyfinanzierung: wird geloggt aber NICHT gezählt)
+                if (!isHandyFinanzierung) {
+                    await incrementSkipCount(agentName);
+                }
                 setSkipReason(reasonData);
                 setShowSkipReasonModal(false);
                 setView('offer');
                 setViewOfferCounter(c => c + 1);
-                triggerToast(`✓ Situation übersprungen. Grund: ${reasonData.substring(0, 30)}...`);
+                if (isHandyFinanzierung) {
+                    triggerToast('✓ Handyfinanzierung – zählt nicht als Skip');
+                } else {
+                    triggerToast(`✓ Situation übersprungen (${currentCount + 1}/${limit}). Grund: ${reasonData.substring(0, 30)}...`);
+                }
             };
 
             const handleClearAll = () => { try { offerValidityOverrideRef.current = ''; } catch(e) {} setDrawnStrokes({ main: [], email: [], beratungs_id: [], provider: [], notes: [], skip_reason: [], sit_Kundenname: [], sit_Rufnummer: [], sit_Anbieter: [], sit_Hardware: [], sit_Nutzung: [], sit_Haushalt: [], sit_WeitereProdukte: [], sit_Fernsehen: [], sit_WiFi: [], sit_Gesamtkosten: [], offer1: [], offer2: [], offer3: [], cost_einmalig: [], cost_monatlich1: [], cost_monatlich2: [], cost_smartphone: [], agent_name: [], date_field: [], offer_valid_until: [] }); setTextData({ AgentName: '', DateValue: '', OfferValidUntil: '', offer1: '', offer2: '', offer3: '', Kundenname: '', Rufnummer: '', Anbieter: '', Hardware: '', Nutzung: '', Haushalt: '', 'Weitere Produkte': '', Fernsehen: '', WiFi: '', Gesamtkosten: '' }); setCustomerType(""); setSegment(""); setProviderSelect(""); setCustomProvider(""); setIsCustomProvider(false); setWlanRecommendation(''); setSpeedRecommendation(''); setEmailText(''); setBeratungsId(''); setSkipReason(''); setSkipReasonMode('keyboard'); setCostState({ mobile: '', landline: '', tv: '' }); setOfferData(initialOfferData); setPackagePrices({ offer1:{einmalig:'',monatlich:''}, offer2:{einmalig:'',monatlich:''}, offer3:{einmalig:'',monatlich:''} }); setCanvasStatus({ offer1: 'neutral', offer2: 'neutral', offer3: 'neutral' }); setCustomerSignature(null); setCanvasImages({ offer1: null, offer2: null, offer3: null }); setImageTransform({ offer1: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer2: { x: 0, y: 0, scale: 1.0, rotation: 0 }, offer3: { x: 0, y: 0, scale: 1.0, rotation: 0 } }); setRedrawCounter(r => r + 1); try{clearAutosave();}catch(e){} try{setShowRestoreToast(false);}catch(e){} triggerToast('Alle Daten gelöscht und Ansicht zurückgesetzt.'); };
@@ -10295,21 +10908,47 @@ const handleFinishOfferClick = () => {
             const handleCategoryClick = (cat) => { setActiveCategory(cat); setQuestionIndex(0); };
             const handleNextQuestion = () => setQuestionIndex((prev) => (prev + 1) % (questionsData[activeCategory || 'default'].length));
             const getCurrentQuestion = () => questionsData[activeCategory || 'default'][questionIndex];
+            // v47.3: Debounce-Timer für Auto-Übersetzung beim Tippen
+            const autoTranslateTimerRef = useRef(null);
+
             const handleTextChange = (key, val) => {
+                // Immer den deutschen Quelltext aktualisieren
                 setTextData(prev => ({ ...prev, [key]: val }));
-                // v45.3: Deutscher Text geändert → gecachte Übersetzungen dieses Felds verwerfen
-                if (displayLanguage === 'de') {
-                    setTranslatedText(prev => {
-                        let changed = false;
-                        const next = {};
-                        for (const lang of Object.keys(prev || {})) {
-                            if (prev[lang] && Object.prototype.hasOwnProperty.call(prev[lang], key)) {
-                                const { [key]: _drop, ...rest } = prev[lang];
-                                next[lang] = rest; changed = true;
-                            } else { next[lang] = prev[lang]; }
-                        }
-                        return changed ? next : prev;
-                    });
+
+                // v47.3: Cache für ALLE Sprachen invalidieren (nicht nur wenn displayLanguage === 'de')
+                // Sonst lässt sich ein geänderter Text nie neu übersetzen.
+                setTranslatedText(prev => {
+                    let changed = false;
+                    const next = {};
+                    for (const lang of Object.keys(prev || {})) {
+                        if (prev[lang] && Object.prototype.hasOwnProperty.call(prev[lang], key)) {
+                            const { [key]: _drop, ...rest } = prev[lang];
+                            next[lang] = rest; changed = true;
+                        } else { next[lang] = prev[lang]; }
+                    }
+                    return changed ? next : prev;
+                });
+
+                // v47.3: Wenn gerade NICHT Deutsch aktiv → Auto-Übersetzen nach 1s Pause.
+                // Der User tippt Deutsch, sieht erstmal den deutschen Text, und nach 1s
+                // wird dieser eine Text automatisch via MyMemory übersetzt → nahtlos.
+                if (displayLanguage !== 'de') {
+                    clearTimeout(autoTranslateTimerRef.current);
+                    autoTranslateTimerRef.current = setTimeout(async () => {
+                        const EXCLUDE_KEYS = ['AgentName', 'DateValue', 'OfferValidUntil'];
+                        if (EXCLUDE_KEYS.includes(key)) return;
+                        if (key.toLowerCase().includes('kundenname') || key.toLowerCase().includes('rufnummer')) return;
+                        if (!val || val.trim().length < 2 || !/[A-Za-zÄÖÜäöüß]/.test(val) || /^[\d.,:\s€%+-]+$/.test(val.trim())) return;
+                        try {
+                            const res = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(val.slice(0, 480)) + '&langpair=de|' + displayLanguage);
+                            if (!res.ok) return;
+                            const j = await res.json();
+                            const t = j?.responseData?.translatedText;
+                            if (t && String(j?.responseStatus) === '200' && t.trim() && !/MYMEMORY WARNING/i.test(t)) {
+                                setTranslatedText(prev => ({ ...prev, [displayLanguage]: { ...(prev[displayLanguage] || {}), [key]: t } }));
+                            }
+                        } catch(_) {}
+                    }, 1000);
                 }
                 // Merken: dieses Feld wurde digital (Tastatur) genutzt -> im Druck/Share anzeigen
                 try {
@@ -10388,9 +11027,9 @@ const handleFinishOfferClick = () => {
                         }
                     }
                 } catch(e) {}
-                if (displayLanguage !== 'de') {
-                    setTranslatedText(prev => ({ ...prev, [displayLanguage]: { ...prev[displayLanguage], [key]: val } }));
-                }
+                // v47.3: NICHT mehr den deutschen Rohtext als "Übersetzung" speichern!
+                // Das hat vorher den Cache mit dem unübersetzten Text gefüllt → Re-Übersetzung ging nie.
+                // Die Auto-Übersetzung läuft jetzt oben per Debounce-Timer.
             };
             const handleCostChange = (key, e) => { const val = e.target.value; setCostState(prev => ({ ...prev, [key]: val })); };
             const handleUpdateQuestions = (cat, newQs) => { setQuestionsData(prev => ({...prev, [cat]: newQs})); };
@@ -11484,9 +12123,16 @@ const renderStrokesForPrint = (strokes, targetW, targetH, key) => {
             const bh = stroke.baseHeight || targetH;
             const sx = targetW / bw;
             const sy = targetH / bh;
+            // v47.4: IMMER proportional skalieren – auch für Offer-Canvases.
+            // Vorher: Offer nutzte sx/sy separat → Handschrift wurde gestreckt/gestaucht
+            // wenn Bildschirm-Seitenverhältnis ≠ PDF-Seitenverhältnis (z.B. Querformat → PDF).
+            // Jetzt: kleinster Faktor → Handschrift passt immer rein + behält Proportionen.
             const uni = Math.min(sx, sy);
-            const useX = isOfferKey ? sx : uni;
-            const useY = isOfferKey ? sy : uni;
+            // Zentrierung: wenn uni < sx oder uni < sy, bleibt ein Rand → mittig verschieben
+            const offsetX = (targetW - bw * uni) / 2;
+            const offsetY = (targetH - bh * uni) / 2;
+            const useX = uni;
+            const useY = uni;
             const visualBase = Math.max(1, Math.min(12, stroke.width || 3));
             const geo = Math.sqrt(Math.max(0.01, sx) * Math.max(0.01, sy));
             const lw = visualBase * Math.min(1.05, Math.max(0.5, geo));
@@ -11506,7 +12152,7 @@ const renderStrokesForPrint = (strokes, targetW, targetH, key) => {
                 ctx.globalAlpha = stroke.opacity != null ? stroke.opacity : 1;
                 ctx.globalCompositeOperation = 'source-over';
             }
-            const pts = stroke.points.map(p => ({ x: p.x * useX, y: p.y * useY }));
+            const pts = stroke.points.map(p => ({ x: p.x * useX + offsetX, y: p.y * useY + offsetY }));
             // v44.0: pen/fountain mit Breitenfaktoren → Druckbild = Bildschirmbild
             if (strokeHasVariableWidth(stroke) && stroke.tool !== 'eraser' && stroke.tool !== 'highlighter') {
                 drawVariableWidthPath(ctx, pts, stroke.points, lw);
@@ -11589,20 +12235,36 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                     // ===== Übernommenes Angebot im Druck: 35% kleiner + Bilder nebeneinander =====
                     try{
                         doc.querySelectorAll('.offer-overlay-outer').forEach(outer=>{
-                            outer.style.position = 'relative';
+                            outer.style.position = 'absolute';
+                            outer.style.left = '0';
+                            outer.style.right = '0';
+                            outer.style.top = '58%';
                             outer.style.width = '100%';
-                            outer.style.overflow = 'hidden';
+                            outer.style.height = 'auto';
+                            outer.style.minHeight = '0';
+                            outer.style.margin = '0';
+                            outer.style.padding = '0 24px';
+                            outer.style.overflow = 'visible';
+                            outer.style.transform = 'none';
+                            outer.style.zIndex = '25';
                             try {
                                 const wrap = outer.querySelector('.offer-html-overlay-wrap');
                                 if (wrap) {
                                     const t = wrap.style.transform || '';
                                     const m = t.match(/scale\(([\d.]+)\)/);
                                     const screenScale = m ? parseFloat(m[1]) : 1;
-                                    const pdfScale = screenScale * 0.65;
+                                    const pdfScale = screenScale; // v51: keine Zusatz-Verkleinerung mehr, sonst wirkt das Overlay blass/zu klein
                                     wrap.style.transform = `scale(${pdfScale})`;
                                     wrap.style.transformOrigin = 'top left';
+                                    wrap.style.opacity = '1';
+                                    wrap.style.filter = 'none';
+                                    wrap.style.webkitFilter = 'none';
+                                    wrap.style.webkitPrintColorAdjust = 'exact';
+                                    wrap.style.printColorAdjust = 'exact';
+                                    wrap.style.background = '#ffffff';
+                                    try { wrap.querySelectorAll('*').forEach(n => { n.style.opacity = '1'; n.style.filter = 'none'; n.style.webkitFilter = 'none'; n.style.mixBlendMode = 'normal'; n.style.backgroundBlendMode = 'normal'; n.style.webkitPrintColorAdjust = 'exact'; n.style.printColorAdjust = 'exact'; }); } catch(_){ }
                                     const curH = parseInt(outer.style.height) || 600;
-                                    const newH = Math.ceil(curH * 0.65);
+                                    const newH = curH; // v51: Höhe nicht künstlich schrumpfen
                                     outer.style.height = newH + 'px';
                                     outer.style.maxHeight = newH + 'px';
                                     try {
@@ -11652,7 +12314,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                     // Importierte Bundle-HTML (Verkaufsmappe) kann dadurch zu groß wirken.
                     // Lösung: Im Clone die Overlay-HTML gezielt "shrink-to-fit" + responsive Medien.
                     try{
-                        const EXTRA = 0.92; // v36: kompakter Bundle-Overlay im Share-PDF, damit Bilder/Kennwerte/Bemerkungen in die Karte passen
+                        const EXTRA = 1.0; // v51: keine weitere Shrink-Skalierung, damit Overlay kräftig bleibt
                         doc.querySelectorAll('.offer-html-overlay-wrap').forEach(el=>{
                             try{
                                 // 1) Transform scale(...) innerhalb "scale(x) rotate(...)" anpassen
@@ -11924,8 +12586,12 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
   overflow:hidden !important;
 }
 .pdf-share-mode .bundle-import-wrap{
-  font-size:0.56em !important;
-  line-height:1.05 !important;
+  font-size:0.95em !important;
+  line-height:1.14 !important;
+  opacity:1 !important;
+  filter:none !important;
+  -webkit-filter:none !important;
+  mix-blend-mode:normal !important;
 }
 .pdf-share-mode .bundle-import-wrap h1,
 .pdf-share-mode .bundle-import-wrap h2,
@@ -11933,8 +12599,8 @@ input::placeholder,textarea::placeholder{color:transparent!important;opacity:0!i
 .pdf-share-mode .bundle-import-wrap [class*="text-3xl"],
 .pdf-share-mode .bundle-import-wrap [class*="text-2xl"],
 .pdf-share-mode .bundle-import-wrap [class*="text-xl"]{
-  font-size:16px !important;
-  line-height:1.02 !important;
+  font-size:20px !important;
+  line-height:1.08 !important;
   white-space:normal !important;
 }
 .pdf-share-mode .bundle-import-wrap [class*="text-5xl"],
@@ -12327,7 +12993,6 @@ const makeOutroContent = () => {
           <div class="share-outro-qr">
             <img crossorigin="anonymous" referrerpolicy="no-referrer" src="${qrUrl(googleReviewUrl,'003CA6')}" alt="QR Google" />
           </div>
-          <div class="share-outro-link">${googleReviewUrl}</div>
         </div>
 
         <div class="share-outro-card share-outro-card-focus">
@@ -12639,37 +13304,51 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
         ta.style.overflowWrap = 'break-word';
     }
 
-    // HTML-Overlay (Bundle/Aktionsmappe): im PDF immer vollständig sichtbar machen
+    // HTML-Overlay (Bundle/Aktionsmappe): im PDF sichtbar + mittig, ohne Blass-/Shrink-Effekt
     const htmlOverlayWrap = container.querySelector('.offer-html-overlay-wrap');
     if (htmlOverlayWrap) {
-        // Overlay-Parent: transform(x,y) aus Screen-Drag ENTFERNEN (sonst verrutscht das Overlay im PDF)
         const overlayParent = htmlOverlayWrap.parentElement;
         if (overlayParent) {
-            // Aktuellen Scale auslesen und um 30% verkleinern (nur PDF-Export)
-            const origStyle = overlayParent.getAttribute('style') || '';
-            const scaleMatch = origStyle.match(/scale\(([\d.]+)\)/);
-            const origScale = scaleMatch ? parseFloat(scaleMatch[1]) : 0.6;
-            const pdfScale = origScale * 0.7;
-            const origTranslate = (origStyle.match(/translate\([^)]+\)/) || ['translate(0px, 60px)'])[0];
-            overlayParent.style.transform = `${origTranslate} scale(${pdfScale.toFixed(3)})`;
-            overlayParent.style.transformOrigin = 'top left';
-            overlayParent.style.transition = 'none';
-            overlayParent.style.position = 'absolute';
-            overlayParent.style.inset = '0';
-            overlayParent.style.opacity = '1';
-            overlayParent.style.display = 'block';
-            overlayParent.style.zIndex = '5';
+            // v53: Im PDF nicht mehr über Flex/Margin-Auto schieben lassen.
+            // Das war der Grund, warum der Bundle-Inhalt unten klebte.
+            overlayParent.style.setProperty('position', 'absolute', 'important');
+            overlayParent.style.setProperty('left', '0', 'important');
+            overlayParent.style.setProperty('right', '0', 'important');
+            overlayParent.style.setProperty('top', '18%', 'important');
+            overlayParent.style.setProperty('width', '100%', 'important');
+            overlayParent.style.setProperty('height', 'auto', 'important');
+            overlayParent.style.setProperty('min-height', '0', 'important');
+            overlayParent.style.setProperty('display', 'block', 'important');
+            overlayParent.style.setProperty('flex', 'none', 'important');
+            overlayParent.style.setProperty('align-self', 'stretch', 'important');
+            overlayParent.style.setProperty('margin-top', '0', 'important');
+            overlayParent.style.setProperty('margin-bottom', '0', 'important');
+            overlayParent.style.setProperty('padding', '0 24px', 'important');
+            overlayParent.style.setProperty('transform', 'none', 'important');
+            overlayParent.style.setProperty('transform-origin', 'center center', 'important');
+            overlayParent.style.setProperty('transition', 'none', 'important');
+            overlayParent.style.setProperty('opacity', '1', 'important');
+            overlayParent.style.setProperty('z-index', '25', 'important');
+            overlayParent.style.setProperty('overflow', 'visible', 'important');
+            overlayParent.style.setProperty('box-sizing', 'border-box', 'important');
+            overlayParent.style.setProperty('z-index', '9999', 'important');
+            try { if (overlayParent.parentElement === container) container.appendChild(overlayParent); } catch(_) {}
         }
-        // Overlay-Wrap selbst: sauber positioniert, volle Fläche, sichtbar
-        htmlOverlayWrap.style.opacity = '1';
-        htmlOverlayWrap.style.pointerEvents = 'none';
-        htmlOverlayWrap.style.userSelect = 'none';
-        htmlOverlayWrap.style.position = 'relative';
-        htmlOverlayWrap.style.width = '100%';
-        htmlOverlayWrap.style.boxSizing = 'border-box';
-        htmlOverlayWrap.style.overflow = 'hidden';
-        htmlOverlayWrap.style.margin = '0';
-        htmlOverlayWrap.style.transform = 'none';
+        try { container.querySelectorAll('.canvas-lines, div.relative[class*="flex-1"]').forEach(n => { n.style.setProperty('display', 'none', 'important'); n.style.setProperty('visibility', 'hidden', 'important'); }); } catch(_) {}
+        // Originale Fit-Skalierung des Wraps bleibt erhalten. Nur Sichtbarkeit/Farbkraft erzwingen.
+        htmlOverlayWrap.style.setProperty('opacity', '1', 'important');
+        htmlOverlayWrap.style.setProperty('pointer-events', 'none', 'important');
+        htmlOverlayWrap.style.setProperty('user-select', 'none', 'important');
+        htmlOverlayWrap.style.setProperty('box-sizing', 'border-box', 'important');
+        htmlOverlayWrap.style.setProperty('filter', 'none', 'important');
+        htmlOverlayWrap.style.setProperty('-webkit-filter', 'none', 'important');
+        htmlOverlayWrap.style.setProperty('mix-blend-mode', 'normal', 'important');
+        try { htmlOverlayWrap.querySelectorAll('*').forEach(n => {
+            n.style.setProperty('opacity', '1', 'important');
+            n.style.setProperty('filter', 'none', 'important');
+            n.style.setProperty('-webkit-filter', 'none', 'important');
+            n.style.setProperty('mix-blend-mode', 'normal', 'important');
+        }); } catch(_) {}
     }
 
     // Spalten-Wrapper: volle Höhe
@@ -13060,7 +13739,7 @@ const opt = {
         margin: 0,
         filename: `Angebot_o2_${new Date().toISOString().split('T')[0]}.pdf`,
         pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'img', '.offer-canvas-wrap'] },
-        image: { type: 'jpeg', quality: 1.0 },
+        image: { type: 'jpeg', quality: 0.85 }, // v47.9: 1.0→0.85 spart ~60% Dateigröße, optisch kaum Unterschied. Verhindert "Anhang zu groß" bei Outlook/WhatsApp (Limit ~20-25 MB).
         html2canvas: {
             // iOS/iPad: Canvas-Pixel-Limit (~16M px) → hohe scale erzeugt Leerseiten.
             // Daher auf iOS-Geräten scale reduzieren.
@@ -13073,7 +13752,7 @@ const opt = {
                         // effektive Auflösung dpr*scale soll ~3-4 bleiben, nicht 8+
                         return Math.max(2, Math.min(3, Math.round(3 / Math.max(1, dpr) * 2)));
                     }
-                    return 4;
+                    return 3; // v47.9: 4→3 – immer noch scharf, aber deutlich kleinere Datei (E-Mail-tauglich)
                 } catch(e) { return 3; }
             })(),
 
@@ -14004,12 +14683,18 @@ const handlePDFShare = async () => {
 
                 try { setShowFinishTypeModal(false); } catch(e) {}
                 // === Nach Unterschrift: PDF-Name = Rufnummer (MSISDN) des Kunden ===
+                // v47.6: Rufnummer wird aus dem Formular vorausgefüllt
+                const rufnummerFromForm2 = (textData?.Rufnummer || '').replace(/[^0-9+]/g, '').trim();
                 let __pdfName2 = `Angebot_${new Date().toISOString().slice(0,10)}.pdf`;
+                let __msisdn2 = rufnummerFromForm2;
                 try {
                     if (customerSignature) {
-                        const ms = window.prompt('📱 Bitte MSISDN / Rufnummer des Kunden eingeben:\n(Die PDF-Datei wird danach benannt)', '');
+                        const ms = window.prompt('📱 Rufnummer des Kunden für PDF-Dateiname:\n(Wird auch für den E-Mail-Betreff verwendet)', rufnummerFromForm2 || '');
                         const cleanMs = (ms || '').replace(/[^0-9+]/g, '').trim();
-                        if (cleanMs) __pdfName2 = `Angebot ${cleanMs}.pdf`;
+                        if (cleanMs) {
+                            __msisdn2 = cleanMs;
+                            __pdfName2 = `Angebot_${cleanMs}_${new Date().toISOString().slice(0,10)}.pdf`;
+                        }
                     }
                 } catch(e) {}
                 triggerToast('PDF wird erstellt… einen Moment.');
@@ -14019,6 +14704,12 @@ const handlePDFShare = async () => {
                     const pdfFile = new File([blob], pdfFileName, { type: 'application/pdf' });
                     window.__lastPdfBlob = blob; window.__lastPdfFile = pdfFile;
 
+                    // v47.9: PDF-Größe prüfen – Outlook/WhatsApp lehnen >20-25 MB Anhänge ab.
+                    const mb = blob.size / (1024 * 1024);
+                    if (mb > 20) {
+                        triggerToast(`⚠️ PDF ist ${mb.toFixed(1)} MB – evtl. zu groß für E-Mail. Tipp: weniger/kleinere Fotos verwenden.`);
+                    }
+
                     // ── Statistik sofort loggen (zählt unabhängig vom Teilen-Weg als "Angebot") ──
                     logQuoteToStatistics();
 
@@ -14027,7 +14718,7 @@ const handlePDFShare = async () => {
                     // zeigen wir den "Jetzt teilen"-Dialog (Button-Tap = neue Geste → klappt sicher).
                     if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
                         try {
-                            await navigator.share({ title: 'Angebot', text: 'Ihr persönliches Angebot', files: [pdfFile] });
+                            trackOutputAction('digital'); await navigator.share({ title: `Ihr persönliches Angebot`, text: `Vielen Dank für Ihren Besuch! Anbei Ihr persönliches Angebot. Bei Fragen sind wir jederzeit für Sie da. 😊${LINK_EMPLOYEE ? '\n\nMit freundlichen Grüßen\n' + LINK_EMPLOYEE : ''}`, files: [pdfFile] });
                             triggerToast('✅ PDF geteilt.');
                             setTimeout(() => setShowReferralModal(true), 400);
                             return;
@@ -14073,6 +14764,7 @@ const handlePDFShare = async () => {
                                 <button onClick={() => {
                                     const f = pdfShareReady;
                                     setPdfShareReady(null);
+                                    trackOutputAction('digital'); // v48.2: digital geteilt
                                     const after = () => setTimeout(() => setShowReferralModal(true), 300);
                                     if (navigator.canShare && navigator.canShare({ files: [f] })) {
                                         // WICHTIG: share() synchron im Tap aufrufen → iOS zeigt den Teilen-Dialog sicher
@@ -14211,6 +14903,106 @@ const handlePDFShare = async () => {
 {LINK_EMPLOYEE === 'Diego da Silva' && <AdminSafeBoundary onClose={()=>setShowAdmin(false)}><AdminModal isOpen={showAdmin} onClose={()=>setShowAdmin(false)} questions={questionsData} onUpdate={handleUpdateQuestions} oneDriveLink={oneDriveLink} onUpdateLink={setOneDriveLink} /></AdminSafeBoundary>}
                     <PinLockModal isOpen={showPinLock} onClose={()=>setShowPinLock(false)} onSuccess={()=>{ setShowPinLock(false); setShowStats(true); }} />
                     <AdminSafeBoundary onClose={()=>setShowStats(false)}><StatsModal isOpen={showStats} onClose={()=>setShowStats(false)} onOpenAdmin={()=>{ if (LINK_EMPLOYEE === 'Diego da Silva') { setShowStats(false); setShowAdmin(true); } }} /></AdminSafeBoundary>
+
+                    {/* 💾 Überschreiben-Dialog (v48.3) – wenn diese Session schon gespeichert wurde */}
+                    {showOverwriteDialog && ReactDOM.createPortal(
+                        <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.45)'}} onClick={()=>setShowOverwriteDialog(false)}>
+                            <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:'20px',width:'90%',maxWidth:'400px',boxShadow:'0 20px 60px rgba(0,0,0,0.25)',overflow:'hidden'}}>
+                                <div style={{padding:'22px 22px 8px',textAlign:'center'}}>
+                                    <div style={{fontSize:'38px',marginBottom:'8px'}}>💾</div>
+                                    <div style={{fontSize:'18px',fontWeight:900,color:'#1e293b',marginBottom:'6px'}}>Bereits gespeichert</div>
+                                    <div style={{fontSize:'13px',color:'#64748b',lineHeight:1.5}}>Dieses Angebot wurde in dieser Sitzung schon gespeichert. Möchtest du das vorhandene aktualisieren oder ein neues anlegen?</div>
+                                </div>
+                                <div style={{display:'flex',flexDirection:'column',gap:'8px',padding:'16px 22px 20px'}}>
+                                    <button onClick={()=>handleSaveOffer(pendingSaveName, sessionOfferId)} disabled={offerSaving} style={{width:'100%',padding:'13px',borderRadius:'12px',border:'none',background:'#2563eb',color:'#fff',fontWeight:800,fontSize:'15px',cursor:'pointer',opacity:offerSaving?0.5:1,boxShadow:'0 3px 12px rgba(37,99,235,0.35)'}}>
+                                        🔄 Vorhandenes aktualisieren
+                                    </button>
+                                    <button onClick={()=>{setShowOverwriteDialog(false);setSaveDialogName(pendingSaveName);setShowSaveDialog(true);}} style={{width:'100%',padding:'12px',borderRadius:'12px',border:'1.5px solid #bfdbfe',background:'#eff6ff',color:'#1d4ed8',fontWeight:700,fontSize:'14px',cursor:'pointer'}}>
+                                        ➕ Als neues Angebot speichern
+                                    </button>
+                                    <button onClick={()=>setShowOverwriteDialog(false)} style={{width:'100%',padding:'10px',borderRadius:'12px',border:'none',background:'transparent',color:'#94a3b8',fontWeight:600,fontSize:'13px',cursor:'pointer'}}>Abbrechen</button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )}
+
+                    {/* 💾 Speichern-Dialog (optionaler Dateiname) */}
+                    {showSaveDialog && ReactDOM.createPortal(
+                        <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.45)'}} onClick={()=>{setShowSaveDialog(false);setSaveDialogName('');}}>
+                            <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:'20px',width:'90%',maxWidth:'400px',boxShadow:'0 20px 60px rgba(0,0,0,0.25)',overflow:'hidden'}}>
+                                <div style={{padding:'20px 22px 14px'}}>
+                                    <div style={{fontSize:'18px',fontWeight:900,color:'#1e293b',marginBottom:'4px'}}>💾 Angebot speichern</div>
+                                    <div style={{fontSize:'12px',color:'#94a3b8'}}>Optional: Gib einen Namen ein, um es leichter wiederzufinden.</div>
+                                </div>
+                                <div style={{padding:'0 22px 18px'}}>
+                                    <input type="text" value={saveDialogName} onChange={e=>setSaveDialogName(e.target.value)}
+                                        placeholder="z.B. Müller – o2 XL + FritzBox"
+                                        onPointerDown={e=>e.stopPropagation()} onTouchStart={e=>e.stopPropagation()}
+                                        style={{width:'100%',padding:'14px 16px',border:'2px solid #bfdbfe',borderRadius:'12px',fontSize:'16px',fontWeight:700,color:'#1e293b',outline:'none',boxSizing:'border-box'}}
+                                        autoFocus
+                                    />
+                                    <div style={{fontSize:'11px',color:'#94a3b8',marginTop:'6px'}}>Leer lassen → wird als "{textData?.Kundenname || 'Unbenannt'}" gespeichert</div>
+                                </div>
+                                <div style={{display:'flex',gap:'10px',padding:'0 22px 20px'}}>
+                                    <button onClick={()=>{setShowSaveDialog(false);setSaveDialogName('');}} style={{flex:1,padding:'12px',borderRadius:'12px',border:'1.5px solid #e2e8f0',background:'#f8fafc',color:'#64748b',fontWeight:700,fontSize:'14px',cursor:'pointer'}}>Abbrechen</button>
+                                    <button onClick={()=>handleSaveOffer(saveDialogName)} disabled={offerSaving} style={{flex:2,padding:'12px',borderRadius:'12px',border:'none',background:'#2563eb',color:'#fff',fontWeight:800,fontSize:'14px',cursor:'pointer',opacity:offerSaving?0.5:1,boxShadow:'0 3px 12px rgba(37,99,235,0.35)'}}>
+                                        {offerSaving ? 'Speichert...' : '💾 Speichern'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )}
+
+                    {/* 💾 Gespeicherte Angebote Modal */}
+                    {showSavedOffers && ReactDOM.createPortal(
+                        <div style={{position:'fixed',inset:0,zIndex:9998,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.5)'}} onClick={()=>setShowSavedOffers(false)}>
+                            <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:'20px',width:'90%',maxWidth:'520px',maxHeight:'80vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
+                                <div style={{padding:'18px 20px 14px',borderBottom:'1.5px solid #e2e8f0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                                    <div>
+                                        <div style={{fontSize:'17px',fontWeight:900,color:'#1e293b'}}>📋 Gespeicherte Angebote</div>
+                                        <div style={{fontSize:'11px',color:'#94a3b8',marginTop:'2px'}}>{savedOffersList.length} Angebot{savedOffersList.length!==1?'e':''} · bleibt 48 Std. abrufbar</div>
+                                    </div>
+                                    <button onClick={()=>setShowSavedOffers(false)} style={{width:'32px',height:'32px',borderRadius:'50%',background:'#f1f5f9',border:'none',cursor:'pointer',fontSize:'16px',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+                                </div>
+                                <div style={{flex:1,overflowY:'auto',padding:'10px 16px'}}>
+                                    {savedOffersList.length===0 && (
+                                        <div style={{textAlign:'center',padding:'40px 20px',color:'#94a3b8'}}>
+                                            <div style={{fontSize:'40px',marginBottom:'12px'}}>📭</div>
+                                            <div style={{fontSize:'14px',fontWeight:700}}>Noch keine Angebote gespeichert</div>
+                                            <div style={{fontSize:'12px',marginTop:'6px'}}>Klicke oben auf 💾 Speichern, um ein Angebot zu sichern.</div>
+                                        </div>
+                                    )}
+                                    {savedOffersList.map(offer=>(
+                                        <div key={offer.id} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',borderRadius:'12px',border:'1px solid #e2e8f0',marginBottom:'8px',background:'#fafbfc'}}>
+                                            <div style={{flex:1,minWidth:0}}>
+                                                <div style={{fontSize:'14px',fontWeight:800,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{offer.label || 'Unbenannt'}</div>
+                                                <div style={{fontSize:'11px',color:'#64748b',marginTop:'2px'}}>
+                                                    {offer.datum || '–'} · {offer.provider || '–'} · {offer.segment || '–'}
+                                                </div>
+                                                <div style={{fontSize:'10px',color:'#94a3b8',marginTop:'2px',display:'flex',gap:'6px',flexWrap:'wrap'}}>
+                                                    <span>{new Date(offer.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+                                                    {offer.customerSignature && <span style={{color:'#10b981'}}>✍️ Signiert</span>}
+                                                    {offer.canvasImages && Object.values(offer.canvasImages).some(v=>v) && <span style={{color:'#8b5cf6'}}>🖼 Bilder</span>}
+                                                    {offer.displayLanguage && offer.displayLanguage !== 'de' && <span style={{color:'#f59e0b'}}>🌐 {offer.displayLanguage.toUpperCase()}</span>}
+                                                    {(() => {
+                                                        const remMs = (48*60*60*1000) - (Date.now() - offer.ts);
+                                                        const remH = Math.max(0, Math.floor(remMs / (60*60*1000)));
+                                                        const col = remH < 6 ? '#ef4444' : '#94a3b8';
+                                                        return <span style={{color:col}}>⏳ noch {remH} Std.</span>;
+                                                    })()}
+                                                </div>
+                                            </div>
+                                            <button onClick={()=>handleLoadOffer(offer)} style={{padding:'8px 14px',borderRadius:'9px',border:'none',background:'#2563eb',color:'#fff',fontWeight:800,fontSize:'12px',cursor:'pointer',flexShrink:0}}>Laden</button>
+                                            <button onClick={()=>{if(confirm('Angebot "'+offer.label+'" löschen?'))handleDeleteOffer(offer.id);}} style={{padding:'8px 10px',borderRadius:'9px',border:'1px solid #fecaca',background:'#fef2f2',color:'#dc2626',fontWeight:700,fontSize:'11px',cursor:'pointer',flexShrink:0}}>🗑</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )}
                     
                     
                     <ImagePlacementModal isOpen={isImageSelectModalOpen} onClose={() => setIsImageSelectModalOpen(false)} onPlace={handleImagePlacement} imageName={currentImagePayload?.name || 'Datei'} />
@@ -14227,7 +15019,7 @@ const handlePDFShare = async () => {
                         setTimeout(() => setShowReferralModal(true), 300);
                     }} />
 
-                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v46.8</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
+                    <header className="bg-white px-4 py-2 border-b border-slate-200 flex items-center gap-3 shrink-0 shadow-sm z-30 relative h-16 w-full"><div className="print-hide-toast" style={{display:"flex",alignItems:"center",gap:4,marginRight:4,cursor:"default"}} title="Autosave aktiv – alle 30s gesichert"><div style={{width:7,height:7,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/><span style={{fontSize:9,fontWeight:700,color:"#94a3b8",letterSpacing:"0.04em",userSelect:"none"}}>AUTO</span></div><span style={{fontSize:8,fontWeight:700,color:'#cbd5e1',letterSpacing:'0.05em',userSelect:'none',pointerEvents:'none',marginLeft:'-8px',marginRight:'2px'}}>v48.3</span>{LINK_EMPLOYEE === 'Diego da Silva' && <button onClick={handleOpenStats} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="📊 Statistik & Admin"><Icon d={ICONS.Lock} size={18}/></button>}<button onClick={toggleFullScreen} className="p-2 text-slate-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors" title="Vollbild umschalten (wie F11)">{isFullscreen ? <Icon d={ICONS.Minimize} size={18}/> : <Icon d={ICONS.Maximize} size={18}/>}</button>
                     
                     <button onClick={() => setDarkMode(d => !d)} className="dark-toggle-btn" title="Hell/Dunkel umschalten">
                         <div className={`dark-toggle-track ${darkMode ? 'on' : ''}`}><div className="dark-toggle-thumb"></div></div>
@@ -15466,9 +16258,8 @@ const handlePDFShare = async () => {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">{renderOfferInput('agent', 'AgentLabel', 'text')}{renderOfferInput('datum', 'DateLabel', 'text')}{renderOfferInput('gueltig', 'ValidUntilLabel', 'date')}<div className="col-span-2">
   <div className="h-12 w-full bg-white border border-slate-300 rounded-lg overflow-hidden flex items-stretch">
-    {/* Shop-Stempel (fix links) */}
-    <div className="shrink-0 flex items-center gap-2 px-2 bg-slate-50 border-r border-slate-200">
-      <img src={SHOP_STAMP_QR} alt="QR Code" className="h-9 w-9 object-contain" />
+    {/* Shop-Stempel (fix links) – QR-Code entfernt (v56), nur Text */}
+    <div className="shrink-0 flex items-center gap-2 px-3 bg-slate-50 border-r border-slate-200">
       <div className="flex flex-col leading-tight">
         <span className="text-[10px] font-black text-slate-700 uppercase tracking-wide">Stempel</span>
         <span className="text-[11px] font-bold text-slate-800 whitespace-nowrap">{SHOP_STAMP_TEXT}</span>
@@ -15695,9 +16486,11 @@ const handlePDFShare = async () => {
 
                     <div className="h-14 bg-[#f0f6ff] border-t border-slate-200 flex items-center px-4 shrink-0 justify-between shadow-sm footer-bar" style={{position:"fixed",bottom:0,left:0,right:0,width:"100%",zIndex:9000,boxSizing:"border-box"}}>
                         {view === 'situation' ? (<><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && !scrollMode && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'fountain' || tool === 'ballpen' || tool === 'highlighter') && (<div className="opacity-slider-group flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="toolbar-divider w-px h-6 bg-slate-200 mx-1"></div><div className="color-picker-group relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-2">
+                            <button onClick={handleSaveButtonClick} disabled={offerSaving} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-emerald-500 hover:bg-emerald-50 transition-colors" title="💾 Angebot speichern" style={{opacity:offerSaving?0.5:1}}><Icon d={ICONS.Save||ICONS.CheckCircle} size={18}/></button>
+                            <button onClick={()=>{loadOffersList();setShowSavedOffers(true);}} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-blue-500 hover:bg-blue-50 transition-colors" title="📋 Gespeicherte Angebote"><Icon d={ICONS.List} size={18}/></button>
                             <button onClick={() => { if (LINK_EMPLOYEE === 'Diego da Silva') { handleSkipToOffer('Übersprungen (Admin)'); } else { setShowSkipReasonModal(true); } }} className="px-4 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors">Überspringen</button>
                             <button onClick={() => { if(isFormValid){ setView('offer'); setViewOfferCounter(c => c + 1); } }} className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${isFormValid ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`} title={isFormValid ? "Weiter zum Angebot" : "Bitte Pflichtfelder ausfüllen (Kundentyp, Segment, Anbieter)"}>Zum Angebot <Icon d={ICONS.ArrowRight} size={18} /></button>
-                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'fountain' || tool === 'ballpen' || tool === 'highlighter') && (<div className="opacity-slider-group flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="toolbar-divider w-px h-6 bg-slate-200 mx-1"></div><div className="color-picker-group relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
+                        </div></>) : (<div className="w-full flex justify-between items-center"><div className="flex items-center gap-3"><div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm"><button onClick={() => setInputMode('pen')} className={`p-2 rounded-md transition-colors ${inputMode === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Stift-Modus (Stylus Only)"><Icon d={ICONS.Pen} size={16} /></button><button onClick={() => setInputMode('keyboard')} className={`p-2 rounded-md transition-colors ${inputMode === 'keyboard' ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`} title="Tastatur-Modus"><Icon d={ICONS.Keyboard} size={16} /></button></div>{inputMode === 'pen' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50">{renderPenToolButtons()}{(tool === 'pen' || tool === 'fountain' || tool === 'ballpen' || tool === 'highlighter') && (<div className="opacity-slider-group flex items-center gap-2 bg-slate-50 rounded border border-slate-200 p-1.5 ml-2"><Icon d={ICONS.Sun} size={16} className="text-slate-400"/><input type="range" min="10" max="100" value={Math.round(opacity * 100)} onChange={(e) => setOpacity(parseInt(e.target.value) / 100)} className="w-20 h-1 appearance-none bg-blue-200 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg" title={`Deckkraft: ${Math.round(opacity * 100)}%`}/></div>)}<div className="toolbar-divider w-px h-6 bg-slate-200 mx-1"></div><div className="color-picker-group relative"><button onClick={() => setShowColorPicker(!showColorPicker)} className="w-8 h-8 rounded-full border shadow-sm flex items-center justify-center ring-offset-2 focus:ring-2" style={{ backgroundColor: color }}><Icon d={ICONS.Palette} size={12} className="text-white mix-blend-difference" /></button>{showColorPicker && (<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white p-3 rounded-xl shadow-2xl border border-slate-200 grid grid-cols-4 gap-2 w-[180px] z-[100]"><div className="col-span-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-1">Farbe wählen</div>{COLORS.map(c => <button key={c.id} onClick={() => { setColor(c.value); setShowColorPicker(false); if(c.id==='white') triggerToast('Weiß: auf hellem Canvas kaum sichtbar!'); }} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c.value ? 'border-slate-400 shadow-inner scale-110' : 'border-transparent'}`} style={{ backgroundColor: c.value }} title={c.label} />)}</div>)}</div></div>)}{inputMode === 'keyboard' && (<div className="flex gap-1 bg-white p-0.5 rounded-lg border border-slate-200 shadow-sm animate-in items-center relative z-50"><div className="flex bg-slate-50 rounded border border-slate-200 p-0.5 gap-0.5"><button onClick={() => setTextSize('small')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'small' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'11px'}}>S</button><button onClick={() => setTextSize('medium')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'medium' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'14px'}}>M</button><button onClick={() => setTextSize('large')} className={`w-8 h-8 flex items-center justify-center rounded font-bold ${textSize === 'large' ? 'bg-white shadow text-blue-600 ring-1 ring-blue-100' : 'text-slate-500 hover:bg-slate-200'}`} style={{fontSize:'18px'}}>L</button></div><div className="w-px h-6 bg-slate-200 mx-1"></div><div className="flex gap-1"><button onClick={() => setTextStyle(p => ({...p, bold: !p.bold}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.bold ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Fett" style={{fontSize:'16px',fontWeight:900}}>F</button><button onClick={() => setTextStyle(p => ({...p, italic: !p.italic}))} className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${textStyle.italic ? 'bg-blue-100 text-blue-600 ring-1 ring-blue-200' : 'text-slate-500 hover:bg-slate-100'}`} title="Kursiv" style={{fontStyle:'italic',fontFamily:'Georgia,serif',fontSize:'15px',fontWeight:600}}>K</button></div></div>)}</div><div className="footer-action-icons flex items-center gap-4"><button onClick={handleFileAdd} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors" title="Datei hinzufügen (Kamera / Ordner)"><Icon d={ICONS.Folder} size={18}/></button><div className="relative"><button onClick={() => setShowLanguageDropdown(p => !p)} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 transition-colors" title={`Sprache: ${SORTED_LANGUAGES.find(l => l.code === displayLanguage)?.name || 'Deutsch'}`}><div className="relative flex items-center justify-center"><Icon d={ICONS.Globe} size={18} className="text-slate-500"/>{displayLanguage !== 'de' && (<span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black text-white mix-blend-difference leading-none pointer-events-none">{displayLanguage.toUpperCase()}</span>)}</div></button>{showLanguageDropdown && (<div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in"><div className="p-2 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase">Sprache wählen</div>{SORTED_LANGUAGES.map(lang => (<button key={lang.code} onClick={() => { setDisplayLanguage(lang.code); setShowLanguageDropdown(false); }} className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${displayLanguage === lang.code ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-100'}`}>{lang.name}{displayLanguage === lang.code && <Icon d={ICONS.CheckCircle} size={14} className="ml-auto"/>}</button>))}</div>)}</div><div className="flex items-center">{showShareButton && view !== 'offer' && (<button onClick={handlePDFShare} className="p-2 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-100 text-blue-600 transition-colors mr-2 flex items-center justify-center w-10 h-10" title="Angebot teilen (System)"><Icon d={ICONS.Share} size={20} className="w-5 h-5" /></button>)}<a href="https://jefferson990.github.io/Freunde-Werben-Freunde/" target="_blank" rel="noopener noreferrer" className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Freunde werben (Link)"><Icon d={ICONS.Users} size={18}/></a><button onClick={openOneDriveLink} className="p-2 bg-slate-50 text-slate-500 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-100 hover:text-blue-600 transition-colors mr-2 flex items-center justify-center" title="Aktionsmappe öffnen"><Icon d={ICONS.Flyer} size={18}/></button>
                                 {/* ── Gutschrift-Rechner Icon-Button ── */}
                                 {(()=>{
                                     const gut2 = parseFloat(gutschriftBetrag.replace(',','.')) || 0;
@@ -15715,6 +16508,8 @@ const handlePDFShare = async () => {
                                     </div>
                                     );
                                 })()}
+                                <button onClick={handleSaveButtonClick} disabled={offerSaving} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-emerald-500 hover:bg-emerald-50 transition-colors mr-2" title="💾 Angebot speichern" style={{opacity:offerSaving?0.5:1}}><Icon d={ICONS.Save||ICONS.CheckCircle} size={18}/></button>
+                                <button onClick={()=>{loadOffersList();setShowSavedOffers(true);}} className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-blue-500 hover:bg-blue-50 transition-colors mr-2" title="📋 Gespeicherte Angebote"><Icon d={ICONS.List} size={18}/></button>
                                 <button onClick={() => setView('situation')} className="px-6 py-2 text-slate-500 font-bold text-xs hover:bg-slate-100 rounded-lg transition-colors mr-2 flex items-center gap-1"><Icon d={ICONS.ArrowLeft} size={14}/> Zurück</button><button onClick={handleFinishOfferClick} disabled={!isReadyToFinish}  className={`px-6 py-2 rounded-lg font-bold shadow-lg text-sm flex items-center gap-2 transition-all ${
                     (!isReadyToFinish)
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
@@ -15890,21 +16685,48 @@ const handlePDFShare = async () => {
                     offerWrapper.querySelectorAll('.offer-canvas-container').forEach(el => {
                         el.style.overflow = 'hidden';
                         el.style.position = 'relative';
-                        // Bundle-Overlay: im Print auf 35% skalieren + oben-links positionieren
+                        // v51: Bundle-Overlay im Browser-Druck mittig halten, aber NICHT auf 0.45 verkleinern.
                         const overlayWrap = el.querySelector('.offer-html-overlay-wrap');
                         if (overlayWrap) {
                             const origWrapStyle = overlayWrap.getAttribute('style') || '';
                             overlayWrap.setAttribute('data-orig-wrap-style', origWrapStyle);
-                            const newWrapStyle = origWrapStyle.replace(/scale\([^)]+\)/, 'scale(0.45)');
-                            overlayWrap.setAttribute('style', newWrapStyle);
-                            // Overlay-Parent: translate auf saubere Position setzen
+                            overlayWrap.style.setProperty('opacity', '1', 'important');
+                            overlayWrap.style.setProperty('filter', 'none', 'important');
+                            overlayWrap.style.setProperty('-webkit-filter', 'none', 'important');
+                            overlayWrap.style.setProperty('mix-blend-mode', 'normal', 'important');
+                            try { overlayWrap.querySelectorAll('*').forEach(n => {
+                                n.style.setProperty('opacity', '1', 'important');
+                                n.style.setProperty('filter', 'none', 'important');
+                                n.style.setProperty('-webkit-filter', 'none', 'important');
+                                n.style.setProperty('mix-blend-mode', 'normal', 'important');
+                            }); } catch(_) {}
                             const overlayParent = overlayWrap.parentElement;
                             if (overlayParent) {
                                 const origParentStyle = overlayParent.getAttribute('style') || '';
                                 overlayParent.setAttribute('data-orig-parent-style', origParentStyle);
-                                const newParentStyle = origParentStyle.replace(/translate\([^)]+\)/, 'translate(10px, 95px)');
-                                overlayParent.setAttribute('style', newParentStyle);
+                                overlayParent.style.setProperty('position', 'absolute', 'important');
+                                overlayParent.style.setProperty('left', '0', 'important');
+                                overlayParent.style.setProperty('right', '0', 'important');
+                                overlayParent.style.setProperty('top', '18%', 'important');
+                                overlayParent.style.setProperty('bottom', 'auto', 'important');
+                                overlayParent.style.setProperty('width', '100%', 'important');
+                                overlayParent.style.setProperty('height', 'auto', 'important');
+                                overlayParent.style.setProperty('min-height', '0', 'important');
+                                overlayParent.style.setProperty('display', 'block', 'important');
+                                overlayParent.style.setProperty('flex', 'none', 'important');
+                                overlayParent.style.setProperty('align-self', 'stretch', 'important');
+                                overlayParent.style.setProperty('margin-top', '0', 'important');
+                                overlayParent.style.setProperty('margin-bottom', '0', 'important');
+                                overlayParent.style.setProperty('padding', '0 24px', 'important');
+                                overlayParent.style.setProperty('transform', 'none', 'important');
+                                overlayParent.style.setProperty('transform-origin', 'center center', 'important');
+                                overlayParent.style.setProperty('overflow', 'visible', 'important');
+                                overlayParent.style.setProperty('opacity', '1', 'important');
+                                overlayParent.style.setProperty('z-index', '9999', 'important');
+                                overlayParent.style.setProperty('box-sizing', 'border-box', 'important');
+                                try { if (overlayParent.parentElement === el) el.appendChild(overlayParent); } catch(_) {}
                             }
+                            try { el.querySelectorAll('.canvas-lines, div.relative[class*="flex-1"]').forEach(n => { n.style.setProperty('display', 'none', 'important'); n.style.setProperty('visibility', 'hidden', 'important'); }); } catch(_) {}
                         }
                     });
                     // Canvas-Container: Styles per data-Attribut sichern (robust gegen React Re-render)
