@@ -3960,8 +3960,9 @@ body.pdf-share-mode .email-mode-buttons { display: none !important; }
 <style id="overlay-print-position-hotfix-v55">
 /* v55: Druck/PDF-Hardfix für Verkaufsmappe-/Bundle-Overlay
    NICHT mehr per Flex/Margin-Auto positionieren, sondern absolut in der Angebotskarte.
-   --ps-overlay-print-top kann bei Bedarf schnell angepasst werden: 18% = gleiche sichtbare Höhe wie vorher, aber ohne transform/Blass-Effekt. */
-:root { --ps-overlay-print-top: 18%; }
+   --ps-overlay-print-top kann bei Bedarf schnell angepasst werden.
+   v56: 12% statt 18%, da Bundle-Inhalt jetzt 1,4× größer gedruckt wird. */
+:root { --ps-overlay-print-top: 12%; }
 .offer-overlay-outer,
 .offer-overlay-outer *,
 .offer-html-overlay-wrap,
@@ -9170,27 +9171,32 @@ const toolRef = useRef('pen');
                     }
                 } catch(_) {}
 
-                // Prüft, ob ein Canvas zu einem Key tatsächlich Pixel zeigt
+                // Prüft, ob ein Canvas zu einem Key tatsächlich Pixel zeigt.
+                // Plattform-robust: willReadFrequently (iPad/Android Performance),
+                // und bei getImageData-Fehler (tainted canvas durch Bilder/CORS) ein
+                // sicherer Fallback auf reine Größen-/Bereitschaftsprüfung.
                 const canvasShowsInk = (key) => {
+                    let el = null;
                     try {
-                        // Sichtbares Canvas über vorhandene Attribute finden:
-                        // Offer/Kosten-Canvas tragen data-stroke-key, Situations-Canvas data-sit-key.
-                        const el = document.querySelector(
+                        el = document.querySelector(
                             'canvas[data-stroke-key="' + key + '"], canvas[data-sit-key="' + key + '"], canvas[data-cost-key="' + key + '"]'
                         );
-                        if (!el || el.width < 2 || el.height < 2) return false;
-                        const ctx = el.getContext('2d');
-                        // Stichprobe statt voller Scan (Performance): zentraler Streifen
+                    } catch(_) { el = null; }
+                    if (!el || el.width < 2 || el.height < 2) return false;
+                    try {
+                        // willReadFrequently: verhindert iPad/Android-Performance-Einbruch beim Lesen
+                        const ctx = el.getContext('2d', { willReadFrequently: true }) || el.getContext('2d');
                         const w = el.width, h = el.height;
                         const data = ctx.getImageData(0, 0, w, h).data;
-                        // Schritt durch jeden 40. Pixel → schnell genug, findet jede Linie
                         for (let i = 3; i < data.length; i += 160) {
                             if (data[i] > 8) return true; // Alpha > 8 = Tinte
                         }
                         return false;
                     } catch(_) {
-                        // getImageData kann bei 0×0 / nicht gemountet werfen → noch nicht bereit
-                        return false;
+                        // getImageData verboten (tainted) oder Canvas nicht bereit.
+                        // Fallback: Canvas hat gültige Größe → als "bereit" werten, damit der
+                        // Loop nicht ewig läuft. Der Redraw wird trotzdem ausgelöst.
+                        return (el.width >= 2 && el.height >= 2);
                     }
                 };
 
@@ -9431,6 +9437,27 @@ const handleOpenStats = () => { setShowPinLock(true); };
                     try { document.body.classList.remove('print-recs-enabled'); } catch(e) {}
                 };
             }, [printRecommendationsEnabled]);
+
+            // ═══════════════════════════════════════════════════════════════════
+            // v56 AGENT-NAME-GARANTIE (Ronny-Bug endgültig)
+            // ───────────────────────────────────────────────────────────────────
+            // Problem: Der Agent-Name kam nur als useState-Initialwert ins Feld.
+            // Wenn textData später überschrieben wurde (Autosave-Restore beim Start,
+            // Angebot laden, Clear), konnte das Feld leer bleiben → "mal da, mal nicht".
+            // Lösung: Sobald ein Link-Agent vorhanden ist (?agent=... oder gemerkt),
+            // GARANTIERT diesen Namen ins Feld setzen, falls es leer ist oder abweicht.
+            // Läuft bei jedem Render-relevanten Wechsel – idempotent (setzt nur bei Bedarf).
+            React.useEffect(() => {
+                try {
+                    if (!LINK_EMPLOYEE) return; // ohne Link-Agent nichts erzwingen
+                    const cur = (textData && textData.AgentName) ? String(textData.AgentName).trim() : '';
+                    // Nur setzen, wenn das Feld LEER ist → manuelle Eingaben (z.B. Vertretung)
+                    // bleiben erhalten, aber der häufige Fall "Feld leer trotz Link" ist gelöst.
+                    if (cur === '') {
+                        setTextData(prev => ({ ...prev, AgentName: LINK_EMPLOYEE }));
+                    }
+                } catch(_) {}
+            }, [textData.AgentName]);
 
             // ── Firebase Config (gleich wie Aktionsmappe) ──
             const AM_FB_CONFIG = {
@@ -9940,6 +9967,7 @@ const fileInputRef = useRef(null);
                         isCustomProvider,
                         segment,
                         canvasImages: { ...canvasImages },
+                        canvasHtml: JSON.parse(JSON.stringify(canvasHtml)), // v56: Bundle-Overlay (z.B. Galaxy Tab) mitspeichern
                         imageTransform: JSON.parse(JSON.stringify(imageTransform)),
                         offerData: JSON.parse(JSON.stringify(offerData)),
                         costState: { ...costState },
@@ -9975,7 +10003,7 @@ const fileInputRef = useRef(null);
                 setShowSaveDialog(false);
                 setShowOverwriteDialog(false);
                 setSaveDialogName('');
-            }, [textData, drawnStrokes, emailText, beratungsId, view, customerType, providerSelect, customProvider, isCustomProvider, segment, canvasImages, imageTransform, offerData, costState, packagePrices, showSecondYear, gutschriftBetrag, showSavingsBlock, showCostSection, checkedTechs, techUebernommen, netBundleMatched, wlanSnapshot, wlanRecommendation, speedRecommendation, followUpsByKey, customerSignature, displayLanguage, translatedText, staticTranslations, sitLayoutMode, offerLayoutMode, triggerToast, loadOffersList]);
+            }, [textData, drawnStrokes, emailText, beratungsId, view, customerType, providerSelect, customProvider, isCustomProvider, segment, canvasImages, canvasHtml, imageTransform, offerData, costState, packagePrices, showSecondYear, gutschriftBetrag, showSavingsBlock, showCostSection, checkedTechs, techUebernommen, netBundleMatched, wlanSnapshot, wlanRecommendation, speedRecommendation, followUpsByKey, customerSignature, displayLanguage, translatedText, staticTranslations, sitLayoutMode, offerLayoutMode, triggerToast, loadOffersList]);
 
             // v48.3: Speichern-Button gedrückt → prüfen ob diese Session schon gespeichert wurde
             const handleSaveButtonClick = useCallback(() => {
@@ -10013,6 +10041,15 @@ const fileInputRef = useRef(null);
                     if (offer.isCustomProvider != null) setIsCustomProvider(offer.isCustomProvider);
                     if (offer.segment != null) setSegment(offer.segment);
                     if (offer.canvasImages) setCanvasImages(offer.canvasImages);
+                    if (offer.canvasHtml) {
+                        // v56: Bundle-Overlay (z.B. Galaxy Tab) wiederherstellen + neu rendern
+                        setCanvasHtml(offer.canvasHtml);
+                        setBundleInsertCounter(prev => ({
+                            offer1: (prev.offer1||0) + (offer.canvasHtml.offer1 ? 1 : 0),
+                            offer2: (prev.offer2||0) + (offer.canvasHtml.offer2 ? 1 : 0),
+                            offer3: (prev.offer3||0) + (offer.canvasHtml.offer3 ? 1 : 0),
+                        }));
+                    }
                     if (offer.imageTransform) setImageTransform(offer.imageTransform);
                     if (offer.offerData) setOfferData(offer.offerData);
                     if (offer.costState) setCostState(offer.costState);
@@ -11670,6 +11707,18 @@ const handleFinishOfferClick = () => {
                     const x = cssX;
                     const y = cssY;
 
+                    // === v56 DOPPELSTRICH-FIX (Apple Pencil / S Pen "Geisterlinie") ===
+                    // Manche Stylus-Geräte liefern via getCoalescedEvents() den aktuellen Punkt
+                    // zusätzlich zum nativen Event → derselbe Punkt wird zweimal verarbeitet.
+                    // Über viele Frames entsteht eine parallel versetzte zweite Linie.
+                    // Fix: Punkte verwerfen, die praktisch identisch zum letzten Punkt sind.
+                    {
+                        const lp = stroke.points.length > 0 ? stroke.points[stroke.points.length - 1] : null;
+                        if (lp && Math.abs(x - lp.x) < 0.15 && Math.abs(y - lp.y) < 0.15) {
+                            continue; // Duplikat – überspringen
+                        }
+                    }
+
                     // === v44.0 TINTEN-ENGINE: Breite aus Druck + Schreibtempo ===
                     // pen/fountain: lebendige Linie (Füller deutlich stärker), ballpen: konstant.
                     // wf (Breitenfaktor) wird pro Punkt gespeichert → Redraw rendert IDENTISCH.
@@ -12235,6 +12284,28 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
     const sourceOffer = document.querySelector('.print-offer-view');
     if (!sourceOffer || !sourceSituation) throw new Error('print views not found');
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // v56 ANDROID-DRUCK-FIX: Verzerrung auf Samsung & Co. beheben.
+    // ───────────────────────────────────────────────────────────────────────
+    // Ursache: Beim Start (applyScale) wird auf Tablets der <meta viewport> auf
+    // z.B. initial-scale=1.2 gesetzt, damit die UI größer wirkt. Auf iPad/Safari
+    // ignoriert html2canvas diesen Viewport beim Rastern → Druck korrekt.
+    // Auf ANDROID/Chrome fließt der modifizierte Viewport jedoch in die Messung
+    // ein → das ganze A4-Bild wird gestaucht/verzerrt.
+    // Lösung: Für die Dauer des Exports den Viewport auf neutral (1.0) setzen
+    // und danach im finally exakt wiederherstellen. Nur nötig auf Android.
+    let __vpRestore = null;
+    try {
+        const __isAndroid = /Android/.test(navigator.userAgent || '');
+        if (__isAndroid) {
+            const vp = document.querySelector('meta[name="viewport"]');
+            if (vp) {
+                __vpRestore = vp.getAttribute('content');
+                vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+            }
+        }
+    } catch(_) {}
+
     // Offscreen-Iframe
     const iframe = document.createElement('iframe');
     iframe.setAttribute('aria-hidden', 'true');
@@ -12268,7 +12339,7 @@ const SHARE_OFFSET_Y_PX  = 0; // Share: keep at 0 (prevents page-cut) // Share: 
                             outer.style.position = 'absolute';
                             outer.style.left = '0';
                             outer.style.right = '0';
-                            outer.style.top = '14%';      // v56: höher, da Inhalt nun größer ist
+                            outer.style.top = '12%';      // v56: höher, da Inhalt nun größer ist
                             outer.style.width = '100%';
                             outer.style.height = 'auto';
                             outer.style.minHeight = '0';
@@ -12859,8 +12930,17 @@ const bakeCanvasesIntoClone = (srcRoot, cloneRoot) => {
             img.className = (dc.className || '') + ' canvas-baked-image';
             img.style.cssText = (dc.getAttribute('style') || '') + ';' +
                 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top;pointer-events:none;touch-action:none;';
-            try { dc.style.visibility = 'hidden'; } catch(e){}
-            try { dc.parentNode && dc.parentNode.insertBefore(img, dc.nextSibling); } catch(e){}
+            // v56 DOPPELSCHRIFT-FIX (Samsung): Erst img sicher einfügen, DANN das Canvas
+            // KOMPLETT entfernen (nicht nur visibility:hidden). Manche PDF-Renderer (Android)
+            // rastern versteckte Canvasse trotzdem → img + Canvas-Bitmap = doppelte Schrift.
+            let __inserted = false;
+            try { if (dc.parentNode) { dc.parentNode.insertBefore(img, dc.nextSibling); __inserted = true; } } catch(e){}
+            if (__inserted) {
+                try { dc.parentNode.removeChild(dc); } catch(e){ try { dc.style.visibility = 'hidden'; } catch(_){} }
+            } else {
+                // Fallback: img konnte nicht eingefügt werden → Canvas wenigstens verstecken
+                try { dc.style.visibility = 'hidden'; } catch(e){}
+            }
         }
 
         // === METHODE 2: Key-basiert (für Kosten/Input Canvases mit data-cost-key) ===
@@ -12885,8 +12965,14 @@ const bakeCanvasesIntoClone = (srcRoot, cloneRoot) => {
             img.style.cssText =
                 'position:absolute;inset:0;width:100%;height:100%;' +
                 'object-fit:contain;pointer-events:none;touch-action:none;z-index:15;';
-            try { dc.style.visibility = 'hidden'; } catch(e){}
-            try { dc.parentNode && dc.parentNode.insertBefore(img, dc.nextSibling); } catch(e){}
+            // v56 DOPPELSCHRIFT-FIX (Samsung): img sicher einfügen, dann Canvas entfernen.
+            let __ins2 = false;
+            try { if (dc.parentNode) { dc.parentNode.insertBefore(img, dc.nextSibling); __ins2 = true; } } catch(e){}
+            if (__ins2) {
+                try { dc.parentNode.removeChild(dc); } catch(e){ try { dc.style.visibility = 'hidden'; } catch(_){} }
+            } else {
+                try { dc.style.visibility = 'hidden'; } catch(e){}
+            }
         });
 
     } catch(e) {
@@ -12985,7 +13071,12 @@ const makeCoverContent = () => {
 const makeOutroContent = () => {
     const wrap = doc.createElement('div');
     wrap.className = 'share-outro';
-    const googleReviewUrl = (window.GOOGLE_REVIEW_URL || 'https://www.google.com/search?hl=de-DE&gl=de&q=o2+Shop,+N%C3%B6rdlicher+Stadtgraben+6,+73430+Aalen&ludocid=4324091216711915803&lsig=AB86z5X0AwWKxq2sT1xY0AQEbR3v#lrd=0x47991b873100b771:0x3c02420d3480191b,3');
+    // v56: Direkter Bewertungs-Link – soll sofort das Sterne-/Bewertungsfenster öffnen
+    // (statt nur das Profil). Google öffnet bei diesem Such-URL-Format mit ludocid (CID)
+    // den Knowledge-Panel mit prominentem "Rezension schreiben"-Button.
+    // Hinweis: Für das 1-Klick-Sterne-Popup ist die ChIJ-Place-ID nötig (writereview-Flow).
+    // window.GOOGLE_REVIEW_URL kann jederzeit mit der finalen writereview-URL überschrieben werden.
+    const googleReviewUrl = (window.GOOGLE_REVIEW_URL || 'https://www.google.com/search?q=o2+Shop+Aalen&ludocid=4324091216711915803&hl=de#lrd=0x47991b873100b771:0x3c02420d3480191b,1');
     const instagramUrl = (window.INSTAGRAM_URL || 'https://www.instagram.com/o2shop_aalen/');
     wrap.innerHTML = `
       <div class="share-outro-grid">
@@ -13197,8 +13288,11 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
                     im.src = re;
                     im.className = 'canvas-baked-image';
                     im.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top;pointer-events:none;z-index:10;';
-                    try { cvs.style.visibility = 'hidden'; } catch(e){}
-                    try { cvs.parentNode && cvs.parentNode.insertBefore(im, cvs.nextSibling); } catch(e){}
+                    // v56 DOPPELSCHRIFT-FIX: img einfügen, dann Canvas entfernen (nicht nur verstecken)
+                    let __ins3 = false;
+                    try { if (cvs.parentNode) { cvs.parentNode.insertBefore(im, cvs.nextSibling); __ins3 = true; } } catch(e){}
+                    if (__ins3) { try { cvs.parentNode.removeChild(cvs); } catch(e){ try { cvs.style.visibility = 'hidden'; } catch(_){} } }
+                    else { try { cvs.style.visibility = 'hidden'; } catch(e){} }
                 }
             }
         }
@@ -13317,7 +13411,7 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
             overlayParent.style.setProperty('position', 'absolute', 'important');
             overlayParent.style.setProperty('left', '0', 'important');
             overlayParent.style.setProperty('right', '0', 'important');
-            overlayParent.style.setProperty('top', '18%', 'important');
+            overlayParent.style.setProperty('top', '12%', 'important'); // v56: höher, da Inhalt 1,4× größer
             overlayParent.style.setProperty('width', '100%', 'important');
             overlayParent.style.setProperty('height', 'auto', 'important');
             overlayParent.style.setProperty('min-height', '0', 'important');
@@ -13338,7 +13432,24 @@ const makeOfferPage = (sourceOfferEl, offerIndex, offerTitles) => {
             try { if (overlayParent.parentElement === container) container.appendChild(overlayParent); } catch(_) {}
         }
         try { container.querySelectorAll('.canvas-lines, div.relative[class*="flex-1"]').forEach(n => { n.style.setProperty('display', 'none', 'important'); n.style.setProperty('visibility', 'hidden', 'important'); }); } catch(_) {}
-        // Originale Fit-Skalierung des Wraps bleibt erhalten. Nur Sichtbarkeit/Farbkraft erzwingen.
+        // v56: Bundle-Inhalt im PDF GRÖSSER (1,4×) – Diego: Overlay ist fix, also Seite füllen.
+        // Originale Fit-Skalierung als Basis nehmen und mit 1,4 multiplizieren.
+        try {
+            const PS_PRINT_SCALE = 1.4;
+            const tw = String(htmlOverlayWrap.style.transform || '');
+            const mw = tw.match(/scale\(([\d.]+)\)/);
+            const baseScale = mw ? parseFloat(mw[1]) : 1;
+            const newScale = baseScale * PS_PRINT_SCALE;
+            if (mw) {
+                htmlOverlayWrap.style.setProperty('transform', tw.replace(/scale\([\d.]+\)/, 'scale(' + newScale + ')'), 'important');
+            } else {
+                htmlOverlayWrap.style.setProperty('transform', 'scale(' + newScale + ')', 'important');
+            }
+            htmlOverlayWrap.style.setProperty('transform-origin', 'top center', 'important');
+            // Position etwas höher, da der Inhalt jetzt größer ist
+            if (overlayParent) overlayParent.style.setProperty('top', '12%', 'important');
+        } catch(_) {}
+        // Sichtbarkeit/Farbkraft erzwingen.
         htmlOverlayWrap.style.setProperty('opacity', '1', 'important');
         htmlOverlayWrap.style.setProperty('pointer-events', 'none', 'important');
         htmlOverlayWrap.style.setProperty('user-select', 'none', 'important');
@@ -13750,13 +13861,23 @@ const opt = {
                 try {
                     var ua = navigator.userAgent || '';
                     var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                    var isAndroid = /Android/.test(ua);
                     var dpr = window.devicePixelRatio || 1;
                     if (isIOS) {
                         // effektive Auflösung dpr*scale soll ~3-4 bleiben, nicht 8+
                         return Math.max(2, Math.min(3, Math.round(3 / Math.max(1, dpr) * 2)));
                     }
+                    if (isAndroid) {
+                        // v56 ANDROID-DRUCK-FIX: Samsung & Co. haben oft hohen DPR (2.6–3.5).
+                        // html2canvas multipliziert intern mit dem Geräte-DPR; bei festem
+                        // scale=3 wird das Raster riesig → Chrome staucht/verzerrt das A4-Bild.
+                        // Scale je nach DPR begrenzen, damit dpr*scale im sicheren Bereich (~3-4) bleibt.
+                        if (dpr >= 3) return 1.5;
+                        if (dpr >= 2) return 2;
+                        return 3;
+                    }
                     return 3; // v47.9: 4→3 – immer noch scharf, aber deutlich kleinere Datei (E-Mail-tauglich)
-                } catch(e) { return 3; }
+                } catch(e) { return 2; }
             })(),
 
             useCORS: true,
@@ -14186,6 +14307,15 @@ const opt = {
         }
         return blob;
     } finally {
+        // v56 ANDROID-DRUCK-FIX: ursprünglichen Viewport wiederherstellen
+        try {
+            if (__vpRestore !== null) {
+                const vp = document.querySelector('meta[name="viewport"]');
+                if (vp) vp.setAttribute('content', __vpRestore);
+                // Canvas-Maße nach Viewport-Wechsel neu berechnen lassen
+                try { window.dispatchEvent(new Event('ps-canvas-recalc')); } catch(_) {}
+            }
+        } catch(_) {}
         try { document.body.classList.remove('exporting'); } catch(e){}
         try { document.body.removeChild(iframe); } catch(e){}
     }
